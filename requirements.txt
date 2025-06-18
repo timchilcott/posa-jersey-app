@@ -4,3 +4,4 @@ sqlalchemy
 sendgrid
 python-dotenv
 psycopg2-binary
+jinja2
