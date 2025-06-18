@@ -57,8 +57,16 @@ def process_inbound_email(raw_email: str, db):
     print(raw_email)
     print("---- Raw email end ----")
 
+    # Extract parent email from the "To:" field in the email header
+    to_email_match = re.search(r"^To:\s*(.*)", raw_email, re.MULTILINE)
+    if to_email_match:
+        parent_email = to_email_match.group(1).strip()
+        print(f"Parent Email: {parent_email}")
+    else:
+        print("❌ Parent email not found in the 'To' field.")
+        return
+
     # Regex to find order lines with player and program info, e.g.:
-    # 1 Wells Chilcott2025 Pines Fall Soccer - U6 $25.00 $0.00
     order_line_pattern = re.compile(r"\d+\s+([A-Za-z\s'-]+)(\d{4} Pines Fall Soccer - \w+)", re.MULTILINE)
     matches = order_line_pattern.findall(raw_email)
 
@@ -90,15 +98,16 @@ def process_inbound_email(raw_email: str, db):
             # Optionally add new registration if needed here
             continue
 
-        # Assign a dummy DOB because none provided
-        dummy_dob = "2000-01-01"
+        # No need for DOB logic here, as it's not required
+        # Assign a dummy DOB (if necessary)
+        dummy_dob = "2000-01-01"  # Can be removed or adjusted as per your needs
 
         jersey_number = assign_jersey_number(db, division)
 
         # Create Player
         new_player = Player(
             full_name=player_name,
-            parent_email=None,  # Update this if you have parent email info from headers
+            parent_email=parent_email,  # Parent email extracted from 'To' field
             jersey_number=jersey_number
         )
         db.add(new_player)
@@ -112,7 +121,7 @@ def process_inbound_email(raw_email: str, db):
             sport=sport,
             division=division,
             program=program_info,
-            season="Fall 2025"  # Update season as needed or extract from email
+            season="Fall 2025"
         )
         db.add(new_registration)
         db.commit()
