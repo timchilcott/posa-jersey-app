@@ -1,47 +1,3 @@
-import os
-import re
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
-
-# Debug: confirm file loads
-print("📬 Loaded email.py")
-
-def send_confirmation_email(to_email, player_name, jersey_number, order_url):
-    # Email sending is currently disabled.
-    print(f"[DEV MODE] Skipping email to {to_email} for {player_name} (#{jersey_number})")
-
-    from_email = os.getenv("FROM_EMAIL")
-    api_key = os.getenv("SENDGRID_API_KEY")
-
-    print(f"🧪 FROM_EMAIL={from_email}")
-    print(f"🧪 SENDGRID_API_KEY begins with={api_key[:5] if api_key else 'None'}")
-
-    if not from_email or not api_key:
-        print("❌ Missing FROM_EMAIL or SENDGRID_API_KEY in environment variables.")
-        return
-
-    message = Mail(
-        from_email=from_email,
-        to_emails=to_email,
-        subject="Your POSA Jersey Info",
-        html_content=f"""
-            <p>Hi there,</p>
-            <p><strong>{player_name}</strong> has been assigned jersey number <strong>{jersey_number}</strong>.</p>
-            <p>Please order their uniform here:</p>
-            <p><a href="{order_url}" target="_blank">{order_url}</a></p>
-            <p>If you have any questions, reply to this email.</p>
-            <p>🌲 Pines stand tall.</p>
-        """
-    )
-
-    try:
-        sg = SendGridAPIClient(api_key)
-        response = sg.send(message)
-        print(f"✅ Email sent to {to_email}: {response.status_code}")
-    except Exception as e:
-        print(f"❌ Failed to send email to {to_email}: {e}")
-
-
 def process_inbound_email(raw_email: str, db):
     """
     Parses the raw inbound email content (like Sports Connect order confirmation)
@@ -88,16 +44,14 @@ def process_inbound_email(raw_email: str, db):
             # Optionally add new registration if needed here
             continue
 
-        # Assign a dummy DOB because none provided
-        dummy_dob = "2000-01-01"
+        # Correct call: assign jersey number using db and division
+        jersey_number = assign_jersey_number(db, division)
 
-        jersey_number = assign_jersey_number(dummy_dob, db)
-
-        # Create Player
+        # Create Player with dummy DOB (since not provided)
         new_player = Player(
             full_name=player_name,
-            dob=dummy_dob,
-            parent_email=None,  # Update this if you have parent email info from headers
+            dob="2000-01-01",
+            parent_email=None,  # You can add logic to extract parent email if available
             jersey_number=jersey_number
         )
         db.add(new_player)
@@ -105,7 +59,7 @@ def process_inbound_email(raw_email: str, db):
         db.refresh(new_player)
         print(f"✅ Added player {player_name} with jersey #{jersey_number}")
 
-        # Create Registration
+        # Create Registration record for player, sport, division
         new_registration = Registration(
             player_id=new_player.id,
             sport=sport,
