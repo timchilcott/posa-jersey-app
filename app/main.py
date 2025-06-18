@@ -13,7 +13,7 @@ import re
 from .database import Base, engine, SessionLocal
 from .models import Player, Registration
 from .services.assign import assign_jersey_number
-from .email import send_confirmation_email, process_inbound_email  # import your email parsing function
+from .email import send_confirmation_email, process_inbound_email  # Import the parsing function
 
 app = FastAPI()
 templates = Jinja2Templates(directory="app/templates")
@@ -124,15 +124,14 @@ def grouped_view(request: Request, db: Session = Depends(get_db)):
         birth_year_groups[year].append(player)
     return templates.TemplateResponse("grouped.html", {"request": request, "groups": dict(birth_year_groups)})
 
-# New route for SendGrid Inbound Parse webhook
+# Updated route for SendGrid Inbound Parse webhook
 @app.post("/email/receive")
-async def receive_email(request: Request):
+async def receive_email(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
     raw_email = form.get("email")
 
     if raw_email:
-        # Call your existing email parsing function here
-        process_inbound_email(raw_email)
+        process_inbound_email(raw_email, db)
         return {"message": "Email received and processed"}
     else:
         return {"error": "No email content found in request"}
