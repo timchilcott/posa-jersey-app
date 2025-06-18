@@ -1,3 +1,4 @@
 sendgrid
 uvicorn
 fastapi
+sqlalchemy
