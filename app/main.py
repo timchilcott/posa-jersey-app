@@ -2,8 +2,6 @@ from fastapi import FastAPI, Depends, Request, Form, status
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from datetime import datetime
 from collections import defaultdict
 import os
 import csv
@@ -13,7 +11,7 @@ import re
 from .database import Base, engine, SessionLocal
 from .models import Player, Registration
 from .services.assign import assign_jersey_number
-from .email import send_confirmation_email, process_inbound_email  # Import the parsing function
+from .email import send_confirmation_email, process_inbound_email
 
 app = FastAPI()
 templates = Jinja2Templates(directory="app/templates")
@@ -25,11 +23,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-class PlayerCreate(BaseModel):
-    full_name: str
-    dob: str
-    parent_email: str
 
 @app.get("/")
 def read_root():
@@ -63,19 +56,24 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         "total_players": len(players),
     })
 
+class PlayerCreate(BaseModel):
+    full_name: str
+    parent_email: str
+
 @app.post("/players")
 def create_player(player: PlayerCreate, db: Session = Depends(get_db)):
-    jersey_number = assign_jersey_number(player.dob, db)
+    # Assign jersey number based on dummy division or logic you prefer
+    dummy_division = "U6"  # or any default you want; adjust as needed
+    jersey_number = assign_jersey_number(db, dummy_division)
     db_player = Player(
         full_name=player.full_name,
-        dob=player.dob,
         parent_email=player.parent_email,
         jersey_number=jersey_number
     )
     db.add(db_player)
     db.commit()
     db.refresh(db_player)
-    send_confirmation_email(db_player)
+    send_confirmation_email(db_player.parent_email, db_player.full_name, db_player.jersey_number, order_url="https://your-order-url.com")
     return db_player
 
 @app.get("/export")
@@ -83,9 +81,9 @@ def export_players_csv(db: Session = Depends(get_db)):
     players = db.query(Player).all()
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Name", "DOB", "Parent Email", "Jersey Number"])
+    writer.writerow(["Name", "Parent Email", "Jersey Number"])
     for player in players:
-        writer.writerow([player.full_name, player.dob, player.parent_email, player.jersey_number])
+        writer.writerow([player.full_name, player.parent_email, player.jersey_number])
     output.seek(0)
     return StreamingResponse(io.BytesIO(output.getvalue().encode()), media_type="text/csv")
 
@@ -101,7 +99,6 @@ def delete_player(player_id: int, db: Session = Depends(get_db)):
 def edit_player(
     player_id: int,
     full_name: str = Form(...),
-    dob: str = Form(...),
     parent_email: str = Form(...),
     jersey_number: int = Form(...),
     db: Session = Depends(get_db),
@@ -109,22 +106,11 @@ def edit_player(
     player = db.query(Player).get(player_id)
     if player:
         player.full_name = full_name
-        player.dob = dob
         player.parent_email = parent_email
         player.jersey_number = jersey_number
         db.commit()
     return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
 
-@app.get("/admin/groups", response_class=HTMLResponse)
-def grouped_view(request: Request, db: Session = Depends(get_db)):
-    players = db.query(Player).all()
-    birth_year_groups = defaultdict(list)
-    for player in players:
-        year = datetime.strptime(player.dob, "%Y-%m-%d").year
-        birth_year_groups[year].append(player)
-    return templates.TemplateResponse("grouped.html", {"request": request, "groups": dict(birth_year_groups)})
-
-# Updated route for SendGrid Inbound Parse webhook
 @app.post("/email/receive")
 async def receive_email(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
