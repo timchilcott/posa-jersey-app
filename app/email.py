@@ -44,50 +44,73 @@ def send_confirmation_email(to_email, player_name, jersey_number, order_url):
 
 def process_inbound_email(raw_email: str, db):
     """
-    Basic example to parse raw email text and save a Player to DB.
-    You’ll need to adjust regexes to match your actual email format.
+    Parses the raw inbound email content (like Sports Connect order confirmation)
+    and inserts player info into the database.
     """
 
     print("📧 Processing inbound email")
 
-    # Example regex patterns — adjust as needed for your email format
-    name_match = re.search(r"Player Name:\s*(.+)", raw_email)
-    dob_match = re.search(r"Date of Birth:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})", raw_email)
-    parent_email_match = re.search(r"Parent Email:\s*(\S+@\S+)", raw_email)
+    # Print full raw email for debugging (optional, comment out later)
+    print("---- Raw email start ----")
+    print(raw_email)
+    print("---- Raw email end ----")
 
-    if not name_match or not dob_match or not parent_email_match:
-        print("❌ Required data not found in email")
+    # Regex to find order lines with player and program info, e.g.:
+    # 1 Wells Chilcott2025 Pines Fall Soccer - U6 $25.00 $0.00
+    order_line_pattern = re.compile(r"\d+\s+([A-Za-z\s'-]+)(\d{4} Pines Fall Soccer - \w+)", re.MULTILINE)
+    matches = order_line_pattern.findall(raw_email)
+
+    if not matches:
+        print("❌ No matching order details found")
         return
 
-    full_name = name_match.group(1).strip()
-    dob = dob_match.group(1).strip()
-    parent_email = parent_email_match.group(1).strip()
-
-    print(f"Extracted Player: {full_name}, DOB: {dob}, Parent Email: {parent_email}")
-
-    # Check if player already exists
-    existing_player = db.query(Player).filter_by(full_name=full_name, dob=dob).first()
-    if existing_player:
-        print(f"⚠️ Player {full_name} already exists in DB.")
-        return
-
-    # Assign jersey number (you may need to import your assigner here)
+    # Import here to avoid circular import
+    from .models import Player, Registration
     from .services.assign import assign_jersey_number
-    jersey_number = assign_jersey_number(dob, db)
 
-    # Create and add new player
-    from .models import Player
-    new_player = Player(
-        full_name=full_name,
-        dob=dob,
-        parent_email=parent_email,
-        jersey_number=jersey_number
-    )
+    for player_name, program_info in matches:
+        player_name = player_name.strip()
+        program_info = program_info.strip()
 
-    try:
+        # Extract division from program_info, e.g., U6 from "2025 Pines Fall Soccer - U6"
+        division_match = re.search(r"- (\w+)$", program_info)
+        division = division_match.group(1) if division_match else "Unknown"
+
+        # We assume sport is "soccer" based on program info structure
+        sport = "soccer"
+
+        print(f"Extracted Player: {player_name}, Program: {program_info}, Division: {division}")
+
+        # Check if player exists by full name (you might want to improve uniqueness criteria)
+        existing_player = db.query(Player).filter_by(full_name=player_name).first()
+        if existing_player:
+            print(f"⚠️ Player {player_name} already exists in DB.")
+            # Optionally add new registration if needed here
+            continue
+
+        # Assign a dummy DOB because none provided
+        dummy_dob = "2000-01-01"
+
+        jersey_number = assign_jersey_number(dummy_dob, db)
+
+        # Create Player
+        new_player = Player(
+            full_name=player_name,
+            dob=dummy_dob,
+            parent_email=None,  # Update this if you have parent email info from headers
+            jersey_number=jersey_number
+        )
         db.add(new_player)
         db.commit()
-        print(f"✅ Added player {full_name} to database with jersey #{jersey_number}")
-    except Exception as e:
-        db.rollback()
-        print(f"❌ Failed to add player: {e}")
+        db.refresh(new_player)
+        print(f"✅ Added player {player_name} with jersey #{jersey_number}")
+
+        # Create Registration
+        new_registration = Registration(
+            player_id=new_player.id,
+            sport=sport,
+            division=division
+        )
+        db.add(new_registration)
+        db.commit()
+        print(f"✅ Added registration for {sport} {division}")
