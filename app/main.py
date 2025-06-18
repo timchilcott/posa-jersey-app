@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, Request, Form, status
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from pydantic import BaseModel          # <-- Add this line
 from collections import defaultdict
 import os
 import csv
