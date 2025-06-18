@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, Request, Form, status
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel  # <-- Add this line
 from collections import defaultdict
 import os
 import csv
@@ -60,10 +60,12 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
 class PlayerCreate(BaseModel):
     full_name: str
     parent_email: str
+    jersey_number: int  # <-- Added jersey_number to the model
 
 @app.post("/players")
 def create_player(player: PlayerCreate, db: Session = Depends(get_db)):
-    dummy_division = "U6"
+    # Assign jersey number based on dummy division or logic you prefer
+    dummy_division = "U6"  # or any default you want; adjust as needed
     jersey_number = assign_jersey_number(db, dummy_division)
     db_player = Player(
         full_name=player.full_name,
@@ -76,27 +78,6 @@ def create_player(player: PlayerCreate, db: Session = Depends(get_db)):
     send_confirmation_email(db_player.parent_email, db_player.full_name, db_player.jersey_number, order_url="https://your-order-url.com")
     return db_player
 
-@app.put("/players/{player_id}")
-async def update_player(player_id: int, player: PlayerCreate, db: Session = Depends(get_db)):
-    db_player = db.query(Player).filter(Player.id == player_id).first()
-    if db_player:
-        db_player.full_name = player.full_name
-        db_player.parent_email = player.parent_email
-        db_player.jersey_number = player.jersey_number
-        db.commit()
-        db.refresh(db_player)
-        return {"message": "Player updated successfully"}
-    return {"error": "Player not found"}
-
-@app.delete("/players/{player_id}")
-async def delete_player(player_id: int, db: Session = Depends(get_db)):
-    db_player = db.query(Player).filter(Player.id == player_id).first()
-    if db_player:
-        db.delete(db_player)
-        db.commit()
-        return {"message": "Player deleted successfully"}
-    return {"error": "Player not found"}
-
 @app.get("/export")
 def export_players_csv(db: Session = Depends(get_db)):
     players = db.query(Player).all()
@@ -107,6 +88,30 @@ def export_players_csv(db: Session = Depends(get_db)):
         writer.writerow([player.full_name, player.parent_email, player.jersey_number])
     output.seek(0)
     return StreamingResponse(io.BytesIO(output.getvalue().encode()), media_type="text/csv")
+
+@app.post("/delete/{player_id}")
+def delete_player(player_id: int, db: Session = Depends(get_db)):
+    player = db.query(Player).get(player_id)
+    if player:
+        db.delete(player)
+        db.commit()
+    return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
+
+@app.put("/players/{player_id}")  # <-- Change to PUT for update
+def update_player(
+    player_id: int,
+    full_name: str = Form(...),
+    parent_email: str = Form(...),
+    jersey_number: int = Form(...),
+    db: Session = Depends(get_db),
+):
+    player = db.query(Player).get(player_id)
+    if player:
+        player.full_name = full_name
+        player.parent_email = parent_email
+        player.jersey_number = jersey_number
+        db.commit()
+    return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
 
 @app.post("/email/receive")
 async def receive_email(request: Request, db: Session = Depends(get_db)):
