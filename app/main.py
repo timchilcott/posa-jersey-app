@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, Request, Form, status, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -8,6 +8,8 @@ from .models import Player, Registration
 from .services.assign import assign_jersey_number
 from .email import send_confirmation_email, process_inbound_email
 from collections import defaultdict
+import csv
+import io
 
 app = FastAPI()
 templates = Jinja2Templates(directory="app/templates")
@@ -52,25 +54,20 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         "total_players": len(players),
     })
 
-# Pydantic model for updating player
 class PlayerUpdate(BaseModel):
     full_name: str
     parent_email: str
     jersey_number: int
 
-@app.put("/players/{player_id}")  # <-- Ensure the correct method
-async def update_player(
-    player_id: int,
-    player: PlayerUpdate,  # <-- Receiving JSON input here
-    db: Session = Depends(get_db),
-):
+@app.put("/players/{player_id}")
+async def update_player(player_id: int, player: PlayerUpdate, db: Session = Depends(get_db)):
     db_player = db.query(Player).get(player_id)
     if db_player:
         db_player.full_name = player.full_name
         db_player.parent_email = player.parent_email
         db_player.jersey_number = player.jersey_number
         db.commit()
-        db.refresh(db_player)  # Ensure fresh data
+        db.refresh(db_player)
         return db_player
     else:
         raise HTTPException(status_code=404, detail="Player not found")
@@ -78,12 +75,11 @@ async def update_player(
 class PlayerCreate(BaseModel):
     full_name: str
     parent_email: str
-    jersey_number: int  # <-- Added jersey_number to the model
+    jersey_number: int
 
 @app.post("/players")
 def create_player(player: PlayerCreate, db: Session = Depends(get_db)):
-    # Assign jersey number based on dummy division or logic you prefer
-    dummy_division = "U6"  # or any default you want; adjust as needed
+    dummy_division = "U6"
     jersey_number = assign_jersey_number(db, dummy_division)
     db_player = Player(
         full_name=player.full_name,
@@ -107,13 +103,15 @@ def export_players_csv(db: Session = Depends(get_db)):
     output.seek(0)
     return StreamingResponse(io.BytesIO(output.getvalue().encode()), media_type="text/csv")
 
-@app.post("/delete/{player_id}")
+@app.delete("/players/{player_id}")
 def delete_player(player_id: int, db: Session = Depends(get_db)):
     player = db.query(Player).get(player_id)
     if player:
         db.delete(player)
         db.commit()
-    return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
+        return {"message": "Player deleted"}
+    else:
+        raise HTTPException(status_code=404, detail="Player not found")
 
 @app.post("/email/receive")
 async def receive_email(request: Request, db: Session = Depends(get_db)):

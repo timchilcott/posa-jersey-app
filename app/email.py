@@ -1,128 +1,148 @@
 import os
 import re
+from datetime import datetime
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
-# Debug: confirm file loads
+from .models import Player, Registration
+from .services.assign import assign_jersey_number
+
 print("📬 Loaded email.py")
 
-def send_confirmation_email(to_email, player_name, jersey_number, order_url):
-    # Email sending is disabled for now
+# Simplified for local/dev use – no actual email sending, just update flag
+def send_confirmation_email(to_email, player_name, jersey_number, order_url, registration=None, db=None):
     print(f"[DEV MODE] Skipping sending email to {to_email} for {player_name} (#{jersey_number})")
 
-    # Uncomment below to enable sending
-    """
-    from_email = os.getenv("FROM_EMAIL")
-    api_key = os.getenv("SENDGRID_API_KEY")
+    if registration and db:
+        registration.confirmation_sent = True
+        db.commit()
 
-    print(f"🧪 FROM_EMAIL={from_email}")
-    print(f"🧪 SENDGRID_API_KEY begins with={api_key[:5] if api_key else 'None'}")
-
-    if not from_email or not api_key:
-        print("❌ Missing FROM_EMAIL or SENDGRID_API_KEY in environment variables.")
-        return
-
+# Optional: uncomment to send actual emails in production
+"""
+def send_confirmation_email(to_email, player_name, jersey_number, order_url, registration=None, db=None):
     message = Mail(
-        from_email=from_email,
+        from_email="noreply@posasports.org",
         to_emails=to_email,
-        subject="Your POSA Jersey Info",
-        html_content=f'''
-            <p>Hi there,</p>
-            <p><strong>{player_name}</strong> has been assigned jersey number <strong>{jersey_number}</strong>.</p>
-            <p>Please order their uniform here:</p>
-            <p><a href="{order_url}" target="_blank">{order_url}</a></p>
-            <p>If you have any questions, reply to this email.</p>
-            <p>🌲 Pines stand tall.</p>
-        '''
+        subject="Your POSA Jersey Number",
+        html_content=f"""
+        <p>Hi {player_name},</p>
+        <p>Your jersey number is <strong>{jersey_number}</strong>.</p>
+        <p>You can order your uniform here: <a href="{order_url}">Order Jersey</a></p>
+        """
     )
-
     try:
-        sg = SendGridAPIClient(api_key)
+        sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
         response = sg.send(message)
-        print(f"✅ Email sent to {to_email}: {response.status_code}")
+        print(response.status_code)
+        print(response.body)
+        print(response.headers)
+        if registration and db:
+            registration.confirmation_sent = True
+            db.commit()
     except Exception as e:
-        print(f"❌ Failed to send email to {to_email}: {e}")
-    """
+        print(e)
+"""
 
-def process_inbound_email(raw_email: str, db):
-    """
-    Parses the raw inbound email content (like Sports Connect order confirmation)
-    and inserts player info into the database.
-    """
+def process_inbound_email(email_body: str, db):
+    print("📥 Processing inbound email")
 
-    print("📧 Processing inbound email")
+    # Clean up formatting issues
+    email_body = email_body.replace("\r\n", "\n").replace("=\n", "").strip()
 
-    # Print full raw email for debugging (optional, comment out later)
-    print("---- Raw email start ----")
-    print(raw_email)
-    print("---- Raw email end ----")
+    # Split by lines and chunk into blocks per registrant
+    lines = email_body.splitlines()
+    registrant_blocks = []
+    current_block = []
 
-    # Extract parent email from the "To:" field in the email header
-    to_email_match = re.search(r"^To:\s*(.*)", raw_email, re.MULTILINE)
-    if to_email_match:
-        parent_email = to_email_match.group(1).strip()
-        print(f"Parent Email: {parent_email}")
-    else:
-        print("❌ Parent email not found in the 'To' field.")
-        return
+    for line in lines:
+        if line.strip() == "":
+            if current_block:
+                registrant_blocks.append(current_block)
+                current_block = []
+        else:
+            current_block.append(line)
 
-    # Regex to find order lines with player and program info, e.g.:
-    order_line_pattern = re.compile(r"\d+\s+([A-Za-z\s'-]+)(\d{4} Pines Fall Soccer - \w+)", re.MULTILINE)
-    matches = order_line_pattern.findall(raw_email)
+    if current_block:
+        registrant_blocks.append(current_block)
 
-    if not matches:
-        print("❌ No matching order details found")
-        return
+    for block in registrant_blocks:
+        full_text = "\n".join(block)
 
-    # Import here to avoid circular import
-    from .models import Player, Registration
-    from .services.assign import assign_jersey_number
-
-    for player_name, program_info in matches:
-        player_name = player_name.strip()
-        program_info = program_info.strip()
-
-        # Extract division from program_info, e.g., U6 from "2025 Pines Fall Soccer - U6"
-        division_match = re.search(r"- (\w+)$", program_info)
-        division = division_match.group(1) if division_match else "Unknown"
-
-        # We assume sport is "soccer" based on program info structure
-        sport = "soccer"
-
-        print(f"Extracted Player: {player_name}, Program: {program_info}, Division: {division}")
-
-        # Check if player exists by full name (you might want to improve uniqueness criteria)
-        existing_player = db.query(Player).filter_by(full_name=player_name).first()
-        if existing_player:
-            print(f"⚠️ Player {player_name} already exists in DB.")
-            # Optionally add new registration if needed here
+        # Skip adult leagues and camps
+        if "Adult League Softball" in full_text or "Camp" in full_text:
+            print("⏭ Skipping non-youth program")
             continue
 
-        # No need for DOB logic here, as it's not required
-        # Assign a dummy DOB (if necessary)
-        dummy_dob = "2000-01-01"  # Can be removed or adjusted as per your needs
+        try:
+            name_match = re.search(r"Name:\s*(.+)", full_text)
+            program_match = re.search(r"Program:\s*(.+)", full_text)
+            division_match = re.search(r"Division:\s*(.+)", full_text)
+            parent_email_match = re.search(r"Parent Email:\s*(.+)", full_text)
+            order_number_match = re.search(r"Order Number:\s*(.+)", full_text)
+            order_date_match = re.search(r"Order Date:\s*(.+)", full_text)
 
-        jersey_number = assign_jersey_number(db, division)
+            if not all([name_match, program_match, division_match, parent_email_match]):
+                print("❌ Skipping incomplete entry")
+                continue
 
-        # Create Player
-        new_player = Player(
-            full_name=player_name,
-            parent_email=parent_email,  # Parent email extracted from 'To' field
-            jersey_number=jersey_number
-        )
-        db.add(new_player)
-        db.commit()
-        db.refresh(new_player)
-        print(f"✅ Added player {player_name} with jersey #{jersey_number}")
+            full_name = name_match.group(1).strip()
+            program = program_match.group(1).strip()
+            division = division_match.group(1).strip()
+            parent_email = parent_email_match.group(1).strip()
+            order_number = order_number_match.group(1).strip() if order_number_match else None
+            order_date = datetime.strptime(order_date_match.group(1).strip(), "%B %d, %Y") if order_date_match else None
 
-        # Create Registration
-        new_registration = Registration(
-            player_id=new_player.id,
-            sport=sport,
-            division=division,
-            program=program_info,
-            season="Fall 2025"
-        )
-        db.add(new_registration)
-        db.commit()
-        print(f"✅ Added registration for {sport} {division}")
+            sport = "unknown"
+            season = "unknown"
+
+            parts = program.lower().split()
+            if "fall" in parts:
+                season = "fall"
+            elif "spring" in parts:
+                season = "spring"
+            elif "summer" in parts:
+                season = "summer"
+            elif "winter" in parts:
+                season = "winter"
+
+            for s in ["soccer", "basketball", "baseball", "softball", "volleyball", "flag"]:
+                if s in parts:
+                    sport = s
+                    break
+
+            player = db.query(Player).filter_by(full_name=full_name).first()
+
+            if not player:
+                jersey_number = assign_jersey_number(db, division)
+                player = Player(full_name=full_name, parent_email=parent_email, jersey_number=jersey_number)
+                db.add(player)
+                db.commit()
+                db.refresh(player)
+
+            existing_reg = db.query(Registration).filter_by(
+                player_id=player.id,
+                division=division,
+                season=season,
+                sport=sport
+            ).first()
+
+            if not existing_reg:
+                reg = Registration(
+                    player_id=player.id,
+                    program=program,
+                    division=division,
+                    sport=sport,
+                    season=season,
+                    order_number=order_number,
+                    order_date=order_date,
+                    confirmation_sent=False
+                )
+                db.add(reg)
+                db.commit()
+
+                send_confirmation_email(player.parent_email, player.full_name, player.jersey_number, "https://your-order-url.com", reg, db)
+            else:
+                print(f"✔ Registration already exists for {player.full_name} in {division} {sport} {season}")
+
+        except Exception as e:
+            print(f"❌ Error processing registrant block: {e}")

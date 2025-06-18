@@ -43,6 +43,7 @@
                                         <th>Name</th>
                                         <th>Jersey #</th>
                                         <th>Parent Email</th>
+                                        <th>Email Sent</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -52,6 +53,13 @@
                                             <td><span class="full-name">{{ player.full_name }}</span><input class="form-control d-none edit-full-name" value="{{ player.full_name }}"></td>
                                             <td><span class="jersey-number">{{ player.jersey_number }}</span><input class="form-control d-none edit-jersey-number" type="number" value="{{ player.jersey_number }}"></td>
                                             <td><span class="parent-email">{{ player.parent_email }}</span><input class="form-control d-none edit-parent-email" value="{{ player.parent_email }}"></td>
+                                            <td>
+                                                {% if player.confirmation_sent %}
+                                                    ✅
+                                                {% else %}
+                                                    ❌
+                                                {% endif %}
+                                            </td>
                                             <td>
                                                 <button class="btn btn-sm btn-primary btn-edit">Edit</button>
                                                 <button class="btn btn-sm btn-success btn-save d-none">Save</button>
