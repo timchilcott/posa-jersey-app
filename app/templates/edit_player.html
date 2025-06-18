@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Player</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    >
+</head>
+<body class="container py-5">
+    <h1 class="mb-4">Edit Player</h1>
+
+    <form method="POST" action="/players/{{ player.id }}/update">
+        <div class="mb-3">
+            <label for="full_name" class="form-label">Full Name</label>
+            <input type="text" class="form-control" id="full_name" name="full_name" value="{{ player.full_name }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="birth_year" class="form-label">Birth Year</label>
+            <input type="number" class="form-control" id="birth_year" name="birth_year" value="{{ player.birth_year }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="parent_email" class="form-label">Parent Email</label>
+            <input type="email" class="form-control" id="parent_email" name="parent_email" value="{{ player.parent_email }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="jersey_number" class="form-label">Jersey Number</label>
+            <input type="number" class="form-control" id="jersey_number" name="jersey_number" value="{{ player.jersey_number }}" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <a href="/admin" class="btn btn-secondary ms-2">Cancel</a>
+    </form>
+</body>
+</html>

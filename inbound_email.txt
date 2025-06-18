@@ -1,0 +1,135 @@
+From: president@pendoreillesports.org
+To: test@inbound.posasports.org
+Subject: Pend Oreille Sports Association User Account Update
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional //EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">            
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+      <meta name="viewport" content="width=device-width">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <style type="text/css">           body{margin:0;padding:0}table,td,tr{vertical-align:top;border-collapse:collapse}*{line-height:inherit}a[x-apple-data-detectors=true]{color:inherit!important;text-decoration:none!important}         </style>
+      <style type="text/css" id="media-query">          @media (max-width:620px){.w-100{width:100%!important}.footer-cta{font-size:21px!important;padding:13px 15px!important}.p-12{padding-left:12px!important;padding-right:12px!important}.p-10{padding-left:10px!important;padding-right:10px!important}} tr.alt:nth-child(even) { background-color: #f0f0f0 !important; }         </style>
+   </head>
+   <body class="clean-body" style="margin: 0; padding: 0; -webkit-text-size-adjust: 100%;">
+      <table class="nl-container" style="table-layout: fixed; vertical-align: top;  Margin: 0 auto; border-spacing: 0; border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; background-color: #E3ECF3; width: 100%;" cellpadding="0" cellspacing="0" role="presentation" width="100%" bgcolor="#E3ECF3" valign="top">
+         <tbody>
+            <tr style="vertical-align: top;" valign="top">
+               <td class="w-100" style="word-break: break-word; vertical-align: top; padding: 35px 10px 0 10px; width: 480px; max-width: 480px;" align="center" valign="top">
+                  <table class="w-100" cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff" width="480" >
+                     <tbody>
+                        <tr>
+                           <td align="center" style="padding: 15px 0 0 7px;">                 <img src="https://tshq.bluesombrero.com/portals/22668/logo638807035564849539.png" border="0" alt="Pend Oreille Sports Association" style="display: block;border: 0;" />                </td>
+                        </tr>
+                        <tr>
+                           <td align="center" style="font-family:'Helvetica',arial,sans-serif; font-size: 20px; line-height: 24px;                   font-weight: bold; color: #525252;letter-spacing: 0px;">
+                              <p style="margin: 0;">Welcome  </p>
+                           </td>
+                        </tr>
+                        <tr>
+                           <td align="center">                 
+<tr>
+    <td align="center" style="padding: 20px 13px 20px; font-size: 16px; line-height: 19px; color: #525252; letter-spacing: 0px; font-family: ' Helvetica ', Arial, sans-serif;">
+        <p style="margin: 0;">
+            Your user account at   <span style="font-weight: 700;">Pend Oreille Sports Association</span> has been recently updated to include access to the following Security Role:</P>
+        
+    </td>
+</tr>
+<tr>
+	<td class="p-12" valign="middle" align="center" style="padding-right: 26px; padding-left: 26px; padding-top:0px; padding-bottom:0px;">
+		<table cellspacing="0" cellpadding="0" border="0" width="100%" >
+			<tbody>
+				<tr bgcolor="#f0efef">
+					<td
+						style="font-family:'Helvetica',arial,sans-serif; font-size: 16px; line-height: 21px; color: #525252;font-weight: bold; padding: 5px 0; padding-left: 40px; width: 133px;">
+						Role:</td>
+					<td
+						style="font-family:'Helvetica',arial,sans-serif; font-size: 16px; line-height: 21px; color: #525252;font-weight: 700; padding: 5px 0;">
+						Club Admin</td>
+				</tr>
+					<tr >
+					<td
+						style="font-family:'Helvetica',arial,sans-serif; font-size: 16px; line-height: 21px; color: #525252;font-weight: bold; padding: 16px 0; padding-left: 40px; width: 133px;">
+						Effective Date:</td>
+					<td
+						style="font-family:'Helvetica',arial,sans-serif; font-size: 16px; line-height: 21px; color: #525252;font-weight: normal; padding: 16px 0;">
+						6/17/2025 12:00:00 AM</td>
+				</tr>
+				
+				<tr  bgcolor="#f0efef" style="display:none">
+					<td
+						style="font-family:'Helvetica',arial,sans-serif; font-size: 16px; line-height: 21px; color: #525252;font-weight: bold; padding: 5px 0; padding-left: 40px; width: 133px;">
+						</td>
+					<td
+						style="font-family:'Helvetica',arial,sans-serif; font-size: 16px; line-height: 21px; color: #525252;font-weight: normal; padding: 5px 0;">
+						</td>
+				</tr>
+				
+				
+			</tbody>
+		</table>
+	</td>
+</tr>
+<tr>
+    <td align="center" style="padding: 0 13px 26px; font-size: 16px; line-height: 19px; color: #525252; letter-spacing: 0px; font-family: ' Helvetica ', Arial, sans-serif;">
+        <p style="margin: 0;"><br/> Thank you, we appreciate your support. <br/>
+		Pend Oreille Sports Association</p>
+    </td>
+</tr>
+                </td>
+                        </tr>
+                     </tbody>
+                  </table>
+               </td>
+            </tr>
+         </tbody>
+      </table>
+      <table cellspacing="0" cellpadding="0" border="0" width="100%">
+         <tbody>
+            <tr>
+               <td align="center" width="100%" background="https://dt5602vnjxv0c.cloudfront.net/stacksports/stack-sports-footer-bg.png" style="background-position:center top !important; background-size:cover!important;overflow:hidden; background-color:#E3ECF3; background-repeat: no-repeat; overflow:hidden; width: 100%;">
+                  <table class="nl-container" cellpadding="0" cellspacing="0" role="presentation" width="100%" valign="top">
+                     <tbody>
+                        <tr style="vertical-align: top;" valign="top">
+                           <td  style="word-break: break-word; vertical-align: top; width: 480px; max-width: 480px;padding:0px 10px !important" align="center" valign="top">
+                              <table class="w-100" border="0" cellpadding="0" cellspacing="0" width="480" class="mcnButtonBlock" bgcolor="#ffffff" >
+                                 <tbody class="mcnButtonBlockOuter">
+                                    <tr>
+                                       <td style="padding: 0 12px 18px 12px;!important;margin-bottom:5px;" valign="top" align="center" class="p-12">
+                                          <table border="0" cellpadding="0" cellspacing="0" class="w-100" style="border-collapse: separate !important;border-radius: 4px;background-color: #050505;margin-bottom:10px;">
+                                             <tbody>
+                                                <tr>
+                                                   <td align="center" valign="middle" class="footer-cta" style="font-family:'Helvetica',arial,sans-serif; font-size: 25px; padding: 10px 47px;">                         <a class="mcnButton " title="CLICK HERE TO LOGIN" href="https://tshq.bluesombrero.com/Default.aspx?tabid=1507348&isLogin=True&returnurl=%2fDefault.aspx%3ftabid%3d1525262%26ctl%3dUser%2520Roles%26mid%3d1593666%26UserId%3d138307241" target="_blank" style="font-weight: bold;letter-spacing: normal;line-height: 100%;text-align: center;text-decoration: none;color: #FFFFFF;">CLICK HERE TO LOGIN</a>                        </td>
+                                                </tr>
+                                             </tbody>
+                                          </table>
+                                       </td>
+                                    </tr>
+                                 </tbody>
+                              </table>
+                              <table class="w-100" cellspacing="0" cellpadding="0" border="0" width="480">
+                                 <tbody>
+                                    <tr>
+                                       <td align="center" align="center" style="padding: 10px 10px 30px 10px;">                     <img src="https://dt5602vnjxv0c.cloudfront.net/portals/_default/images/sports-connect-logo.png" alt="sports-connect-logo" border="0" style="height: auto; border: 0; width: 100%; max-width: 270px; display: block;">                    </td>
+                                    </tr>
+                                 </tbody>
+                              </table>
+                              <table class="w-100" cellspacing="0" cellpadding="0" border="0" width="480">
+                                 <tbody>
+                                    <tr>
+                                       <td valign="middle" align="center" style="padding: 0 15px 25px;">
+                                          <p style="font-family:'Helvetica',arial,sans-serif;                      font-size: 14px; line-height: 17px; color: #fff;font-weight: normal; margin: 0; ">Willoughby Way NE, Atlanta GA 30312                      <br />                      <a style="color: #fff; text-decoration: none;"                       href="http://www.sportsconnect.com">www.sportsconnect.com</a></p>
+                                       </td>
+                                    </tr>
+                                 </tbody>
+                              </table>
+                           </td>
+                        </tr>
+                     </tbody>
+                  </table>
+               </td>
+            </tr>
+         </tbody>
+      </table>
+   <img src="http://send.bluesombrero.com/wf/open?upn=u001.5UowLLI1S5TgYcqMHzRhj9GbW3wiRiyjqnS74JRlld4kQErBUztOo8Hj1eWMRwC0uGRs89SI5QnZzayoVuI5D1YSUTeZu587Iq-2Be2cv5o72yCG9eAY2AKuQ-2FPdkxoQuiFyVZCSyWQ7eKXkAO9dsEUlP-2BVZdGu64WMZvaGxd0zEXLvwSCnX5ictGEiWJZHyZ1uXRnnh3ED3GjTSTiDHLrsFDlZ8b9DsJcJ3KTO-2FXzxSI-3D" alt="" width="1" height="1" border="0" style="height:1px !important;width:1px !important;border-width:0 !important;margin-top:0 !important;margin-bottom:0 !important;margin-right:0 !important;margin-left:0 !important;padding-top:0 !important;padding-bottom:0 !important;padding-right:0 !important;padding-left:0 !important;"/></body>
+</html>
