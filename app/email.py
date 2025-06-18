@@ -18,30 +18,28 @@ def send_confirmation_email(to_email, player_name, jersey_number, order_url, reg
         db.commit()
 
 # Optional: uncomment to send actual emails in production
-"""
-def send_confirmation_email(to_email, player_name, jersey_number, order_url, registration=None, db=None):
-    message = Mail(
-        from_email="noreply@posasports.org",
-        to_emails=to_email,
-        subject="Your POSA Jersey Number",
-        html_content=f"""
-        <p>Hi {player_name},</p>
-        <p>Your jersey number is <strong>{jersey_number}</strong>.</p>
-        <p>You can order your uniform here: <a href="{order_url}">Order Jersey</a></p>
-        """
-    )
-    try:
-        sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
-        response = sg.send(message)
-        print(response.status_code)
-        print(response.body)
-        print(response.headers)
-        if registration and db:
-            registration.confirmation_sent = True
-            db.commit()
-    except Exception as e:
-        print(e)
-"""
+# def send_confirmation_email(to_email, player_name, jersey_number, order_url, registration=None, db=None):
+#     message = Mail(
+#         from_email="noreply@posasports.org",
+#         to_emails=to_email,
+#         subject="Your POSA Jersey Number",
+#         html_content=f"""
+#         <p>Hi {player_name},</p>
+#         <p>Your jersey number is <strong>{jersey_number}</strong>.</p>
+#         <p>You can order your uniform here: <a href="{order_url}">Order Jersey</a></p>
+#         """
+#     )
+#     try:
+#         sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
+#         response = sg.send(message)
+#         print(response.status_code)
+#         print(response.body)
+#         print(response.headers)
+#         if registration and db:
+#             registration.confirmation_sent = True
+#             db.commit()
+#     except Exception as e:
+#         print(e)
 
 def process_inbound_email(email_body: str, db):
     print("📥 Processing inbound email")
