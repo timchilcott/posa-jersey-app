@@ -1,14 +1,8 @@
-from fastapi import FastAPI, Depends, Request, Form, status
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi import FastAPI, Depends, Request, Form, status, HTTPException
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from pydantic import BaseModel  # <-- Add this line
-from collections import defaultdict
-import os
-import csv
-import io
-import re
-
+from pydantic import BaseModel
 from .database import Base, engine, SessionLocal
 from .models import Player, Registration
 from .services.assign import assign_jersey_number
@@ -57,6 +51,29 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         "total_players": len(players),
     })
 
+# Pydantic model for updating player
+class PlayerUpdate(BaseModel):
+    full_name: str
+    parent_email: str
+    jersey_number: int
+
+@app.put("/players/{player_id}")  # <-- Ensure the correct method
+async def update_player(
+    player_id: int,
+    player: PlayerUpdate,  # <-- Receiving JSON input here
+    db: Session = Depends(get_db),
+):
+    db_player = db.query(Player).get(player_id)
+    if db_player:
+        db_player.full_name = player.full_name
+        db_player.parent_email = player.parent_email
+        db_player.jersey_number = player.jersey_number
+        db.commit()
+        db.refresh(db_player)  # Ensure fresh data
+        return db_player
+    else:
+        raise HTTPException(status_code=404, detail="Player not found")
+
 class PlayerCreate(BaseModel):
     full_name: str
     parent_email: str
@@ -94,22 +111,6 @@ def delete_player(player_id: int, db: Session = Depends(get_db)):
     player = db.query(Player).get(player_id)
     if player:
         db.delete(player)
-        db.commit()
-    return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
-
-@app.put("/players/{player_id}")  # <-- Change to PUT for update
-def update_player(
-    player_id: int,
-    full_name: str = Form(...),
-    parent_email: str = Form(...),
-    jersey_number: int = Form(...),
-    db: Session = Depends(get_db),
-):
-    player = db.query(Player).get(player_id)
-    if player:
-        player.full_name = full_name
-        player.parent_email = parent_email
-        player.jersey_number = jersey_number
         db.commit()
     return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
 
