@@ -13,7 +13,7 @@ import re
 from .database import Base, engine, SessionLocal
 from .models import Player, Registration
 from .services.assign import assign_jersey_number
-from .email import send_confirmation_email
+from .email import send_confirmation_email, process_inbound_email  # import your email parsing function
 
 app = FastAPI()
 templates = Jinja2Templates(directory="app/templates")
@@ -52,7 +52,6 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
                 "division": reg.division,
             })
 
-    # Sort divisions by predefined order
     sorted_players_by_sport = {}
     for sport, divisions in players_by_sport.items():
         sorted_divisions = dict(sorted(divisions.items(), key=lambda x: division_order.get(x[0], 999)))
@@ -63,7 +62,6 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         "players_by_sport": sorted_players_by_sport,
         "total_players": len(players),
     })
-
 
 @app.post("/players")
 def create_player(player: PlayerCreate, db: Session = Depends(get_db)):
@@ -125,3 +123,16 @@ def grouped_view(request: Request, db: Session = Depends(get_db)):
         year = datetime.strptime(player.dob, "%Y-%m-%d").year
         birth_year_groups[year].append(player)
     return templates.TemplateResponse("grouped.html", {"request": request, "groups": dict(birth_year_groups)})
+
+# New route for SendGrid Inbound Parse webhook
+@app.post("/email/receive")
+async def receive_email(request: Request):
+    form = await request.form()
+    raw_email = form.get("email")
+
+    if raw_email:
+        # Call your existing email parsing function here
+        process_inbound_email(raw_email)
+        return {"message": "Email received and processed"}
+    else:
+        return {"error": "No email content found in request"}
