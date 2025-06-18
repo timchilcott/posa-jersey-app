@@ -1,4 +1,6 @@
-sendgrid
-uvicorn
 fastapi
+uvicorn
 sqlalchemy
+sendgrid
+python-dotenv
+psycopg2-binary
