@@ -7,6 +7,7 @@ from .database import Base, engine, SessionLocal
 from .models import Player, Registration
 from .services.assign import assign_jersey_number
 from .email import send_confirmation_email, process_inbound_email
+from collections import defaultdict
 
 app = FastAPI()
 templates = Jinja2Templates(directory="app/templates")
