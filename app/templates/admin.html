@@ -1,7 +1,26 @@
 {% extends "base.html" %}
 {% block title %}POSA Admin{% endblock %}
 {% block content %}
-<p>Total players: {{ total_players }}</p>
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-4">
+        <div class="bg-white border rounded shadow-sm p-3 text-center">
+            <div class="fs-4 fw-bold text-dark">{{ total_players }}</div>
+            <small class="text-muted">Total Athletes</small>
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="bg-white border rounded shadow-sm p-3 text-center">
+            <div class="fs-4 fw-bold text-dark">{{ missing_emails }}</div>
+            <small class="text-muted">Missing Emails</small>
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="bg-white border rounded shadow-sm p-3 text-center">
+            <div class="fs-4 fw-bold text-dark">{{ missing_jerseys }}</div>
+            <small class="text-muted">Missing Jersey #</small>
+        </div>
+    </div>
+</div>
 <!-- Sport Tabs -->
 <ul class="nav nav-tabs" id="sportTabs" role="tablist">
     {% for sport, divisions in players_by_sport.items() %}

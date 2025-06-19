@@ -31,8 +31,15 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
     players = db.query(Player).all()
     division_order = {"U4": 0, "U6": 1, "U8": 2, "U10": 3, "U12": 4, "U14": 5}
     players_by_sport = defaultdict(lambda: defaultdict(list))
+    missing_emails = 0
+    missing_jerseys = 0
 
     for player in players:
+        if not player.parent_email:
+            missing_emails += 1
+        if not player.jersey_number:
+            missing_jerseys += 1
+
         for reg in player.registrations:
             players_by_sport[reg.sport][reg.division].append({
                 "id": player.id,
@@ -54,6 +61,8 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         "request": request,
         "players_by_sport": sorted_players_by_sport,
         "total_players": len(players),
+        "missing_emails": missing_emails,
+        "missing_jerseys": missing_jerseys,
     })
 
 class PlayerUpdate(BaseModel):
