@@ -2,6 +2,8 @@ from fastapi import FastAPI, Depends, Request, Form, status, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
+from fastapi.middleware.sessions import SessionMiddleware
+ main
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from .database import Base, engine, SessionLocal
