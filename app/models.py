@@ -40,3 +40,13 @@ class Registration(Base):
     __table_args__ = (
         UniqueConstraint("player_id", "sport", "season", name="uq_player_sport_season"),
     )
+
+
+class User(Base):
+    """Application user."""
+
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, nullable=False)
+    password_hash = Column(String, nullable=False)
