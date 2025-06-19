@@ -1,9 +1,11 @@
 fastapi
-uvicorn
-sqlalchemy
-sendgrid
-python-dotenv
-psycopg2-binary
+itsdangerous
 jinja2
-python-multipart
+passlib[bcrypt]
+psycopg2-binary
 pytest
+python-dotenv
+python-multipart
+sendgrid
+sqlalchemy
+uvicorn
