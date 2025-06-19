@@ -1,126 +1,94 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>POSA Admin - Players by Sport</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .missing {
-            color: #b30000;
-            font-weight: bold;
-        }
-        .tabs {
-            margin-bottom: 1.5rem;
-        }
-    </style>
-</head>
-<body class="bg-light">
-    <div class="container py-4">
-        <h1 class="mb-4">Players by Sport and Season</h1>
-
-        {% if request.query_params.error == "missing_info" %}
-            <div class="alert alert-danger">Missing info: email or jersey number not available.</div>
-        {% endif %}
-
-        <!-- Tabs for Sports -->
-        <ul class="nav nav-tabs tabs" id="sportTabs" role="tablist">
-            {% for sport in ['basketball', 'baseball', 'softball', 'volleyball', 'soccer', 'flag football'] %}
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link {% if loop.first %}active{% endif %}" id="{{ sport|replace(' ', '-') }}-tab" data-bs-toggle="tab" data-bs-target="#{{ sport|replace(' ', '-') }}" type="button" role="tab">
-                        {{ sport.title() }}
-                    </button>
-                </li>
+{% extends "base.html" %}
+{% block title %}POSA Admin - Players by Sport{% endblock %}
+{% block content %}
+<h1 class="mb-4">Players by Sport and Season</h1>
+{% if request.query_params.error == "missing_info" %}
+    <div class="alert alert-danger">Missing info: email or jersey number not available.</div>
+{% endif %}
+<ul class="nav nav-tabs mb-3" id="sportTabs" role="tablist">
+    {% for sport in ['basketball', 'baseball', 'softball', 'volleyball', 'soccer', 'flag football'] %}
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if loop.first %}active{% endif %}" id="{{ sport|replace(' ', '-') }}-tab" data-bs-toggle="tab" data-bs-target="#{{ sport|replace(' ', '-') }}" type="button" role="tab">
+                {{ sport.title() }}
+            </button>
+        </li>
+    {% endfor %}
+</ul>
+<div class="tab-content" id="sportTabsContent">
+    {% for sport in ['basketball', 'baseball', 'softball', 'volleyball', 'soccer', 'flag football'] %}
+        <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="{{ sport|replace(' ', '-') }}" role="tabpanel">
+            {% set sport_seasons = [] %}
+            {% for (s, season), regs in grouped.items() %}
+                {% if s|lower == sport %}
+                    {% set _ = sport_seasons.append((season, regs)) %}
+                {% endif %}
             {% endfor %}
-        </ul>
-
-        <!-- Tab Content -->
-        <div class="tab-content" id="sportTabsContent">
-            {% for sport in ['basketball', 'baseball', 'softball', 'volleyball', 'soccer', 'flag football'] %}
-                <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="{{ sport|replace(' ', '-') }}" role="tabpanel">
-                    {% set sport_seasons = [] %}
-                    {% for (s, season), regs in grouped.items() %}
-                     {% if s|lower == sport %}
-                            {% set _ = sport_seasons.append((season, regs)) %}
-                        {% endif %}
-                    {% endfor %}
-
-                    {% if sport_seasons %}
-                        {% for season, registrations in sport_seasons %}
-                            <div class="card my-4">
-                                <div class="card-header bg-primary text-white">
-                                    <strong>{{ sport.title() }} – {{ season }}</strong>
-                                </div>
-                                <div class="card-body p-0">
-                                    <table class="table table-striped mb-0">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>Player</th>
-                                                <th>Birth Year</th>
-                                                <th>Jersey #</th>
-                                                <th>Parent Email</th>
-                                                <th>Email Sent</th>
-                                                <th>Resend</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for reg in registrations %}
-                                                <tr>
-                                                    <td>{{ reg.player.full_name }}</td>
-                                                    <td>{{ reg.player.birth_year }}</td>
-                                                    <td class="{% if not reg.player.jersey_number %}missing{% endif %}">
-                                                        {{ reg.player.jersey_number or "—" }}
-                                                    </td>
-                                                    <td class="{% if not reg.player.parent_email %}missing{% endif %}">
-                                                        {{ reg.player.parent_email or "—" }}
-                                                    </td>
-                                                    <td>
-                                                        {% if reg.confirmation_sent %}
-                                                            ✅
-                                                        {% else %}
-                                                            ❌
-                                                        {% endif %}
-                                                    </td>
-                                                    <td>
-                                                        <form action="/admin/resend/{{ reg.id }}" method="get">
-                                                            <button class="btn btn-sm btn-outline-secondary" type="submit">Resend</button>
-                                                        </form>
-                                                    </td>
-                                                </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <div class="card-footer text-end text-muted small">
-                                    Total: {{ registrations|length }} players
-                                </div>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="alert alert-warning mt-4">No registrations for {{ sport.title() }}.</div>
-                    {% endif %}
-                </div>
-            {% endfor %}
+            {% if sport_seasons %}
+                {% for season, registrations in sport_seasons %}
+                    <div class="card my-4">
+                        <div class="card-header bg-primary text-white">
+                            <strong>{{ sport.title() }} – {{ season }}</strong>
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table table-striped mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Player</th>
+                                        <th>Birth Year</th>
+                                        <th>Jersey #</th>
+                                        <th>Parent Email</th>
+                                        <th>Email Sent</th>
+                                        <th>Resend</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for reg in registrations %}
+                                        <tr>
+                                            <td>{{ reg.player.full_name }}</td>
+                                            <td>{{ reg.player.birth_year }}</td>
+                                            <td class="{% if not reg.player.jersey_number %}missing{% endif %}">
+                                                {{ reg.player.jersey_number or "—" }}
+                                            </td>
+                                            <td class="{% if not reg.player.parent_email %}missing{% endif %}">
+                                                {{ reg.player.parent_email or "—" }}
+                                            </td>
+                                            <td>
+                                                {% if reg.confirmation_sent %}✅{% else %}❌{% endif %}
+                                            </td>
+                                            <td>
+                                                <form action="/admin/resend/{{ reg.id }}" method="get">
+                                                    <button class="btn btn-sm btn-outline-secondary" type="submit">Resend</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="card-footer text-end text-muted small">
+                            Total: {{ registrations|length }} players
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-warning mt-4">No registrations for {{ sport.title() }}.</div>
+            {% endif %}
         </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Persist active tab using localStorage
-        const tabs = document.querySelectorAll('#sportTabs button');
-        const activeTabId = localStorage.getItem('activeSportTab');
-
-        if (activeTabId) {
-            const tabToShow = document.querySelector(`#sportTabs button[data-bs-target="${activeTabId}"]`);
-            if (tabToShow) {
-                new bootstrap.Tab(tabToShow).show();
-            }
-        }
-
-        tabs.forEach(tab => {
-            tab.addEventListener('shown.bs.tab', (event) => {
-                localStorage.setItem('activeSportTab', event.target.dataset.bsTarget);
-            });
-        });
-    </script>
-</body>
-</html>
+    {% endfor %}
+</div>
+<script>
+const tabs = document.querySelectorAll('#sportTabs button');
+const activeTabId = localStorage.getItem('activeSportTab');
+if (activeTabId) {
+    const tabToShow = document.querySelector(`#sportTabs button[data-bs-target="${activeTabId}"]`);
+    if (tabToShow) {
+        new bootstrap.Tab(tabToShow).show();
+    }
+}
+tabs.forEach(tab => {
+    tab.addEventListener('shown.bs.tab', (event) => {
+        localStorage.setItem('activeSportTab', event.target.dataset.bsTarget);
+    });
+});
+</script>
+{% endblock %}
