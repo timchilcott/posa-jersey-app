@@ -7,9 +7,31 @@
     <link href="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/css/posa-sports.webflow.shared.f686eb855.css" rel="stylesheet">
     <style>
         body { font-family: 'Generalsans', Arial, sans-serif; }
-        .navbar-posa { background-color: #3898ec; }
+        .navbar-posa { background-color: #0d1932; }
         .navbar-posa .navbar-brand, .navbar-posa .nav-link { color: #fff; }
         .navbar-posa .nav-link:hover { color: #fff; opacity: 0.8; }
+
+        /* Override Webflow styles for Bootstrap nav components */
+        .nav-pills .nav-link {
+            color: #0d1932;
+            border: 1px solid #dee2e6;
+            border-radius: 50rem;
+        }
+        .nav-pills .nav-link.active {
+            color: #fff;
+            background-color: #0d1932;
+        }
+        .nav-tabs .nav-link {
+            border: 1px solid #dee2e6;
+            border-radius: 50rem !important;
+            color: #0d1932;
+            margin-bottom: 0;
+        }
+        .nav-tabs .nav-link.active {
+            background-color: #0d1932;
+            color: #fff;
+            border-color: #0d1932;
+        }
     </style>
 </head>
 <body>
