@@ -36,11 +36,13 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         for reg in player.registrations:
             players_by_sport[reg.sport][reg.division].append({
                 "id": player.id,
+                "registration_id": reg.id,
                 "full_name": player.full_name,
                 "parent_email": player.parent_email,
                 "jersey_number": player.jersey_number,
                 "sport": reg.sport,
                 "division": reg.division,
+                "confirmation_sent": reg.confirmation_sent,
             })
 
     sorted_players_by_sport = {}
@@ -88,7 +90,6 @@ def create_player(player: PlayerCreate, db: Session = Depends(get_db)):
     db.add(db_player)
     db.commit()
     db.refresh(db_player)
-    send_confirmation_email(db_player.parent_email, db_player.full_name, db_player.jersey_number, order_url="https://your-order-url.com")
     return db_player
 
 @app.get("/export")
@@ -122,3 +123,20 @@ async def receive_email(request: Request, db: Session = Depends(get_db)):
         return {"message": "Email received and processed"}
     else:
         return {"error": "No email content found in request"}
+
+
+@app.post("/registrations/{registration_id}/send_email")
+def send_registration_email(registration_id: int, db: Session = Depends(get_db)):
+    reg = db.query(Registration).get(registration_id)
+    if not reg:
+        raise HTTPException(status_code=404, detail="Registration not found")
+    player = reg.player
+    send_confirmation_email(
+        player.parent_email,
+        player.full_name,
+        player.jersey_number,
+        "https://your-order-url.com",
+        reg,
+        db,
+    )
+    return {"message": "Email sent"}

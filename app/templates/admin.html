@@ -49,11 +49,11 @@
                                 </thead>
                                 <tbody>
                                     {% for player in players %}
-                                        <tr data-player-id="{{ player.id }}">
+                                        <tr data-player-id="{{ player.id }}" data-reg-id="{{ player.registration_id }}">
                                             <td><span class="full-name">{{ player.full_name }}</span><input class="form-control d-none edit-full-name" value="{{ player.full_name }}"></td>
                                             <td><span class="jersey-number">{{ player.jersey_number }}</span><input class="form-control d-none edit-jersey-number" type="number" value="{{ player.jersey_number }}"></td>
                                             <td><span class="parent-email">{{ player.parent_email }}</span><input class="form-control d-none edit-parent-email" value="{{ player.parent_email }}"></td>
-                                            <td>
+                                            <td class="email-status">
                                                 {% if player.confirmation_sent %}
                                                     ✅
                                                 {% else %}
@@ -64,6 +64,7 @@
                                                 <button class="btn btn-sm btn-primary btn-edit">Edit</button>
                                                 <button class="btn btn-sm btn-success btn-save d-none">Save</button>
                                                 <button class="btn btn-sm btn-secondary btn-cancel d-none">Cancel</button>
+                                                <button class="btn btn-sm btn-info btn-send-email">Email</button>
                                                 <button class="btn btn-sm btn-danger btn-delete">Delete</button>
                                             </td>
                                         </tr>
@@ -147,6 +148,19 @@
                     } else {
                         alert("Failed to delete player.");
                     }
+                }
+            });
+        });
+
+        document.querySelectorAll(".btn-send-email").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                const row = btn.closest("tr");
+                const regId = row.dataset.regId;
+                const response = await fetch(`/registrations/${regId}/send_email`, { method: "POST" });
+                if (response.ok) {
+                    row.querySelector(".email-status").textContent = "✅";
+                } else {
+                    alert("Failed to send email.");
                 }
             });
         });
