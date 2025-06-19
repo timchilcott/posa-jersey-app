@@ -1,14 +1,19 @@
 fastapi
-uvicorn
-sqlalchemy
-sendgrid
-python-dotenv
-psycopg2-binary
+itsdangerous
 jinja2
-python-multipart
+passlib[bcrypt]
+psycopg2-binary
 pytest
+ hxlm72-codex/add-user-authentication-and-invite-system
+python-dotenv
+python-multipart
+sendgrid
+sqlalchemy
+uvicorn
+
  nv2hi5-codex/add-user-authentication-and-invite-system
 itsdangerous
 
 main
 passlib[bcrypt]
+ main
