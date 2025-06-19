@@ -4,22 +4,8 @@ jinja2
 passlib[bcrypt]
 psycopg2-binary
 pytest
- axgrjl-codex/add-user-authentication-and-invite-system
-
- hxlm72-codex/add-user-authentication-and-invite-system
- main
 python-dotenv
 python-multipart
 sendgrid
 sqlalchemy
 uvicorn
- axgrjl-codex/add-user-authentication-and-invite-system
-
-
- nv2hi5-codex/add-user-authentication-and-invite-system
-itsdangerous
-
-main
-passlib[bcrypt]
- main
- main
