@@ -137,8 +137,6 @@ def process_inbound_email(email_body: str, db):
                 )
                 db.add(reg)
                 db.commit()
-
-                send_confirmation_email(player.parent_email, player.full_name, player.jersey_number, "https://your-order-url.com", reg, db)
             else:
                 print(f"✔ Registration already exists for {player.full_name} in {division} {sport} {season}")
 
