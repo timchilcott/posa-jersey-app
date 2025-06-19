@@ -1,169 +1,153 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>POSA Admin Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="p-4">
-    <h1 class="mb-4">POSA Admin Dashboard</h1>
-    <p>Total players: {{ total_players }}</p>
-
-    <!-- Sport Tabs -->
-    <ul class="nav nav-tabs" id="sportTabs" role="tablist">
-        {% for sport, divisions in players_by_sport.items() %}
-            <li class="nav-item" role="presentation">
-                <button class="nav-link {% if loop.first %}active{% endif %}" id="tab-{{ sport|lower }}" data-bs-toggle="tab" data-bs-target="#pane-{{ sport|lower }}" type="button" role="tab">
-                    {{ sport.capitalize() }}
-                </button>
-            </li>
-        {% endfor %}
-    </ul>
-
-    <div class="tab-content mt-3" id="sportTabsContent">
-        {% for sport, divisions in players_by_sport.items() %}
-            <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="pane-{{ sport|lower }}" role="tabpanel">
-                <!-- Division Tabs -->
-                <ul class="nav nav-pills mb-3" id="divisionTabs-{{ sport|lower }}" role="tablist">
-                    {% for division, players in divisions.items() %}
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link {% if loop.first %}active{% endif %}" id="tab-{{ sport|lower }}-{{ division|replace(' ', '_')|replace('/', '_')|lower }}" data-bs-toggle="pill" data-bs-target="#pane-{{ sport|lower }}-{{ division|replace(' ', '_')|replace('/', '_')|lower }}" type="button" role="tab">
-                                {{ division }}
-                            </button>
-                        </li>
-                    {% endfor %}
-                </ul>
-
-                <div class="tab-content">
-                    {% for division, players in divisions.items() %}
-                        <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="pane-{{ sport|lower }}-{{ division|replace(' ', '_')|replace('/', '_')|lower }}" role="tabpanel">
-                            <table class="table table-bordered align-middle">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Jersey #</th>
-                                        <th>Parent Email</th>
-                                        <th>Email Sent</th>
-                                        <th>Actions</th>
+{% extends "base.html" %}
+{% block title %}POSA Admin Dashboard{% endblock %}
+{% block content %}
+<h1 class="mb-4">POSA Admin Dashboard</h1>
+<p>Total players: {{ total_players }}</p>
+<!-- Sport Tabs -->
+<ul class="nav nav-tabs" id="sportTabs" role="tablist">
+    {% for sport, divisions in players_by_sport.items() %}
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if loop.first %}active{% endif %}" id="tab-{{ sport|lower }}" data-bs-toggle="tab" data-bs-target="#pane-{{ sport|lower }}" type="button" role="tab">
+                {{ sport.capitalize() }}
+            </button>
+        </li>
+    {% endfor %}
+</ul>
+<div class="tab-content mt-3" id="sportTabsContent">
+    {% for sport, divisions in players_by_sport.items() %}
+        <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="pane-{{ sport|lower }}" role="tabpanel">
+            <ul class="nav nav-pills mb-3" id="divisionTabs-{{ sport|lower }}" role="tablist">
+                {% for division, players in divisions.items() %}
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link {% if loop.first %}active{% endif %}" id="tab-{{ sport|lower }}-{{ division|replace(' ', '_')|replace('/', '_')|lower }}" data-bs-toggle="pill" data-bs-target="#pane-{{ sport|lower }}-{{ division|replace(' ', '_')|replace('/', '_')|lower }}" type="button" role="tab">
+                            {{ division }}
+                        </button>
+                    </li>
+                {% endfor %}
+            </ul>
+            <div class="tab-content">
+                {% for division, players in divisions.items() %}
+                    <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="pane-{{ sport|lower }}-{{ division|replace(' ', '_')|replace('/', '_')|lower }}" role="tabpanel">
+                        <table class="table table-bordered align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Jersey #</th>
+                                    <th>Parent Email</th>
+                                    <th>Email Sent</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for player in players %}
+                                    <tr data-player-id="{{ player.id }}" data-reg-id="{{ player.registration_id }}">
+                                        <td><span class="full-name">{{ player.full_name }}</span><input class="form-control d-none edit-full-name" value="{{ player.full_name }}"></td>
+                                        <td><span class="jersey-number">{{ player.jersey_number }}</span><input class="form-control d-none edit-jersey-number" type="number" value="{{ player.jersey_number }}"></td>
+                                        <td><span class="parent-email">{{ player.parent_email }}</span><input class="form-control d-none edit-parent-email" value="{{ player.parent_email }}"></td>
+                                        <td class="email-status">
+                                            {% if player.confirmation_sent %}
+                                                ✅
+                                            {% else %}
+                                                ❌
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-primary btn-edit">Edit</button>
+                                            <button class="btn btn-sm btn-success btn-save d-none">Save</button>
+                                            <button class="btn btn-sm btn-secondary btn-cancel d-none">Cancel</button>
+                                            <button class="btn btn-sm btn-info btn-send-email">Email</button>
+                                            <button class="btn btn-sm btn-danger btn-delete">Delete</button>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    {% for player in players %}
-                                        <tr data-player-id="{{ player.id }}" data-reg-id="{{ player.registration_id }}">
-                                            <td><span class="full-name">{{ player.full_name }}</span><input class="form-control d-none edit-full-name" value="{{ player.full_name }}"></td>
-                                            <td><span class="jersey-number">{{ player.jersey_number }}</span><input class="form-control d-none edit-jersey-number" type="number" value="{{ player.jersey_number }}"></td>
-                                            <td><span class="parent-email">{{ player.parent_email }}</span><input class="form-control d-none edit-parent-email" value="{{ player.parent_email }}"></td>
-                                            <td class="email-status">
-                                                {% if player.confirmation_sent %}
-                                                    ✅
-                                                {% else %}
-                                                    ❌
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                <button class="btn btn-sm btn-primary btn-edit">Edit</button>
-                                                <button class="btn btn-sm btn-success btn-save d-none">Save</button>
-                                                <button class="btn btn-sm btn-secondary btn-cancel d-none">Cancel</button>
-                                                <button class="btn btn-sm btn-info btn-send-email">Email</button>
-                                                <button class="btn btn-sm btn-danger btn-delete">Delete</button>
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% endfor %}
-                </div>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endfor %}
             </div>
-        {% endfor %}
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.querySelectorAll(".btn-edit").forEach(btn => {
-            btn.addEventListener("click", () => {
-                const row = btn.closest("tr");
-                row.querySelectorAll("span").forEach(el => el.classList.add("d-none"));
-                row.querySelectorAll("input").forEach(el => el.classList.remove("d-none"));
-                row.querySelector(".btn-edit").classList.add("d-none");
-                row.querySelector(".btn-save").classList.remove("d-none");
-                row.querySelector(".btn-cancel").classList.remove("d-none");
-            });
+        </div>
+    {% endfor %}
+</div>
+<script>
+    document.querySelectorAll(".btn-edit").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const row = btn.closest("tr");
+            row.querySelectorAll("span").forEach(el => el.classList.add("d-none"));
+            row.querySelectorAll("input").forEach(el => el.classList.remove("d-none"));
+            row.querySelector(".btn-edit").classList.add("d-none");
+            row.querySelector(".btn-save").classList.remove("d-none");
+            row.querySelector(".btn-cancel").classList.remove("d-none");
         });
-
-        document.querySelectorAll(".btn-cancel").forEach(btn => {
-            btn.addEventListener("click", () => {
-                const row = btn.closest("tr");
-                row.querySelectorAll("input").forEach(el => {
-                    const key = el.classList.contains("edit-full-name") ? "full_name" :
-                                el.classList.contains("edit-jersey-number") ? "jersey_number" :
-                                "parent_email";
-                    el.value = row.querySelector(`span.${key.replace('_', '-')}`).textContent;
-                    el.classList.add("d-none");
-                });
+    });
+    document.querySelectorAll(".btn-cancel").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const row = btn.closest("tr");
+            row.querySelectorAll("input").forEach(el => {
+                const key = el.classList.contains("edit-full-name") ? "full_name" :
+                            el.classList.contains("edit-jersey-number") ? "jersey_number" :
+                            "parent_email";
+                el.value = row.querySelector(`span.${key.replace('_', '-')}`).textContent;
+                el.classList.add("d-none");
+            });
+            row.querySelectorAll("span").forEach(el => el.classList.remove("d-none"));
+            row.querySelector(".btn-save").classList.add("d-none");
+            row.querySelector(".btn-cancel").classList.add("d-none");
+            row.querySelector(".btn-edit").classList.remove("d-none");
+        });
+    });
+    document.querySelectorAll(".btn-save").forEach(btn => {
+        btn.addEventListener("click", async () => {
+            const row = btn.closest("tr");
+            const id = row.dataset.playerId;
+            const payload = {
+                full_name: row.querySelector(".edit-full-name").value,
+                jersey_number: parseInt(row.querySelector(".edit-jersey-number").value),
+                parent_email: row.querySelector(".edit-parent-email").value
+            };
+            const response = await fetch(`/players/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            if (response.ok) {
+                row.querySelector(".full-name").textContent = payload.full_name;
+                row.querySelector(".jersey-number").textContent = payload.jersey_number;
+                row.querySelector(".parent-email").textContent = payload.parent_email;
+                row.querySelectorAll("input").forEach(el => el.classList.add("d-none"));
                 row.querySelectorAll("span").forEach(el => el.classList.remove("d-none"));
                 row.querySelector(".btn-save").classList.add("d-none");
                 row.querySelector(".btn-cancel").classList.add("d-none");
                 row.querySelector(".btn-edit").classList.remove("d-none");
-            });
+            } else {
+                alert("Failed to update player.");
+            }
         });
-
-        document.querySelectorAll(".btn-save").forEach(btn => {
-            btn.addEventListener("click", async () => {
-                const row = btn.closest("tr");
-                const id = row.dataset.playerId;
-                const payload = {
-                    full_name: row.querySelector(".edit-full-name").value,
-                    jersey_number: parseInt(row.querySelector(".edit-jersey-number").value),
-                    parent_email: row.querySelector(".edit-parent-email").value
-                };
-                const response = await fetch(`/players/${id}`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
-                });
+    });
+    document.querySelectorAll(".btn-delete").forEach(btn => {
+        btn.addEventListener("click", async () => {
+            const row = btn.closest("tr");
+            const id = row.dataset.playerId;
+            if (confirm("Are you sure you want to delete this player?")) {
+                const response = await fetch(`/players/${id}`, { method: "DELETE" });
                 if (response.ok) {
-                    row.querySelector(".full-name").textContent = payload.full_name;
-                    row.querySelector(".jersey-number").textContent = payload.jersey_number;
-                    row.querySelector(".parent-email").textContent = payload.parent_email;
-                    row.querySelectorAll("input").forEach(el => el.classList.add("d-none"));
-                    row.querySelectorAll("span").forEach(el => el.classList.remove("d-none"));
-                    row.querySelector(".btn-save").classList.add("d-none");
-                    row.querySelector(".btn-cancel").classList.add("d-none");
-                    row.querySelector(".btn-edit").classList.remove("d-none");
+                    row.remove();
                 } else {
-                    alert("Failed to update player.");
+                    alert("Failed to delete player.");
                 }
-            });
+            }
         });
-
-        document.querySelectorAll(".btn-delete").forEach(btn => {
-            btn.addEventListener("click", async () => {
-                const row = btn.closest("tr");
-                const id = row.dataset.playerId;
-                if (confirm("Are you sure you want to delete this player?")) {
-                    const response = await fetch(`/players/${id}`, { method: "DELETE" });
-                    if (response.ok) {
-                        row.remove();
-                    } else {
-                        alert("Failed to delete player.");
-                    }
-                }
-            });
+    });
+    document.querySelectorAll(".btn-send-email").forEach(btn => {
+        btn.addEventListener("click", async () => {
+            const row = btn.closest("tr");
+            const regId = row.dataset.regId;
+            const response = await fetch(`/registrations/${regId}/send_email`, { method: "POST" });
+            if (response.ok) {
+                row.querySelector(".email-status").textContent = "✅";
+            } else {
+                alert("Failed to send email.");
+            }
         });
-
-        document.querySelectorAll(".btn-send-email").forEach(btn => {
-            btn.addEventListener("click", async () => {
-                const row = btn.closest("tr");
-                const regId = row.dataset.regId;
-                const response = await fetch(`/registrations/${regId}/send_email`, { method: "POST" });
-                if (response.ok) {
-                    row.querySelector(".email-status").textContent = "✅";
-                } else {
-                    alert("Failed to send email.");
-                }
-            });
-        });
-    </script>
-</body>
-</html>
+    });
+</script>
+{% endblock %}
