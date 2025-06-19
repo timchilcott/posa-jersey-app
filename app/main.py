@@ -75,7 +75,6 @@ async def update_player(player_id: int, player: PlayerUpdate, db: Session = Depe
 class PlayerCreate(BaseModel):
     full_name: str
     parent_email: str
-    jersey_number: int
 
 @app.post("/players")
 def create_player(player: PlayerCreate, db: Session = Depends(get_db)):
