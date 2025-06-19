@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine, MetaData, Table
 
-# Update this path if your database file is somewhere else
+# Use the same DATABASE_URL environment variable as app/database.py.
+# For a script within the application package, see app/scripts/add_email_column.py.
 DATABASE_URL = "sqlite:///./posa.db"
 
 engine = create_engine(DATABASE_URL)
