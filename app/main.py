@@ -8,7 +8,7 @@ from .database import Base, engine, SessionLocal
 from .models import Player, Registration, User
 from .auth import authenticate_user, create_user
 from .services.assign import assign_jersey_number
-from .email import send_confirmation_email, process_inbound_email
+from .email import send_confirmation_email, process_inbound_email, save_inbound_email
 from collections import defaultdict
 import csv
 import io
@@ -200,6 +200,7 @@ async def receive_email(request: Request, db: Session = Depends(get_db)):
     raw_email = form.get("email")
 
     if raw_email:
+        save_inbound_email(raw_email)
         process_inbound_email(raw_email, db)
         return {"message": "Email received and processed"}
     else:

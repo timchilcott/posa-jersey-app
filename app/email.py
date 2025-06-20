@@ -56,8 +56,17 @@ def send_confirmation_email(to_email, player_name, jersey_number, order_url, reg
 #     except Exception as e:
 #         print(e)
 
-def process_inbound_email(email_body: str, db):
-    print("📥 Processing inbound email")
+# Utility for capturing raw inbound emails
+def save_inbound_email(email_body: str, filename: str = "captured_email.txt") -> None:
+    """Persist the raw inbound email to a file for debugging."""
+    root_dir = os.path.dirname(os.path.dirname(__file__))
+    path = os.path.join(root_dir, filename)
+    try:
+        with open(path, "w") as f:
+            f.write(email_body)
+        print(f"📩 Saved inbound email to {path}")
+    except Exception as e:
+        print(f"❌ Failed to save inbound email: {e}")
 
 def process_inbound_email(email_body: str, db):
     print("📥 Processing inbound email")
