@@ -7,27 +7,42 @@ from sendgrid.helpers.mail import Mail
 from .models import Player, Registration
 from .services.assign import assign_jersey_number
 
+# Promo code mapping based on number of registrations in a single email
+PROMO_CODES = {
+    1: "Pines1Player",
+    2: "Pines2Players",
+    3: "Pines3Players",
+    4: "Pines4Players",
+    5: "Pines5Players",
+    6: "Pines6Players",
+    7: "Pines7Players",
+}
+
 print("📬 Loaded email.py")
 
 # Simplified for local/dev use – no actual email sending, just update flag
-def send_confirmation_email(to_email, player_name, jersey_number, order_url, registration=None, db=None):
-    print(f"[DEV MODE] Skipping sending email to {to_email} for {player_name} (#{jersey_number})")
+def send_confirmation_email(to_email, player_name, jersey_number, order_url, registration=None, db=None, promo_code=None):
+    promo_msg = f" Promo code: {promo_code}" if promo_code else ""
+    print(f"[DEV MODE] Skipping sending email to {to_email} for {player_name} (#{jersey_number}){promo_msg}")
 
     if registration and db:
         registration.confirmation_sent = True
         db.commit()
 
 # Optional: uncomment to send actual emails in production
-# def send_confirmation_email(to_email, player_name, jersey_number, order_url, registration=None, db=None):
+# def send_confirmation_email(to_email, player_name, jersey_number, order_url, registration=None, db=None, promo_code=None):
+#     html = f"""
+#         <p>Hi {player_name},</p>
+#         <p>Your jersey number is <strong>{jersey_number}</strong>.</p>
+#     """
+#     if promo_code:
+#         html += f"<p>Your promo code is <strong>{promo_code}</strong>. Use it during checkout for your free jersey.</p>"
+#     html += f'<p>You can order your uniform here: <a href="{order_url}">Order Jersey</a></p>'
 #     message = Mail(
 #         from_email="noreply@posasports.org",
 #         to_emails=to_email,
 #         subject="Your POSA Jersey Number",
-#         html_content=f"""
-#         <p>Hi {player_name},</p>
-#         <p>Your jersey number is <strong>{jersey_number}</strong>.</p>
-#         <p>You can order your uniform here: <a href="{order_url}">Order Jersey</a></p>
-#         """
+#         html_content=html,
 #     )
 #     try:
 #         sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
@@ -62,6 +77,8 @@ def process_inbound_email(email_body: str, db):
 
     if current_block:
         registrant_blocks.append(current_block)
+
+    parsed_regs = []
 
     for block in registrant_blocks:
         full_text = "\n".join(block)
@@ -108,37 +125,68 @@ def process_inbound_email(email_body: str, db):
                     sport = s
                     break
 
-            player = db.query(Player).filter_by(full_name=full_name).first()
-
-            if not player:
-                jersey_number = assign_jersey_number(db, division)
-                player = Player(full_name=full_name, parent_email=parent_email, jersey_number=jersey_number)
-                db.add(player)
-                db.commit()
-                db.refresh(player)
-
-            existing_reg = db.query(Registration).filter_by(
-                player_id=player.id,
-                division=division,
-                season=season,
-                sport=sport
-            ).first()
-
-            if not existing_reg:
-                reg = Registration(
-                    player_id=player.id,
-                    program=program,
-                    division=division,
-                    sport=sport,
-                    season=season,
-                    order_number=order_number,
-                    order_date=order_date,
-                    confirmation_sent=False
-                )
-                db.add(reg)
-                db.commit()
-            else:
-                print(f"✔ Registration already exists for {player.full_name} in {division} {sport} {season}")
+            parsed_regs.append({
+                "full_name": full_name,
+                "program": program,
+                "division": division,
+                "parent_email": parent_email,
+                "order_number": order_number,
+                "order_date": order_date,
+                "sport": sport,
+                "season": season,
+            })
 
         except Exception as e:
             print(f"❌ Error processing registrant block: {e}")
+
+    promo_code = PROMO_CODES.get(len(parsed_regs))
+
+    for entry in parsed_regs:
+        player = db.query(Player).filter_by(full_name=entry["full_name"]).first()
+
+        if not player:
+            jersey_number = assign_jersey_number(db, entry["division"])
+            player = Player(
+                full_name=entry["full_name"],
+                parent_email=entry["parent_email"],
+                jersey_number=jersey_number,
+            )
+            db.add(player)
+            db.commit()
+            db.refresh(player)
+
+        existing_reg = db.query(Registration).filter_by(
+            player_id=player.id,
+            division=entry["division"],
+            season=entry["season"],
+            sport=entry["sport"],
+        ).first()
+
+        if not existing_reg:
+            reg = Registration(
+                player_id=player.id,
+                program=entry["program"],
+                division=entry["division"],
+                sport=entry["sport"],
+                season=entry["season"],
+                order_number=entry["order_number"],
+                order_date=entry["order_date"],
+                confirmation_sent=False,
+            )
+            db.add(reg)
+            db.commit()
+
+            # Auto email sending disabled. Uncomment to enable.
+            # send_confirmation_email(
+            #     player.parent_email,
+            #     player.full_name,
+            #     player.jersey_number,
+            #     "https://your-order-url.com",
+            #     reg,
+            #     db,
+            #     promo_code=promo_code,
+            # )
+        else:
+            print(
+                f"✔ Registration already exists for {player.full_name} in {entry['division']} {entry['sport']} {entry['season']}"
+            )
