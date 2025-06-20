@@ -31,6 +31,7 @@ class Registration(Base):
     season = Column(String, nullable=False)
     order_number = Column(String, nullable=True)
     order_date = Column(DateTime, nullable=True)
+    promo_code = Column(String, nullable=True)
 
     confirmation_sent = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)

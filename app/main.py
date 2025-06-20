@@ -220,5 +220,6 @@ def send_registration_email(registration_id: int, request: Request, db: Session 
         "https://your-order-url.com",
         reg,
         db,
+        promo_code=reg.promo_code,
     )
     return {"message": "Email sent"}
