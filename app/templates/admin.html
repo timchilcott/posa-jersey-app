@@ -162,6 +162,7 @@
             const response = await fetch(`/registrations/${regId}/send_email`, { method: "POST" });
             if (response.ok) {
                 row.querySelector(".email-status").textContent = "✅";
+                alert("Confirmation email sent.");
             } else {
                 alert("Failed to send email.");
             }
