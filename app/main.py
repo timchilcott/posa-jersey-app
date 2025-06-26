@@ -196,6 +196,11 @@ class PlayerCreate(BaseModel):
     full_name: str
     parent_email: str
 
+class InlinePlayerCreate(PlayerCreate):
+    sport: str
+    division: str
+    season: str
+
 @app.post("/players")
 def create_player(player: PlayerCreate, request: Request, db: Session = Depends(get_db)):
     require_login(request)
@@ -210,6 +215,38 @@ def create_player(player: PlayerCreate, request: Request, db: Session = Depends(
     db.commit()
     db.refresh(db_player)
     return db_player
+
+
+@app.post("/players/inline")
+def create_player_inline(player: InlinePlayerCreate, request: Request, db: Session = Depends(get_db)):
+    require_login(request)
+    jersey_number = assign_jersey_number(db, player.division)
+    db_player = Player(
+        full_name=player.full_name,
+        parent_email=player.parent_email,
+        jersey_number=jersey_number,
+    )
+    db.add(db_player)
+    db.flush()
+    reg = Registration(
+        player_id=db_player.id,
+        program=f"{player.season} {player.sport}",
+        division=player.division,
+        sport=player.sport.strip().lower(),
+        season=player.season,
+    )
+    db.add(reg)
+    db.commit()
+    return {
+        "id": db_player.id,
+        "registration_id": reg.id,
+        "full_name": db_player.full_name,
+        "parent_email": db_player.parent_email,
+        "jersey_number": db_player.jersey_number,
+        "sport": player.sport.strip().lower(),
+        "division": player.division,
+        "confirmation_sent": reg.confirmation_sent,
+    }
 
 @app.get("/export")
 def export_players_csv(request: Request, db: Session = Depends(get_db)):

@@ -56,7 +56,7 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody data-sport="{{ sport|lower }}" data-division="{{ division }}">
                                 {% for player in players %}
                                     <tr data-player-id="{{ player.id }}" data-reg-id="{{ player.registration_id }}">
                                         <td><span class="full-name">{{ player.full_name }}</span><input class="form-control d-none edit-full-name" value="{{ player.full_name }}"></td>
@@ -78,6 +78,21 @@
                                         </td>
                                     </tr>
                                 {% endfor %}
+                                <tr class="add-row">
+                                    <td colspan="5">
+                                        <button class="btn btn-sm btn-primary btn-show-add-form">Add Player</button>
+                                    </td>
+                                </tr>
+                                <tr class="add-form-row d-none">
+                                    <td><input class="form-control new-full-name" placeholder="Full Name"></td>
+                                    <td>-</td>
+                                    <td><input class="form-control new-parent-email" placeholder="Parent Email"></td>
+                                    <td></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-success btn-add-save">Save</button>
+                                        <button class="btn btn-sm btn-secondary btn-add-cancel">Cancel</button>
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -87,84 +102,150 @@
     {% endfor %}
 </div>
 <script>
-    document.querySelectorAll(".btn-edit").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const row = btn.closest("tr");
-            row.querySelectorAll("span").forEach(el => el.classList.add("d-none"));
-            row.querySelectorAll("input").forEach(el => el.classList.remove("d-none"));
-            row.querySelector(".btn-edit").classList.add("d-none");
-            row.querySelector(".btn-save").classList.remove("d-none");
-            row.querySelector(".btn-cancel").classList.remove("d-none");
+    function editHandler(event) {
+        const row = event.currentTarget.closest("tr");
+        row.querySelectorAll("span").forEach(el => el.classList.add("d-none"));
+        row.querySelectorAll("input").forEach(el => el.classList.remove("d-none"));
+        row.querySelector(".btn-edit").classList.add("d-none");
+        row.querySelector(".btn-save").classList.remove("d-none");
+        row.querySelector(".btn-cancel").classList.remove("d-none");
+    }
+
+    function cancelHandler(event) {
+        const row = event.currentTarget.closest("tr");
+        row.querySelectorAll("input").forEach(el => {
+            const key = el.classList.contains("edit-full-name") ? "full_name" :
+                        el.classList.contains("edit-jersey-number") ? "jersey_number" :
+                        "parent_email";
+            el.value = row.querySelector(`span.${key.replace('_', '-')}`).textContent;
+            el.classList.add("d-none");
         });
-    });
-    document.querySelectorAll(".btn-cancel").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const row = btn.closest("tr");
-            row.querySelectorAll("input").forEach(el => {
-                const key = el.classList.contains("edit-full-name") ? "full_name" :
-                            el.classList.contains("edit-jersey-number") ? "jersey_number" :
-                            "parent_email";
-                el.value = row.querySelector(`span.${key.replace('_', '-')}`).textContent;
-                el.classList.add("d-none");
-            });
+        row.querySelectorAll("span").forEach(el => el.classList.remove("d-none"));
+        row.querySelector(".btn-save").classList.add("d-none");
+        row.querySelector(".btn-cancel").classList.add("d-none");
+        row.querySelector(".btn-edit").classList.remove("d-none");
+    }
+
+    async function saveHandler(event) {
+        const row = event.currentTarget.closest("tr");
+        const id = row.dataset.playerId;
+        const payload = {
+            full_name: row.querySelector(".edit-full-name").value,
+            jersey_number: parseInt(row.querySelector(".edit-jersey-number").value),
+            parent_email: row.querySelector(".edit-parent-email").value
+        };
+        const response = await fetch(`/players/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        if (response.ok) {
+            row.querySelector(".full-name").textContent = payload.full_name;
+            row.querySelector(".jersey-number").textContent = payload.jersey_number;
+            row.querySelector(".parent-email").textContent = payload.parent_email;
+            row.querySelectorAll("input").forEach(el => el.classList.add("d-none"));
             row.querySelectorAll("span").forEach(el => el.classList.remove("d-none"));
             row.querySelector(".btn-save").classList.add("d-none");
             row.querySelector(".btn-cancel").classList.add("d-none");
             row.querySelector(".btn-edit").classList.remove("d-none");
+        } else {
+            alert("Failed to update player.");
+        }
+    }
+
+    async function deleteHandler(event) {
+        const row = event.currentTarget.closest("tr");
+        const id = row.dataset.playerId;
+        if (confirm("Are you sure you want to delete this player?")) {
+            const response = await fetch(`/players/${id}`, { method: "DELETE" });
+            if (response.ok) {
+                row.remove();
+            } else {
+                alert("Failed to delete player.");
+            }
+        }
+    }
+
+    async function emailHandler(event) {
+        const row = event.currentTarget.closest("tr");
+        const regId = row.dataset.regId;
+        const response = await fetch(`/registrations/${regId}/send_email`, { method: "POST" });
+        if (response.ok) {
+            row.querySelector(".email-status").textContent = "✅";
+        } else {
+            alert("Failed to send email.");
+        }
+    }
+
+    function attachRowHandlers(row) {
+        row.querySelector(".btn-edit")?.addEventListener("click", editHandler);
+        row.querySelector(".btn-cancel")?.addEventListener("click", cancelHandler);
+        row.querySelector(".btn-save")?.addEventListener("click", saveHandler);
+        row.querySelector(".btn-delete")?.addEventListener("click", deleteHandler);
+        row.querySelector(".btn-send-email")?.addEventListener("click", emailHandler);
+    }
+
+    document.querySelectorAll("tbody tr[data-player-id]").forEach(attachRowHandlers);
+
+    document.querySelectorAll(".btn-show-add-form").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const tbody = btn.closest("tbody");
+            tbody.querySelector(".add-row").classList.add("d-none");
+            tbody.querySelector(".add-form-row").classList.remove("d-none");
         });
     });
-    document.querySelectorAll(".btn-save").forEach(btn => {
+
+    document.querySelectorAll(".btn-add-cancel").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const tbody = btn.closest("tbody");
+            tbody.querySelector(".add-form-row").classList.add("d-none");
+            tbody.querySelector(".add-row").classList.remove("d-none");
+            tbody.querySelector(".new-full-name").value = "";
+            tbody.querySelector(".new-parent-email").value = "";
+        });
+    });
+
+    document.querySelectorAll(".btn-add-save").forEach(btn => {
         btn.addEventListener("click", async () => {
-            const row = btn.closest("tr");
-            const id = row.dataset.playerId;
+            const tbody = btn.closest("tbody");
             const payload = {
-                full_name: row.querySelector(".edit-full-name").value,
-                jersey_number: parseInt(row.querySelector(".edit-jersey-number").value),
-                parent_email: row.querySelector(".edit-parent-email").value
+                full_name: tbody.querySelector(".new-full-name").value,
+                parent_email: tbody.querySelector(".new-parent-email").value,
+                sport: tbody.dataset.sport,
+                division: tbody.dataset.division,
+                season: new Date().getFullYear().toString()
             };
-            const response = await fetch(`/players/${id}`, {
-                method: "PUT",
+            const response = await fetch("/players/inline", {
+                method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
             if (response.ok) {
-                row.querySelector(".full-name").textContent = payload.full_name;
-                row.querySelector(".jersey-number").textContent = payload.jersey_number;
-                row.querySelector(".parent-email").textContent = payload.parent_email;
-                row.querySelectorAll("input").forEach(el => el.classList.add("d-none"));
-                row.querySelectorAll("span").forEach(el => el.classList.remove("d-none"));
-                row.querySelector(".btn-save").classList.add("d-none");
-                row.querySelector(".btn-cancel").classList.add("d-none");
-                row.querySelector(".btn-edit").classList.remove("d-none");
+                const data = await response.json();
+                const row = document.createElement("tr");
+                row.dataset.playerId = data.id;
+                row.dataset.regId = data.registration_id;
+                row.innerHTML = `
+                    <td><span class="full-name">${data.full_name}</span><input class="form-control d-none edit-full-name" value="${data.full_name}"></td>
+                    <td><span class="jersey-number">${data.jersey_number}</span><input class="form-control d-none edit-jersey-number" type="number" value="${data.jersey_number}"></td>
+                    <td><span class="parent-email">${data.parent_email}</span><input class="form-control d-none edit-parent-email" value="${data.parent_email}"></td>
+                    <td class="email-status">❌</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary btn-edit">Edit</button>
+                        <button class="btn btn-sm btn-success btn-save d-none">Save</button>
+                        <button class="btn btn-sm btn-secondary btn-cancel d-none">Cancel</button>
+                        <button class="btn btn-sm btn-info btn-send-email">Email</button>
+                        <button class="btn btn-sm btn-danger btn-delete">Delete</button>
+                    </td>
+                `;
+                tbody.querySelector(".add-form-row").before(row);
+                attachRowHandlers(row);
+                tbody.querySelector(".add-form-row").classList.add("d-none");
+                tbody.querySelector(".add-row").classList.remove("d-none");
+                tbody.querySelector(".new-full-name").value = "";
+                tbody.querySelector(".new-parent-email").value = "";
             } else {
-                alert("Failed to update player.");
-            }
-        });
-    });
-    document.querySelectorAll(".btn-delete").forEach(btn => {
-        btn.addEventListener("click", async () => {
-            const row = btn.closest("tr");
-            const id = row.dataset.playerId;
-            if (confirm("Are you sure you want to delete this player?")) {
-                const response = await fetch(`/players/${id}`, { method: "DELETE" });
-                if (response.ok) {
-                    row.remove();
-                } else {
-                    alert("Failed to delete player.");
-                }
-            }
-        });
-    });
-    document.querySelectorAll(".btn-send-email").forEach(btn => {
-        btn.addEventListener("click", async () => {
-            const row = btn.closest("tr");
-            const regId = row.dataset.regId;
-            const response = await fetch(`/registrations/${regId}/send_email`, { method: "POST" });
-            if (response.ok) {
-                row.querySelector(".email-status").textContent = "✅";
-                console.log("Email sent successfully");
-            } else {
-                alert("Failed to send email.");
+                alert("Failed to add player.");
             }
         });
     });
