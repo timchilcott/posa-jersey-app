@@ -9,3 +9,4 @@ python-multipart
 sendgrid
 sqlalchemy
 uvicorn
+beautifulsoup4

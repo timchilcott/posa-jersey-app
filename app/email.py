@@ -1,5 +1,7 @@
 import os
 import re
+import email
+from bs4 import BeautifulSoup
 from datetime import datetime
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
@@ -71,11 +73,41 @@ def save_inbound_email(email_body: str, filename: str = "captured_email.txt") ->
 def process_inbound_email(email_body: str, db):
     print("📥 Processing inbound email")
 
+    msg = email.message_from_string(email_body)
+    text_content = None
+
+    if msg.is_multipart():
+        for part in msg.walk():
+            content_type = part.get_content_type()
+            if content_type == "text/plain":
+                charset = part.get_content_charset() or "utf-8"
+                text_content = part.get_payload(decode=True).decode(charset, errors="replace")
+                break
+        if text_content is None:
+            for part in msg.walk():
+                if part.get_content_type() == "text/html":
+                    charset = part.get_content_charset() or "utf-8"
+                    html = part.get_payload(decode=True).decode(charset, errors="replace")
+                    text_content = BeautifulSoup(html, "html.parser").get_text()
+                    break
+    else:
+        if msg.get_content_type() == "text/plain":
+            charset = msg.get_content_charset() or "utf-8"
+            text_content = msg.get_payload(decode=True).decode(charset, errors="replace")
+        elif msg.get_content_type() == "text/html":
+            charset = msg.get_content_charset() or "utf-8"
+            html = msg.get_payload(decode=True).decode(charset, errors="replace")
+            text_content = BeautifulSoup(html, "html.parser").get_text()
+
+    if text_content is None:
+        text_content = email_body
+
     # Clean up formatting issues
-    email_body = email_body.replace("\r\n", "\n").replace("=\n", "").strip()
+    text_content = text_content.replace("\r\n", "\n").replace("=\n", "").strip()
+
+    lines = text_content.splitlines()
 
     # Split by lines and chunk into blocks per registrant
-    lines = email_body.splitlines()
     registrant_blocks = []
     current_block = []
 
@@ -101,12 +133,12 @@ def process_inbound_email(email_body: str, db):
             continue
 
         try:
-            name_match = re.search(r"Name:\s*(.+)", full_text)
-            program_match = re.search(r"Program:\s*(.+)", full_text)
-            division_match = re.search(r"Division:\s*(.+)", full_text)
-            parent_email_match = re.search(r"Parent Email:\s*(.+)", full_text)
-            order_number_match = re.search(r"Order Number:\s*(.+)", full_text)
-            order_date_match = re.search(r"Order Date:\s*(.+)", full_text)
+            name_match = re.search(r"Name:\s*(.+)", full_text, re.IGNORECASE)
+            program_match = re.search(r"Program:\s*(.+)", full_text, re.IGNORECASE)
+            division_match = re.search(r"Division:\s*(.+)", full_text, re.IGNORECASE)
+            parent_email_match = re.search(r"Parent Email:\s*(.+)", full_text, re.IGNORECASE)
+            order_number_match = re.search(r"Order Number:\s*(.+)", full_text, re.IGNORECASE)
+            order_date_match = re.search(r"Order Date:\s*(.+)", full_text, re.IGNORECASE)
 
             if not all([name_match, program_match, division_match, parent_email_match]):
                 print("❌ Skipping incomplete entry")
