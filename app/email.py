@@ -78,6 +78,7 @@ def process_inbound_email(email_body: str, db):
 
     msg = email.message_from_string(email_body)
     text_content = None
+    html_content = None
 
     if msg.is_multipart():
         for part in msg.walk():
@@ -90,8 +91,8 @@ def process_inbound_email(email_body: str, db):
             for part in msg.walk():
                 if part.get_content_type() == "text/html":
                     charset = part.get_content_charset() or "utf-8"
-                    html = part.get_payload(decode=True).decode(charset, errors="replace")
-                    text_content = BeautifulSoup(html, "html.parser").get_text()
+                    html_content = part.get_payload(decode=True).decode(charset, errors="replace")
+                    text_content = BeautifulSoup(html_content, "html.parser").get_text()
                     break
     else:
         if msg.get_content_type() == "text/plain":
@@ -99,10 +100,10 @@ def process_inbound_email(email_body: str, db):
             text_content = msg.get_payload(decode=True).decode(charset, errors="replace")
         elif msg.get_content_type() == "text/html":
             charset = msg.get_content_charset() or "utf-8"
-            html = msg.get_payload(decode=True).decode(charset, errors="replace")
-            text_content = BeautifulSoup(html, "html.parser").get_text()
+            html_content = msg.get_payload(decode=True).decode(charset, errors="replace")
+            text_content = BeautifulSoup(html_content, "html.parser").get_text()
 
-    if text_content is None:
+    if text_content is None or not re.search(r"Name:\s*", text_content, re.IGNORECASE):
         text_content = email_body
 
     # Clean up formatting issues
@@ -192,6 +193,75 @@ def process_inbound_email(email_body: str, db):
 
         except Exception as e:
             print(f"❌ Error processing registrant block: {e}")
+
+    if not parsed_regs and html_content:
+        try:
+            soup = BeautifulSoup(html_content, "html.parser")
+            order_table = None
+            for table in soup.find_all("table"):
+                if table.find(string=re.compile("Order Details", re.IGNORECASE)):
+                    order_table = table
+                    break
+
+            if order_table:
+                order_number = None
+                order_date = None
+
+                for row in order_table.find_all("tr"):
+                    cells = row.find_all(["td", "th"])
+                    if len(cells) < 2:
+                        continue
+                    header = cells[0].get_text(strip=True)
+                    value = cells[1].get_text(strip=True)
+                    if re.search("Order Number", header, re.IGNORECASE):
+                        order_number = value
+                    elif re.search("Order Date", header, re.IGNORECASE):
+                        try:
+                            order_date = datetime.strptime(value, "%B %d, %Y")
+                        except Exception:
+                            order_date = None
+
+                for row in order_table.find_all("tr"):
+                    spans = row.find_all("span")
+                    if len(spans) >= 2:
+                        full_name = spans[0].get_text(strip=True)
+                        prog_div = spans[1].get_text(strip=True)
+                        if " - " in prog_div:
+                            program, division = [p.strip() for p in prog_div.split(" - ", 1)]
+                        else:
+                            program = prog_div.strip()
+                            division = ""
+                        parent_email = msg.get("To")
+
+                        sport = "unknown"
+                        season = "unknown"
+                        parts = program.lower().split()
+                        if "fall" in parts:
+                            season = "fall"
+                        elif "spring" in parts:
+                            season = "spring"
+                        elif "summer" in parts:
+                            season = "summer"
+                        elif "winter" in parts:
+                            season = "winter"
+
+                        for s in ["soccer", "basketball", "baseball", "softball", "volleyball", "flag"]:
+                            if s in parts:
+                                sport = s
+                                break
+
+                        parsed_regs.append({
+                            "full_name": full_name,
+                            "program": program,
+                            "division": division,
+                            "parent_email": parent_email,
+                            "order_number": order_number,
+                            "order_date": order_date,
+                            "sport": sport,
+                            "season": season,
+                        })
+        except Exception as e:
+            print(f"❌ Error parsing order details table: {e}")
 
     promo_code = PROMO_CODES.get(len(parsed_regs))
 
