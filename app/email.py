@@ -140,8 +140,15 @@ def process_inbound_email(email_body: str, db):
             order_number_match = re.search(r"Order Number:\s*(.+)", full_text, re.IGNORECASE)
             order_date_match = re.search(r"Order Date:\s*(.+)", full_text, re.IGNORECASE)
 
-            if not all([name_match, program_match, division_match, parent_email_match]):
-                print("❌ Skipping incomplete entry")
+            missing = [key for key, match in {
+                "Name": name_match,
+                "Program": program_match,
+                "Division": division_match,
+                "Parent Email": parent_email_match,
+            }.items() if not match]
+
+            if missing:
+                print(f"❌ Skipping entry, missing: {', '.join(missing)}")
                 continue
 
             full_name = name_match.group(1).strip()
