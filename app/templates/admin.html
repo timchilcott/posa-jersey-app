@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}POSA Admin{% endblock %}
 {% block content %}
+<div id="email-msg" class="alert alert-success d-none" role="alert"></div>
 <div class="row g-3 mb-4">
     <div class="col-12 col-md-4">
         <div class="bg-white border rounded shadow-sm p-3 text-center">
@@ -155,6 +156,7 @@
             }
         });
     });
+    const msgBox = document.getElementById("email-msg");
     document.querySelectorAll(".btn-send-email").forEach(btn => {
         btn.addEventListener("click", async () => {
             const row = btn.closest("tr");
@@ -162,8 +164,14 @@
             const response = await fetch(`/registrations/${regId}/send_email`, { method: "POST" });
             if (response.ok) {
                 row.querySelector(".email-status").textContent = "✅";
+                msgBox.textContent = "Email sent successfully";
+                msgBox.classList.remove("d-none", "alert-danger");
+                msgBox.classList.add("alert-success");
+                setTimeout(() => msgBox.classList.add("d-none"), 3000);
             } else {
-                alert("Failed to send email.");
+                msgBox.textContent = "Failed to send email";
+                msgBox.classList.remove("d-none", "alert-success");
+                msgBox.classList.add("alert-danger");
             }
         });
     });
