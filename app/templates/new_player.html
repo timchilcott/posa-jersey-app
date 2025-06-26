@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Add Player{% endblock %}
+{% block content %}
+<h2>Add Player</h2>
+<form method="post">
+    <div class="mb-3">
+        <label class="form-label">Full Name</label>
+        <input type="text" name="full_name" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Parent Email</label>
+        <input type="email" name="parent_email" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Sport</label>
+        <input type="text" name="sport" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Division</label>
+        <input type="text" name="division" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Season</label>
+        <input type="text" name="season" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Add Player</button>
+    <a href="/admin" class="btn btn-secondary ms-2">Cancel</a>
+</form>
+{% endblock %}

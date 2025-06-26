@@ -133,6 +133,44 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         "missing_jerseys": missing_jerseys,
     })
 
+
+@app.get("/players/new", response_class=HTMLResponse)
+def new_player_form(request: Request):
+    """Render form to add a player manually."""
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        return RedirectResponse(exc.headers["Location"], status_code=exc.status_code)
+    return templates.TemplateResponse("new_player.html", {"request": request})
+
+
+@app.post("/players/new")
+def create_player_manual(
+    request: Request,
+    full_name: str = Form(...),
+    parent_email: str = Form(...),
+    sport: str = Form(...),
+    division: str = Form(...),
+    season: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    """Create player and registration from form submission."""
+    require_login(request)
+    jersey_number = assign_jersey_number(db, division)
+    player = Player(full_name=full_name, parent_email=parent_email, jersey_number=jersey_number)
+    db.add(player)
+    db.flush()
+    reg = Registration(
+        player_id=player.id,
+        program=f"{season} {sport}",
+        division=division,
+        sport=sport,
+        season=season,
+    )
+    db.add(reg)
+    db.commit()
+    return RedirectResponse("/admin", status_code=302)
+
 class PlayerUpdate(BaseModel):
     full_name: str
     parent_email: str
