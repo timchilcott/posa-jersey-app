@@ -30,3 +30,7 @@ Run the unit tests with:
 pytest -q
 ```
 
+### Debugging inbound emails
+
+When using the `/email/receive` endpoint in development, inbound messages are saved to timestamped files like `captured_email_20240101_123456.txt` in the project root. This helps inspect the raw email content for troubleshooting.
+

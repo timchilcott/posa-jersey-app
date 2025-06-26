@@ -57,9 +57,12 @@ def send_confirmation_email(to_email, player_name, jersey_number, order_url, reg
 #         print(e)
 
 # Utility for capturing raw inbound emails
-def save_inbound_email(email_body: str, filename: str = "captured_email.txt") -> None:
+def save_inbound_email(email_body: str, filename: str | None = None) -> None:
     """Persist the raw inbound email to a file for debugging."""
     root_dir = os.path.dirname(os.path.dirname(__file__))
+    if not filename:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"captured_email_{timestamp}.txt"
     path = os.path.join(root_dir, filename)
     try:
         with open(path, "w") as f:
