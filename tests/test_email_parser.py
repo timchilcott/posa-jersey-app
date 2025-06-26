@@ -98,3 +98,41 @@ def test_bluesombrero_fixture_parsing(db_session):
     assert reg.division == 'U12'
     assert reg.order_number == '987654321'
     assert reg.order_date == datetime(2024, 2, 10)
+
+
+def test_update_division_for_existing_player(db_session):
+    first = MIMEMultipart('alternative')
+    first['Subject'] = 'First'
+    html1 = """
+    <html><body>
+    Name: John Doe<br>
+    Program: Spring Soccer<br>
+    Division: U10<br>
+    Parent Email: parent@example.com<br>
+    </body></html>
+    """
+    first.attach(MIMEText(html1, 'html'))
+
+    process_inbound_email(first.as_string(), db_session)
+
+    player = db_session.query(Player).filter_by(full_name='John Doe').first()
+    reg = db_session.query(Registration).filter_by(player_id=player.id).first()
+    assert reg.division == 'U10'
+
+    second = MIMEMultipart('alternative')
+    second['Subject'] = 'Second'
+    html2 = """
+    <html><body>
+    Name: John Doe<br>
+    Program: Spring Soccer<br>
+    Division: U12<br>
+    Parent Email: parent@example.com<br>
+    </body></html>
+    """
+    second.attach(MIMEText(html2, 'html'))
+
+    process_inbound_email(second.as_string(), db_session)
+
+    reg_updated = db_session.query(Registration).filter_by(player_id=player.id, sport='soccer', season='spring').first()
+    assert reg_updated.division == 'U12'
+    assert db_session.query(Registration).count() == 1
