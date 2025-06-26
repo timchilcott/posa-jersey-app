@@ -23,14 +23,21 @@ def db_session():
 
 
 def test_logs_missing_single_field(db_session, capsys):
-    body = """Name: John Doe\nProgram: Spring Soccer\nParent Email: p@example.com"""
+    body = """
+Name: John Doe
+Program: Spring Soccer
+Parent Email: p@example.com
+"""
     process_inbound_email(body, db_session)
     captured = capsys.readouterr().out
     assert "missing: Division" in captured
 
 
 def test_logs_missing_multiple_fields(db_session, capsys):
-    body = """Program: Spring Soccer\nDivision: U12"""
+    body = """
+Program: Spring Soccer
+Division: U12
+"""
     process_inbound_email(body, db_session)
     captured = capsys.readouterr().out
     # Order of fields may vary

@@ -3,6 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from datetime import datetime
 
 # Ensure database URL is set before importing application modules
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
@@ -49,7 +50,10 @@ def test_html_email_parsing(db_session):
     assert reg.program == 'Fall Soccer'
     assert reg.division == 'U10'
 
+ codex/add-test-for-email-parser
 
+
+ main
 def test_order_details_table_parsing(db_session):
     msg = MIMEMultipart('alternative')
     msg['Subject'] = 'Order'
@@ -78,3 +82,28 @@ def test_order_details_table_parsing(db_session):
     assert len(regs) == 2
     assert all(r.order_number == 'ABC123' for r in regs)
     assert all(r.order_date.date() == datetime(2024, 1, 2).date() for r in regs)
+ codex/add-test-for-email-parser
+
+def test_bluesombrero_fixture_parsing(db_session):
+    fixture = os.path.join('tests', 'fixtures', 'bluesombrero_order.html')
+    with open(fixture, 'r') as f:
+        html = f.read()
+
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = 'Order'
+    msg.attach(MIMEText(html, 'html'))
+
+    process_inbound_email(msg.as_string(), db_session)
+
+    player = db_session.query(Player).filter_by(full_name='Sally Smith').first()
+    assert player is not None
+    assert player.parent_email == 'sallyparent@example.com'
+
+    reg = db_session.query(Registration).filter_by(player_id=player.id).first()
+    assert reg is not None
+    assert reg.program == 'Winter Basketball'
+    assert reg.division == 'U12'
+    assert reg.order_number == '987654321'
+    assert reg.order_date == datetime(2024, 2, 10)
+
+ main
