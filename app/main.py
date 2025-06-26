@@ -109,13 +109,14 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
             missing_jerseys += 1
 
         for reg in player.registrations:
-            players_by_sport[reg.sport][reg.division].append({
+            sport_key = (reg.sport or "").strip().lower()
+            players_by_sport[sport_key][reg.division].append({
                 "id": player.id,
                 "registration_id": reg.id,
                 "full_name": player.full_name,
                 "parent_email": player.parent_email,
                 "jersey_number": player.jersey_number,
-                "sport": reg.sport,
+                "sport": sport_key,
                 "division": reg.division,
                 "confirmation_sent": reg.confirmation_sent,
             })
@@ -157,6 +158,7 @@ def create_player_manual(
     """Create player and registration from form submission."""
     require_login(request)
     jersey_number = assign_jersey_number(db, division)
+    sport_normalized = sport.strip().lower()
     player = Player(full_name=full_name, parent_email=parent_email, jersey_number=jersey_number)
     db.add(player)
     db.flush()
@@ -164,7 +166,7 @@ def create_player_manual(
         player_id=player.id,
         program=f"{season} {sport}",
         division=division,
-        sport=sport,
+        sport=sport_normalized,
         season=season,
     )
     db.add(reg)
