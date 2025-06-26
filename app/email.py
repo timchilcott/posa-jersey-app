@@ -281,9 +281,8 @@ def process_inbound_email(email_body: str, db):
 
         existing_reg = db.query(Registration).filter_by(
             player_id=player.id,
-            division=entry["division"],
-            season=entry["season"],
             sport=entry["sport"],
+            season=entry["season"],
         ).first()
 
         if not existing_reg:
@@ -311,6 +310,11 @@ def process_inbound_email(email_body: str, db):
             #     promo_code=promo_code,
             # )
         else:
+            existing_reg.division = entry["division"]
+            existing_reg.program = entry["program"]
+            existing_reg.order_number = entry["order_number"]
+            existing_reg.order_date = entry["order_date"]
+            db.commit()
             print(
-                f"✔ Registration already exists for {player.full_name} in {entry['division']} {entry['sport']} {entry['season']}"
+                f"✔ Updated registration for {player.full_name} to {entry['division']} in {entry['sport']} {entry['season']}"
             )
