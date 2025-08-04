@@ -10,3 +10,4 @@ sendgrid
 sqlalchemy
 uvicorn
 beautifulsoup4
+httpx
