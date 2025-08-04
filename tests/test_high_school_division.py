@@ -83,6 +83,31 @@ def test_admin_shows_high_school(db_session):
         season='fall',
     )
     db_session.add(reg)
+
+    # Add entries that should be excluded
+    blank_player = Player(full_name='Blank', parent_email='blank@example.com', jersey_number=assign_jersey_number(db_session, ''))
+    db_session.add(blank_player)
+    db_session.flush()
+    blank_reg = Registration(
+        player_id=blank_player.id,
+        program='Fall Soccer',
+        division='',
+        sport='soccer',
+        season='fall',
+    )
+    db_session.add(blank_reg)
+
+    custom_player = Player(full_name='Custom', parent_email='custom@example.com', jersey_number=assign_jersey_number(db_session, "Pend O'reille Pines (High School Club Team)"))
+    db_session.add(custom_player)
+    db_session.flush()
+    custom_reg = Registration(
+        player_id=custom_player.id,
+        program='Fall Soccer',
+        division="Pend O'reille Pines (High School Club Team)",
+        sport='soccer',
+        season='fall',
+    )
+    db_session.add(custom_reg)
     db_session.commit()
 
     req = Request({'type': 'http', 'session': {'user_id': 1}})
@@ -90,3 +115,4 @@ def test_admin_shows_high_school(db_session):
     divisions = response.context['division_list']
     assert 'High School' in divisions
     assert '' not in divisions
+    assert "Pend O'reille Pines (High School Club Team)" not in divisions

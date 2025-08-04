@@ -102,9 +102,6 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
     except HTTPException as exc:
         return RedirectResponse(exc.headers["Location"], status_code=exc.status_code)
     players = db.query(Player).all()
-codex/validate-and-clean-division-values
-    division_order = {"U4": 0, "U6": 1, "U8": 2, "U10": 3, "U12": 4, "U14": 5, "High School": 6}
-
     division_order = {
         "U4": 0,
         "U6": 1,
@@ -114,7 +111,7 @@ codex/validate-and-clean-division-values
         "U14": 5,
         "High School": 6,
     }
-main
+    EXCLUDED_DIVISIONS = {"", "Pend O'reille Pines (High School Club Team)"}
     players_by_sport = defaultdict(lambda: defaultdict(list))
     missing_emails = 0
     missing_jerseys = 0
@@ -127,23 +124,29 @@ main
 
         for reg in player.registrations:
             sport_key = (reg.sport or "").strip().lower()
-            players_by_sport[sport_key][reg.division].append({
+            division = (reg.division or "").strip()
+            if division in EXCLUDED_DIVISIONS:
+                continue
+            players_by_sport[sport_key][division].append({
                 "id": player.id,
                 "registration_id": reg.id,
                 "full_name": player.full_name,
                 "parent_email": player.parent_email,
                 "jersey_number": player.jersey_number,
                 "sport": sport_key,
-                "division": reg.division,
+                "division": division,
                 "confirmation_sent": reg.confirmation_sent,
             })
 
     # Build list of all divisions from defaults and existing data
     division_names = set(division_order.keys())
     for divisions in players_by_sport.values():
-        division_names.update(div for div in divisions.keys() if div)
+        for div in divisions.keys():
+            name = (div or "").strip()
+            if name not in EXCLUDED_DIVISIONS:
+                division_names.add(name)
     division_list = sorted(
-        [name for name in division_names if name],
+        division_names,
         key=lambda x: division_order.get(x, 999),
     )
     division_rank = {name: idx for idx, name in enumerate(division_list)}
