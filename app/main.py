@@ -102,7 +102,19 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
     except HTTPException as exc:
         return RedirectResponse(exc.headers["Location"], status_code=exc.status_code)
     players = db.query(Player).all()
+codex/validate-and-clean-division-values
     division_order = {"U4": 0, "U6": 1, "U8": 2, "U10": 3, "U12": 4, "U14": 5, "High School": 6}
+
+    division_order = {
+        "U4": 0,
+        "U6": 1,
+        "U8": 2,
+        "U10": 3,
+        "U12": 4,
+        "U14": 5,
+        "High School": 6,
+    }
+main
     players_by_sport = defaultdict(lambda: defaultdict(list))
     missing_emails = 0
     missing_jerseys = 0
