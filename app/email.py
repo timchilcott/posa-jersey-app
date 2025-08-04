@@ -21,7 +21,15 @@ PROMO_CODES = {
 }
 
 # Canonical division definitions and normalization mapping
-DIVISION_ORDER = {"U4": 0, "U6": 1, "U8": 2, "U10": 3, "U12": 4, "U14": 5}
+DIVISION_ORDER = {
+    "U4": 0,
+    "U6": 1,
+    "U8": 2,
+    "U10": 3,
+    "U12": 4,
+    "U14": 5,
+    "High School": 6,
+}
 DIVISION_ALIASES = {
     "UNDER4": "U4",
     "UNDER6": "U6",
@@ -29,6 +37,8 @@ DIVISION_ALIASES = {
     "UNDER10": "U10",
     "UNDER12": "U12",
     "UNDER14": "U14",
+    "HIGHSCHOOL": "High School",
+    "HS": "High School",
 }
 
 
