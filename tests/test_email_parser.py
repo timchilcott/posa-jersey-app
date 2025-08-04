@@ -136,3 +136,42 @@ def test_update_division_for_existing_player(db_session):
     reg_updated = db_session.query(Registration).filter_by(player_id=player.id, sport='soccer', season='spring').first()
     assert reg_updated.division == 'U12'
     assert db_session.query(Registration).count() == 1
+
+
+def test_division_normalization(db_session):
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = 'Normalize'
+    html = """
+    <html><body>
+    Name: Alice Smith<br>
+    Program: Fall Soccer<br>
+    Division: Under 10<br>
+    Parent Email: alice@example.com<br>
+    </body></html>
+    """
+    msg.attach(MIMEText(html, 'html'))
+
+    process_inbound_email(msg.as_string(), db_session)
+
+    reg = db_session.query(Registration).first()
+    assert reg.division == 'U10'
+
+
+def test_unknown_division_defaults(db_session, capsys):
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = 'Unknown'
+    html = """
+    <html><body>
+    Name: Bob Brown<br>
+    Program: Fall Soccer<br>
+    Division: Galactic<br>
+    Parent Email: bob@example.com<br>
+    </body></html>
+    """
+    msg.attach(MIMEText(html, 'html'))
+
+    process_inbound_email(msg.as_string(), db_session)
+    captured = capsys.readouterr().out
+    assert "Unknown division" in captured
+    reg = db_session.query(Registration).first()
+    assert reg.division == 'Unknown'
