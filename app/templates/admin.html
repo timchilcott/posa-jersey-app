@@ -35,7 +35,7 @@
     {% for sport, divisions in players_by_sport.items() %}
         <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="pane-{{ sport|lower }}" role="tabpanel">
             <ul class="nav nav-pills mb-3" id="divisionTabs-{{ sport|lower }}" role="tablist">
-                {% for division, players in divisions.items() %}
+                {% for division in division_list %}
                     <li class="nav-item" role="presentation">
                         <button class="nav-link {% if loop.first %}active{% endif %}" id="tab-{{ sport|lower }}-{{ division|replace(' ', '_')|replace('/', '_')|lower }}" data-bs-toggle="pill" data-bs-target="#pane-{{ sport|lower }}-{{ division|replace(' ', '_')|replace('/', '_')|lower }}" type="button" role="tab">
                             {{ division }}
@@ -44,7 +44,8 @@
                 {% endfor %}
             </ul>
             <div class="tab-content">
-                {% for division, players in divisions.items() %}
+                {% for division in division_list %}
+                    {% set players = divisions[division] %}
                     <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="pane-{{ sport|lower }}-{{ division|replace(' ', '_')|replace('/', '_')|lower }}" role="tabpanel">
                         <table class="table table-bordered align-middle">
                             <thead class="table-light">
