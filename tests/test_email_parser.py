@@ -157,6 +157,25 @@ def test_division_normalization(db_session):
     assert reg.division == 'U10'
 
 
+def test_high_school_division_normalization(db_session):
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = 'NormalizeHS'
+    html = """
+    <html><body>
+    Name: Henry High<br>
+    Program: Fall Soccer<br>
+    Division: High School<br>
+    Parent Email: henry@example.com<br>
+    </body></html>
+    """
+    msg.attach(MIMEText(html, 'html'))
+
+    process_inbound_email(msg.as_string(), db_session)
+
+    reg = db_session.query(Registration).first()
+    assert reg.division == 'HS'
+
+
 def test_unknown_division_defaults(db_session, capsys):
     msg = MIMEMultipart('alternative')
     msg['Subject'] = 'Unknown'
