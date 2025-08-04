@@ -19,6 +19,7 @@ import csv
 import io
 import os
 
+CURRENT_SEASON = os.getenv("CURRENT_SEASON", "2024")
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "secret-key"))
 templates = Jinja2Templates(directory="app/templates")
@@ -101,7 +102,13 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         require_login(request)
     except HTTPException as exc:
         return RedirectResponse(exc.headers["Location"], status_code=exc.status_code)
-    players = db.query(Player).all()
+    players = (
+        db.query(Player)
+            .join(Player.registrations)
+            .filter(Registration.season == CURRENT_SEASON)
+            .distinct()
+            .all()
+    )
     division_order = {
         "U4": 0,
         "U6": 1,
