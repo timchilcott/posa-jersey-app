@@ -111,7 +111,10 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         "U14": 5,
         "High School": 6,
     }
+codex/remove-unnecessary-lines-from-email.py-and-main.py
+
     EXCLUDED_DIVISIONS = {"", "Pend O'reille Pines (High School Club Team)"}
+main
     players_by_sport = defaultdict(lambda: defaultdict(list))
     missing_emails = 0
     missing_jerseys = 0
