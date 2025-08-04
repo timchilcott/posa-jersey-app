@@ -21,7 +21,7 @@ PROMO_CODES = {
 }
 
 # Canonical division definitions and normalization mapping
-DIVISION_ORDER = {"U4": 0, "U6": 1, "U8": 2, "U10": 3, "U12": 4, "U14": 5}
+DIVISION_ORDER = {"U4": 0, "U6": 1, "U8": 2, "U10": 3, "U12": 4, "U14": 5, "High School": 6}
 DIVISION_ALIASES = {
     "UNDER4": "U4",
     "UNDER6": "U6",
@@ -29,6 +29,8 @@ DIVISION_ALIASES = {
     "UNDER10": "U10",
     "UNDER12": "U12",
     "UNDER14": "U14",
+    "HIGHSCHOOL": "High School",
+    "HS": "High School",
 }
 
 
@@ -168,7 +170,6 @@ def process_inbound_email(email_body: str, db):
             missing = [key for key, match in {
                 "Name": name_match,
                 "Program": program_match,
-                "Division": division_match,
                 "Parent Email": parent_email_match,
             }.items() if not match]
 
@@ -178,7 +179,10 @@ def process_inbound_email(email_body: str, db):
 
             full_name = name_match.group(1).strip()
             program = program_match.group(1).strip()
-            division = normalize_division(division_match.group(1).strip())
+            division_raw = division_match.group(1).strip() if division_match else ""
+            division = normalize_division(division_raw)
+            if division == "Unknown" and "high school" in program.lower():
+                division = "High School"
             parent_email = parent_email_match.group(1).strip()
             order_number = order_number_match.group(1).strip() if order_number_match else None
             order_date = datetime.strptime(order_date_match.group(1).strip(), "%B %d, %Y") if order_date_match else None
@@ -253,6 +257,8 @@ def process_inbound_email(email_body: str, db):
                             program = prog_div.strip()
                             division = ""
                         division = normalize_division(division)
+                        if division == "Unknown" and "high school" in program.lower():
+                            division = "High School"
                         parent_email = msg.get("To")
 
                         sport = "unknown"

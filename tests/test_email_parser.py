@@ -175,3 +175,21 @@ def test_unknown_division_defaults(db_session, capsys):
     assert "Unknown division" in captured
     reg = db_session.query(Registration).first()
     assert reg.division == 'Unknown'
+
+
+def test_missing_division_defaults_to_high_school(db_session):
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = 'Missing Division'
+    html = """
+    <html><body>
+    Name: Sam Student<br>
+    Program: High School Soccer<br>
+    Parent Email: sam@example.com<br>
+    </body></html>
+    """
+    msg.attach(MIMEText(html, 'html'))
+
+    process_inbound_email(msg.as_string(), db_session)
+
+    reg = db_session.query(Registration).first()
+    assert reg.division == 'High School'
