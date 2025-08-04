@@ -2,6 +2,7 @@ import argparse
 from app.database import SessionLocal
 from app.models import Player, Registration
 from app.services.assign import assign_jersey_number
+from app.email import normalize_division
 
 
 def main():
@@ -15,14 +16,15 @@ def main():
 
     db = SessionLocal()
     try:
-        jersey = assign_jersey_number(db, args.division)
+        division = normalize_division(args.division)
+        jersey = assign_jersey_number(db, division)
         player = Player(full_name=args.full_name, parent_email=args.parent_email, jersey_number=jersey)
         db.add(player)
         db.flush()
         reg = Registration(
             player_id=player.id,
             program=f"{args.season} {args.sport}",
-            division=args.division,
+            division=division,
             sport=args.sport.strip().lower(),
             season=args.season,
         )

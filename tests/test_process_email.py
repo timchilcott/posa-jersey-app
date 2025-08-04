@@ -30,7 +30,7 @@ Parent Email: p@example.com
 """
     process_inbound_email(body, db_session)
     captured = capsys.readouterr().out
-    assert "missing: Division" in captured
+    assert "Unknown division" in captured
 
 
 def test_logs_missing_multiple_fields(db_session, capsys):
