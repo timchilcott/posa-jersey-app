@@ -74,6 +74,7 @@
                                             <button class="btn btn-sm btn-success btn-save d-none">Save</button>
                                             <button class="btn btn-sm btn-secondary btn-cancel d-none">Cancel</button>
                                             <button class="btn btn-sm btn-info btn-send-email">Email</button>
+                                            <button class="btn btn-sm btn-warning btn-move">Move</button>
                                             <button class="btn btn-sm btn-danger btn-delete">Delete</button>
                                         </td>
                                     </tr>
@@ -177,12 +178,32 @@
         }
     }
 
+    async function moveHandler(event) {
+        const row = event.currentTarget.closest("tr");
+        const regId = row.dataset.regId;
+        const newDivision = prompt("Enter new division:");
+        if (!newDivision) {
+            return;
+        }
+        const response = await fetch(`/registrations/${regId}/division`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ division: newDivision })
+        });
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert("Failed to move player.");
+        }
+    }
+
     function attachRowHandlers(row) {
         row.querySelector(".btn-edit")?.addEventListener("click", editHandler);
         row.querySelector(".btn-cancel")?.addEventListener("click", cancelHandler);
         row.querySelector(".btn-save")?.addEventListener("click", saveHandler);
         row.querySelector(".btn-delete")?.addEventListener("click", deleteHandler);
         row.querySelector(".btn-send-email")?.addEventListener("click", emailHandler);
+        row.querySelector(".btn-move")?.addEventListener("click", moveHandler);
     }
 
     document.querySelectorAll("tbody tr[data-player-id]").forEach(attachRowHandlers);

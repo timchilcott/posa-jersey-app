@@ -248,6 +248,40 @@ def create_player_inline(player: InlinePlayerCreate, request: Request, db: Sessi
         "confirmation_sent": reg.confirmation_sent,
     }
 
+
+class DivisionUpdate(BaseModel):
+    division: str
+
+
+@app.put("/registrations/{registration_id}/division")
+def move_player_division(
+    registration_id: int,
+    payload: DivisionUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Move a player's registration to a new division and assign jersey."""
+    require_login(request)
+    reg = db.query(Registration).get(registration_id)
+    if not reg:
+        raise HTTPException(status_code=404, detail="Registration not found")
+
+    reg.division = payload.division
+    reg.player.jersey_number = assign_jersey_number(db, payload.division)
+    db.commit()
+    db.refresh(reg)
+
+    return {
+        "id": reg.player.id,
+        "registration_id": reg.id,
+        "full_name": reg.player.full_name,
+        "parent_email": reg.player.parent_email,
+        "jersey_number": reg.player.jersey_number,
+        "sport": reg.sport,
+        "division": reg.division,
+        "confirmation_sent": reg.confirmation_sent,
+    }
+
 @app.get("/export")
 def export_players_csv(request: Request, db: Session = Depends(get_db)):
     require_login(request)
