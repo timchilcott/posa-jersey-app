@@ -121,20 +121,27 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
                 "confirmation_sent": reg.confirmation_sent,
             })
 
-    # Ensure each sport has entries for all divisions, even if no players
+    # Build list of all divisions from defaults and existing data
+    division_names = set(division_order.keys())
+    for divisions in players_by_sport.values():
+        division_names.update(divisions.keys())
+    division_list = sorted(division_names, key=lambda x: division_order.get(x, 999))
+    division_rank = {name: idx for idx, name in enumerate(division_list)}
+
+    # Ensure each sport has entries for every division, even if no players
     for sport in players_by_sport.keys():
-        for division in division_order.keys():
+        for division in division_list:
             players_by_sport[sport].setdefault(division, [])
 
     sorted_players_by_sport = {}
     for sport, divisions in players_by_sport.items():
-        sorted_divisions = dict(sorted(divisions.items(), key=lambda x: division_order.get(x[0], 999)))
+        sorted_divisions = dict(sorted(divisions.items(), key=lambda x: division_rank[x[0]]))
         sorted_players_by_sport[sport] = sorted_divisions
 
     return templates.TemplateResponse("admin.html", {
         "request": request,
         "players_by_sport": sorted_players_by_sport,
-        "division_list": list(division_order.keys()),
+        "division_list": division_list,
         "total_players": len(players),
         "missing_emails": missing_emails,
         "missing_jerseys": missing_jerseys,
