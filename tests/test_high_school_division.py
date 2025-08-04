@@ -90,3 +90,24 @@ def test_admin_shows_high_school(db_session):
     divisions = response.context['division_list']
     assert 'High School' in divisions
     assert '' not in divisions
+
+
+def test_pend_oreille_alias(db_session):
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = 'Pend Oreille Test'
+    html = """
+    <html><body>
+    Name: Alias HS<br>
+    Program: Fall Soccer<br>
+    Division: Pend Oreille Pines High School Club Team<br>
+    Parent Email: parent@example.com<br>
+    </body></html>
+    """
+    msg.attach(MIMEText(html, 'html'))
+
+    process_inbound_email(msg.as_string(), db_session)
+
+    reg = db_session.query(Registration).first()
+    assert reg.division == 'High School'
+    divisions = {d for (d,) in db_session.query(Registration.division).distinct()}
+    assert divisions == {'High School'}

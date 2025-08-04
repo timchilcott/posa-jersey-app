@@ -21,9 +21,6 @@ PROMO_CODES = {
 }
 
 # Canonical division definitions and normalization mapping
-codex/validate-and-clean-division-values
-DIVISION_ORDER = {"U4": 0, "U6": 1, "U8": 2, "U10": 3, "U12": 4, "U14": 5, "High School": 6}
-=======
 DIVISION_ORDER = {
     "U4": 0,
     "U6": 1,
@@ -33,7 +30,6 @@ DIVISION_ORDER = {
     "U14": 5,
     "High School": 6,
 }
-main
 DIVISION_ALIASES = {
     "UNDER4": "U4",
     "UNDER6": "U6",
@@ -43,12 +39,13 @@ DIVISION_ALIASES = {
     "UNDER14": "U14",
     "HIGHSCHOOL": "High School",
     "HS": "High School",
+    "PENDOREILLEPINESHIGHSCHOOLCLUBTEAM": "High School",
 }
 
 
 def normalize_division(raw: str) -> str:
     """Map various division strings to canonical form."""
-    key = re.sub(r"[^A-Za-z0-9]", "", raw or "").upper()
+    key = re.sub(r"[^A-Za-z0-9]", "", (raw or "").strip()).upper()
     division = DIVISION_ALIASES.get(key, key)
     if division not in DIVISION_ORDER:
         print(f"⚠️ Unknown division '{raw}', defaulting to 'Unknown'")
