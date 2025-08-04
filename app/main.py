@@ -110,10 +110,11 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         "U12": 4,
         "U14": 5,
         "High School": 6,
+        "Pend Oreille Pines (High School Club Team)": 7,
     }
-
-    EXCLUDED_DIVISIONS = {"", "Pend O'reille Pines (High School Club Team)"}
+    EXCLUDED_DIVISIONS = {"", "Unknown"}
     players_by_sport = defaultdict(lambda: defaultdict(list))
+    unassigned_by_sport = defaultdict(list)
     missing_emails = 0
     missing_jerseys = 0
 
@@ -125,8 +126,19 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
 
         for reg in player.registrations:
             sport_key = (reg.sport or "").strip().lower()
-            division = (reg.division or "").strip()
+            division_raw = (reg.division or "").strip()
+            division = normalize_division(division_raw) if division_raw else ""
             if division in EXCLUDED_DIVISIONS:
+                unassigned_by_sport[sport_key].append({
+                    "id": player.id,
+                    "registration_id": reg.id,
+                    "full_name": player.full_name,
+                    "parent_email": player.parent_email,
+                    "jersey_number": player.jersey_number,
+                    "sport": sport_key,
+                    "division": division,
+                    "confirmation_sent": reg.confirmation_sent,
+                })
                 continue
             players_by_sport[sport_key][division].append({
                 "id": player.id,
@@ -166,6 +178,7 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         "request": request,
         "players_by_sport": sorted_players_by_sport,
         "division_list": division_list,
+        "unassigned_players_by_sport": unassigned_by_sport,
         "total_players": len(players),
         "missing_emails": missing_emails,
         "missing_jerseys": missing_jerseys,

@@ -29,6 +29,7 @@ DIVISION_ORDER = {
     "U12": 4,
     "U14": 5,
     "High School": 6,
+    "Pend Oreille Pines (High School Club Team)": 7,
 }
 DIVISION_ALIASES = {
     "UNDER4": "U4",
@@ -39,6 +40,7 @@ DIVISION_ALIASES = {
     "UNDER14": "U14",
     "HIGHSCHOOL": "High School",
     "HS": "High School",
+    "PENDOREILLEPINESHIGHSCHOOLCLUBTEAM": "Pend Oreille Pines (High School Club Team)",
 }
 
 
