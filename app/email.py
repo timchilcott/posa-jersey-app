@@ -20,6 +20,27 @@ PROMO_CODES = {
     7: "Pines7Players",
 }
 
+# Canonical division definitions and normalization mapping
+DIVISION_ORDER = {"U4": 0, "U6": 1, "U8": 2, "U10": 3, "U12": 4, "U14": 5}
+DIVISION_ALIASES = {
+    "UNDER4": "U4",
+    "UNDER6": "U6",
+    "UNDER8": "U8",
+    "UNDER10": "U10",
+    "UNDER12": "U12",
+    "UNDER14": "U14",
+}
+
+
+def normalize_division(raw: str) -> str:
+    """Map various division strings to canonical form."""
+    key = re.sub(r"[^A-Za-z0-9]", "", raw or "").upper()
+    division = DIVISION_ALIASES.get(key, key)
+    if division not in DIVISION_ORDER:
+        print(f"⚠️ Unknown division '{raw}', defaulting to 'Unknown'")
+        return "Unknown"
+    return division
+
 print("📬 Loaded email.py")
 
 # Simplified for local/dev use – no actual email sending, just update flag
@@ -157,7 +178,7 @@ def process_inbound_email(email_body: str, db):
 
             full_name = name_match.group(1).strip()
             program = program_match.group(1).strip()
-            division = division_match.group(1).strip()
+            division = normalize_division(division_match.group(1).strip())
             parent_email = parent_email_match.group(1).strip()
             order_number = order_number_match.group(1).strip() if order_number_match else None
             order_date = datetime.strptime(order_date_match.group(1).strip(), "%B %d, %Y") if order_date_match else None
@@ -231,6 +252,7 @@ def process_inbound_email(email_body: str, db):
                         else:
                             program = prog_div.strip()
                             division = ""
+                        division = normalize_division(division)
                         parent_email = msg.get("To")
 
                         sport = "unknown"
