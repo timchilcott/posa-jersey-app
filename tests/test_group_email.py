@@ -76,3 +76,82 @@ def test_group_registration_email(client, monkeypatch):
     assert db.query(Registration).get(r1_id).confirmation_sent
     assert db.query(Registration).get(r2_id).confirmation_sent
     db.close()
+
+def _mock_email(monkeypatch, captured):
+    def fake_send_confirmation_email(to_email, players, order_url, registrations=None, db=None, promo_code=None):
+        body = "\n".join(f"{p['name']} (#{p['jersey_number']})" for p in players)
+        if promo_code:
+            body += f"\n{promo_code}"
+        captured['body'] = body
+        captured['promo_code'] = promo_code
+        if registrations and db:
+            for reg in registrations:
+                reg.confirmation_sent = True
+            db.commit()
+    monkeypatch.setattr(app_main, 'send_confirmation_email', fake_send_confirmation_email)
+
+
+def test_single_player_email_body(client, monkeypatch):
+    db = client.SessionLocal()
+    player = Player(full_name='Solo', parent_email='parent@example.com', jersey_number=7)
+    db.add(player)
+    db.flush()
+    reg = Registration(player_id=player.id, program='prog', division='U6', sport='soccer', season='2024', confirmation_sent=False)
+    db.add(reg)
+    db.commit()
+    reg_id = reg.id
+    db.close()
+
+    captured = {}
+    _mock_email(monkeypatch, captured)
+
+    response = client.post(f'/registrations/{reg_id}/send_email')
+    assert response.status_code == 200
+
+    body_lines = captured['body'].splitlines()
+    promo = captured['promo_code']
+    player_lines = [line for line in body_lines if line != promo]
+    assert len(player_lines) == 1
+    assert 'Solo' in player_lines[0]
+    assert promo == PROMO_CODES.get(1)
+    assert captured['body'].count(promo) == 1
+
+    db = client.SessionLocal()
+    assert db.query(Registration).get(reg_id).confirmation_sent
+    db.close()
+
+
+def test_three_player_email_body(client, monkeypatch):
+    db = client.SessionLocal()
+    names = ['Alex', 'Jamie', 'Taylor']
+    regs = []
+    for idx, name in enumerate(names, start=1):
+        p = Player(full_name=name, parent_email='parent@example.com', jersey_number=10 * idx)
+        db.add(p)
+        db.flush()
+        r = Registration(player_id=p.id, program='prog', division='U8', sport='soccer', season='2024', confirmation_sent=False)
+        db.add(r)
+        regs.append(r)
+    db.commit()
+    reg_ids = [r.id for r in regs]
+    db.close()
+
+    captured = {}
+    _mock_email(monkeypatch, captured)
+
+    response = client.post(f'/registrations/{reg_ids[0]}/send_email')
+    assert response.status_code == 200
+
+    body_lines = captured['body'].splitlines()
+    promo = captured['promo_code']
+    player_lines = [line for line in body_lines if line != promo]
+    assert len(player_lines) == 3
+    for name in names:
+        assert any(name in line for line in player_lines)
+    assert promo == PROMO_CODES.get(3)
+    assert captured['body'].count(promo) == 1
+
+    db = client.SessionLocal()
+    for rid in reg_ids:
+        assert db.query(Registration).get(rid).confirmation_sent
+    db.close()
