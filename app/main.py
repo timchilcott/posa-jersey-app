@@ -404,17 +404,14 @@ def send_registration_email(registration_id: int, request: Request, db: Session 
         )
         .all()
     )
+    promo_code = PROMO_CODES.get(len(regs))
     players = [
-        {"name": r.player.full_name, "jersey_number": r.player.jersey_number}
+        {
+            "name": r.player.full_name,
+            "jersey_number": r.player.jersey_number,
+            "promo_code": promo_code,
+        }
         for r in regs
     ]
-    promo_code = PROMO_CODES.get(len(regs))
-    send_confirmation_email(
-        parent_email,
-        players,
-        "https://treblemade.com/search?q=pines&sort_by=relevance",
-        regs,
-        db,
-        promo_code=promo_code,
-    )
+    send_confirmation_email(parent_email, players, regs, db)
     return {"message": "Email sent"}

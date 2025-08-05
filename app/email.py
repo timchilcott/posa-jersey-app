@@ -56,21 +56,32 @@ def normalize_division(raw: str) -> str:
 print("📬 Loaded email.py")
 
 # Simplified for local/dev use – no actual email sending, just update flag
-def send_confirmation_email(
-    to_email, players, order_url, registrations=None, db=None, promo_code=None
-):
-    body_parts = []
+def send_confirmation_email(to_email, players, registrations=None, db=None):
+    body = (
+        "Thanks for signing up for soccer with the Pend Oreille Pines. We're excited to have your family with us this season!\n\n"
+        "Here's the jersey info for your player(s):\n\n"
+    )
+
     for p in players:
-        block = (
+        body += (
             f"{p['name']}\n"
             f"Jersey Number: {p['jersey_number']}\n"
-            f"Order Jersey: {order_url}\n"
+            f"Promo Code: {p['promo_code']}\n\n"
         )
-        if promo_code:
-            block += f"Promo Code: {promo_code}\n"
-        body_parts.append(block)
 
-    body = "\n".join(body_parts).strip()
+    body += (
+        "Order your jerseys here:\n"
+        "https://treblemade.com/search?q=pines&sort_by=relevance\n\n"
+        "Only the reversible Pines jersey is required for games. You're welcome to add Pines-branded black shorts and socks to your order, or use your own. Any plain black shorts and socks are just fine as long as they don't have other team logos or colors.\n\n"
+        "If your family is in a position to purchase the jerseys without using the promo codes, it helps us stretch our nonprofit funds to support other families and improve the program. But either way, jerseys are covered and we're thrilled to have your kids on the field.\n\n"
+        "—\n"
+        "Tim Chilcott\n"
+        "President - POSA\n"
+        "🌲 Pines stand tall.\n"
+        "❤️ The heart of sports starts with us."
+    )
+
+    body = body.strip()
 
     message = Mail(
         from_email="noreply@posasports.org",
