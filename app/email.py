@@ -60,19 +60,27 @@ print("📬 Loaded email.py")
 
 
 def send_confirmation_email(to_email, players, registrations=None, db=None):
-    greeting = ", ".join(p["name"] for p in players)
-    html = f"<p>Hi {greeting},</p>\n<ul>"
+    player_items = []
     for p in players:
-        html += f"<li>Jersey #{p['jersey_number']} for {p['name']}"
+        line = f"<li>{p['name']} – Jersey #{p['jersey_number']}"
         promo = p.get("promo_code")
         if promo:
-            html += f" (Promo Code: <strong>{promo}</strong>)"
-        html += "</li>"
-    html += "</ul>"
-    html += (
-        f'<p>You can order your uniform here: '
-        f'<a href="{UNIFORM_ORDER_URL}">Order Jersey</a></p>'
+            line += f" (Promo Code: <strong>{promo}</strong>)"
+        line += "</li>"
+        player_items.append(line)
+
+    player_list_html = "\n".join(player_items)
+
+    html = (
+        f"<p>Thanks for signing up for the Pend Oreille Softball Association!</p>\n"
+        f"<ul>\n{player_list_html}\n</ul>\n"
+        f"<p><a href=\"{UNIFORM_ORDER_URL}\">Order your jerseys here</a></p>\n"
+        "<p>All players need a glove, cleats, and black softball pants.</p>\n"
+        "<p>Optional items include a batting helmet, bat, and fielding mask.</p>\n"
+        "<p>Promo codes are made possible by the generosity of our donors.</p>\n"
+        "<p>Thanks,<br>Tim Chilcott</p>"
     )
+
     message = Mail(
         from_email="noreply@posasports.org",
         to_emails=to_email,
