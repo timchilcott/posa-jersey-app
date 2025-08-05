@@ -62,32 +62,53 @@ print("📬 Loaded email.py")
 def send_confirmation_email(to_email, players, registrations=None, db=None):
     """Send a registration confirmation email with jersey info."""
 
-    lines = []
-    for p in players:
-        promo = p.get("promo_code")
-        if promo:
-            lines.append(
-                f"{p['name']} – Jersey #{p['jersey_number']} – Promo Code: <strong>{promo}</strong>"
-            )
-        else:
-            lines.append(f"{p['name']} – Jersey #{p['jersey_number']}")
-    players_html = "<br>\n".join(lines)
+    player_sections = [
+        "\n".join(
+            [
+                p["name"],
+                f"Jersey Number: {p['jersey_number']}",
+                f"Promo Code: {p.get('promo_code', '')}",
+            ]
+        )
+        for p in players
+    ]
+    players_text = "\n\n".join(player_sections)
+
+    players_html = "".join(
+        f"<p>{p['name']}<br>Jersey Number: {p['jersey_number']}<br>Promo Code: {p.get('promo_code', '')}</p>"
+        for p in players
+    )
+
+    text = (
+        "Thanks for signing up for soccer with the Pend Oreille Pines. We’re excited to have your family with us this season!\n\n"
+        "Here’s the jersey info for your player(s):\n\n"
+        f"{players_text}\n\n"
+        "Order your jerseys here:\n"
+        f"{UNIFORM_ORDER_URL}\n\n"
+        "Only the reversible Pines jersey is required for games. You’re welcome to add Pines-branded black shorts and socks to your order, or use your own. Any plain black shorts and socks are just fine as long as they don’t have other team logos or colors.\n\n"
+        "If your family is in a position to purchase the jerseys without using the promo codes, it helps us stretch our nonprofit funds to support other families and improve the program. But either way, jerseys are covered and we’re thrilled to have your kids on the field.\n\n"
+        "—\n"
+        "Tim Chilcott\n"
+        "President - POSA\n"
+        "🌲 Pines stand tall.\n"
+        "❤️ The heart of sports starts with us."
+    )
 
     html = (
-        f"<p>Thanks for signing up for soccer with the Pend Oreille Pines!</p>\n\n"
-        "<p>Here’s the jersey info for your player(s):<br>\n"
-        f"{players_html}</p>\n\n"
-        f"<p>Order your jerseys here: <a href=\"{UNIFORM_ORDER_URL}\">{UNIFORM_ORDER_URL}</a></p>\n\n"
-        "<p>The green/white reversible jersey is required for all players.</p>\n"
-        "<p>Black shorts and black socks are optional.</p>\n"
-        "<p>Promo codes are made possible by the generosity of our donors.</p>\n\n"
-        "<p>—<br>Tim Chilcott, League Director<br>Play hard, play fair.<br>Go Pines!</p>"
+        "<p>Thanks for signing up for soccer with the Pend Oreille Pines. We’re excited to have your family with us this season!</p>"
+        "<p>Here’s the jersey info for your player(s):</p>"
+        f"{players_html}"
+        f"<p>Order your jerseys here:<br><a href=\"{UNIFORM_ORDER_URL}\">{UNIFORM_ORDER_URL}</a></p>"
+        "<p>Only the reversible Pines jersey is required for games. You’re welcome to add Pines-branded black shorts and socks to your order, or use your own. Any plain black shorts and socks are just fine as long as they don’t have other team logos or colors.</p>"
+        "<p>If your family is in a position to purchase the jerseys without using the promo codes, it helps us stretch our nonprofit funds to support other families and improve the program. But either way, jerseys are covered and we’re thrilled to have your kids on the field.</p>"
+        "<p>—<br>Tim Chilcott<br>President - POSA<br>🌲 Pines stand tall.<br>❤️ The heart of sports starts with us.</p>"
     )
 
     message = Mail(
         from_email="noreply@posasports.org",
         to_emails=to_email,
         subject="Your POSA Jersey Numbers",
+        plain_text_content=text,
         html_content=html,
     )
     try:
