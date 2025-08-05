@@ -398,10 +398,7 @@ def send_registration_email(registration_id: int, request: Request, db: Session 
     regs = (
         db.query(Registration)
         .join(Registration.player)
-        .filter(
-            Player.parent_email == parent_email,
-            Registration.confirmation_sent == False,
-        )
+        .filter(Player.parent_email == parent_email)
         .all()
     )
     promo_code = PROMO_CODES.get(len(regs))
