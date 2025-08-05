@@ -56,3 +56,35 @@ def test_admin_player_count(client):
     match = re.search(r'fs-4 fw-bold text-dark">(\d+)</div>\s*<small class="text-muted">Total Athletes</small>', response.text)
     assert match is not None
     assert match.group(1) == '1'
+
+
+def test_admin_excludes_unassigned_divisions(client):
+    db = client.SessionLocal()
+    # Player with valid division
+    p_valid = Player(full_name='Valid', parent_email='v@example.com', jersey_number=1)
+    db.add(p_valid)
+    db.flush()
+    db.add(Registration(player_id=p_valid.id, program='prog', division='U8', sport='soccer', season='2024'))
+
+    # Player with only excluded division
+    p_blank = Player(full_name='Blank', parent_email='b@example.com', jersey_number=2)
+    db.add(p_blank)
+    db.flush()
+    db.add(Registration(player_id=p_blank.id, program='prog', division='', sport='soccer', season='2024'))
+
+    # Player with mixed divisions (one excluded, one valid)
+    p_mixed = Player(full_name='Mixed', parent_email='m@example.com', jersey_number=3)
+    db.add(p_mixed)
+    db.flush()
+    db.add(Registration(player_id=p_mixed.id, program='prog', division='Unknown', sport='basketball', season='2024'))
+    db.add(Registration(player_id=p_mixed.id, program='prog', division='U10', sport='soccer', season='2024'))
+
+    db.commit()
+    db.close()
+
+    response = client.get('/admin')
+    assert response.status_code == 200
+    match = re.search(r'fs-4 fw-bold text-dark">(\d+)</div>\s*<small class="text-muted">Total Athletes</small>', response.text)
+    assert match is not None
+    # Only p_valid and p_mixed should be counted
+    assert match.group(1) == '2'
