@@ -54,105 +54,33 @@ def normalize_division(raw: str) -> str:
     return division
 
 print("📬 Loaded email.py")
-
-# Simplified for local/dev use – no actual email sending, just update flag
-i1yhf4-codex/refactor-send_confirmation_email-body-assembly
-def send_confirmation_email(to_email, players, registrations=None, db=None):
-    body = (
-        "Thanks for signing up for soccer with the Pend Oreille Pines. We're excited to have your family with us this season!\n\n"
-        "Here's the jersey info for your player(s):\n\n"
-
 def send_confirmation_email(
-    to_email, players, order_url, registrations=None, db=None, promo_code=None
+    to_email, player_name, jersey_number, order_url, registration=None, db=None, promo_code=None
 ):
-    body = (
-        "Hi there,\n\n"
-        "Thank you for registering with POSA. We're excited for the upcoming season.\n\n"
-        "Here's the jersey info for your player(s):\n"
-main
-    )
-
-    for p in players:
-        body += (
-i1yhf4-codex/refactor-send_confirmation_email-body-assembly
-            f"{p['name']}\n"
-            f"Jersey Number: {p['jersey_number']}\n"
-            f"Promo Code: {p['promo_code']}\n\n"
-        )
-
-    body += (
-        "Order your jerseys here:\n"
-        "https://treblemade.com/search?q=pines&sort_by=relevance\n\n"
-        "Only the reversible Pines jersey is required for games. You're welcome to add Pines-branded black shorts and socks to your order, or use your own. Any plain black shorts and socks are just fine as long as they don't have other team logos or colors.\n\n"
-        "If your family is in a position to purchase the jerseys without using the promo codes, it helps us stretch our nonprofit funds to support other families and improve the program. But either way, jerseys are covered and we're thrilled to have your kids on the field.\n\n"
-        "—\n"
-        "Tim Chilcott\n"
-        "President - POSA\n"
-        "🌲 Pines stand tall.\n"
-        "❤️ The heart of sports starts with us."
-    )
-
-            f"\n{p['name']}\n"
-            f"Jersey Number: {p['jersey_number']}\n"
-        )
-        if promo_code:
-            body += f"Promo Code: {promo_code}\n"
-
-    body += (
-        f"\nOrder your uniform here: {order_url}\n\n"
-        "If your player already has a POSA jersey that fits, you're all set. Otherwise, use the link above and enter the promo code during checkout to receive the free jersey included with registration.\n\n"
-        "For games, players need white pants, a white belt, and white socks. Additional uniform items are available through the store if needed.\n\n"
-        "Thanks,\n"
-        "Tim Chilcott\n"
-        "POSA Equipment Manager"
-    )
-
-main
-    body = body.strip()
-
+    html = f"""
+        <p>Hi {player_name},</p>
+        <p>Your jersey number is <strong>{jersey_number}</strong>.</p>
+    """
+    if promo_code:
+        html += f"<p>Your promo code is <strong>{promo_code}</strong>. Use it during checkout for your free jersey.</p>"
+    html += f'<p>You can order your uniform here: <a href="{order_url}">Order Jersey</a></p>'
     message = Mail(
         from_email="noreply@posasports.org",
         to_emails=to_email,
-        subject="Your POSA Jersey Numbers",
-        plain_text_content=body,
+        subject="Your POSA Jersey Number",
+        html_content=html,
     )
     try:
         sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
-        sg.send(message)
-    except Exception:
-        print(f"[DEV MODE] Email to {to_email}:\n{body}")
-
-    if registrations and db:
-        for reg in registrations:
-            reg.confirmation_sent = True
-        db.commit()
-
-# Optional: uncomment to send actual emails in production
-# def send_confirmation_email(to_email, player_name, jersey_number, order_url, registration=None, db=None, promo_code=None):
-#     html = f"""
-#         <p>Hi {player_name},</p>
-#         <p>Your jersey number is <strong>{jersey_number}</strong>.</p>
-#     """
-#     if promo_code:
-#         html += f"<p>Your promo code is <strong>{promo_code}</strong>. Use it during checkout for your free jersey.</p>"
-#     html += f'<p>You can order your uniform here: <a href="{order_url}">Order Jersey</a></p>'
-#     message = Mail(
-#         from_email="noreply@posasports.org",
-#         to_emails=to_email,
-#         subject="Your POSA Jersey Number",
-#         html_content=html,
-#     )
-#     try:
-#         sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
-#         response = sg.send(message)
-#         print(response.status_code)
-#         print(response.body)
-#         print(response.headers)
-#         if registration and db:
-#             registration.confirmation_sent = True
-#             db.commit()
-#     except Exception as e:
-#         print(e)
+        response = sg.send(message)
+        print(response.status_code)
+        print(response.body)
+        print(response.headers)
+        if registration and db:
+            registration.confirmation_sent = True
+            db.commit()
+    except Exception as e:
+        print(e)
 
 # Utility for capturing raw inbound emails
 def save_inbound_email(email_body: str, filename: str | None = None) -> None:
