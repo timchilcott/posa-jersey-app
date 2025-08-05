@@ -59,18 +59,30 @@ print("📬 Loaded email.py")
 def send_confirmation_email(
     to_email, players, order_url, registrations=None, db=None, promo_code=None
 ):
-    body_parts = []
+    body = (
+        "Hi there,\n\n"
+        "Thank you for registering with POSA. We're excited for the upcoming season.\n\n"
+        "Here's the jersey info for your player(s):\n"
+    )
+
     for p in players:
-        block = (
-            f"{p['name']}\n"
+        body += (
+            f"\n{p['name']}\n"
             f"Jersey Number: {p['jersey_number']}\n"
-            f"Order Jersey: {order_url}\n"
         )
         if promo_code:
-            block += f"Promo Code: {promo_code}\n"
-        body_parts.append(block)
+            body += f"Promo Code: {promo_code}\n"
 
-    body = "\n".join(body_parts).strip()
+    body += (
+        f"\nOrder your uniform here: {order_url}\n\n"
+        "If your player already has a POSA jersey that fits, you're all set. Otherwise, use the link above and enter the promo code during checkout to receive the free jersey included with registration.\n\n"
+        "For games, players need white pants, a white belt, and white socks. Additional uniform items are available through the store if needed.\n\n"
+        "Thanks,\n"
+        "Tim Chilcott\n"
+        "POSA Equipment Manager"
+    )
+
+    body = body.strip()
 
     message = Mail(
         from_email="noreply@posasports.org",
