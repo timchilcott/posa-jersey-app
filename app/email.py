@@ -62,6 +62,7 @@ print("📬 Loaded email.py")
 def send_confirmation_email(to_email, players, registrations=None, db=None):
     """Send a registration confirmation email with jersey info."""
 
+ jb4as5-codex/update-email-content-for-soccer-signups
     player_sections = [
         "\n".join(
             [
@@ -93,6 +94,12 @@ def send_confirmation_email(to_email, players, registrations=None, db=None):
         "🌲 Pines stand tall.\n"
         "❤️ The heart of sports starts with us."
     )
+
+    players_html = "\n".join(
+        f"<p>{p['name']}<br>Jersey Number: {p['jersey_number']}<br>Promo Code: {p.get('promo_code', '')}</p>"
+        for p in players
+    )
+ main
 
     html = (
         "<p>Thanks for signing up for soccer with the Pend Oreille Pines. We’re excited to have your family with us this season!</p>"
