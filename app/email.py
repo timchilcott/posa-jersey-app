@@ -63,7 +63,7 @@ def send_confirmation_email(to_email, players, registrations=None, db=None):
     """Send a registration confirmation email with jersey info."""
 
     players_html = "\n".join(
-        f"<p>{p['name']}<br>Jersey Number: {p['jersey_number']}<br>Promo Code: {p.get('promo_code', '')}</p>"
+        f"<p>Player: {p['name']} (#{p['jersey_number']})<br>Promo Code: {p.get('promo_code', '')}</p>"
         for p in players
     )
 

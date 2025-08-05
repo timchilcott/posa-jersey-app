@@ -71,6 +71,7 @@ def test_group_registration_email(client, monkeypatch):
     assert len(captured['players']) == 2
     expected = PROMO_CODES.get(2)
     assert {p['promo_code'] for p in captured['players']} == {expected}
+    assert {p['jersey_number'] for p in captured['players']} == {12, 34}
 
     db = client.SessionLocal()
     assert db.query(Registration).get(r1_id).confirmation_sent
@@ -112,6 +113,7 @@ def test_single_player_email_body(client, monkeypatch):
     assert len(body_lines) == 1
     assert 'Solo' in body_lines[0]
     assert promo in body_lines[0]
+    assert '#7' in body_lines[0]
 
     db = client.SessionLocal()
     assert db.query(Registration).get(reg_id).confirmation_sent
@@ -146,6 +148,8 @@ def test_three_player_email_body(client, monkeypatch):
         assert any(name in line for line in body_lines)
     for line in body_lines:
         assert promo in line
+    for num in [10, 20, 30]:
+        assert any(f'#{num}' in line for line in body_lines)
 
     db = client.SessionLocal()
     for rid in reg_ids:
