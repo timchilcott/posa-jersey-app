@@ -13,6 +13,7 @@ from .email import (
     process_inbound_email,
     save_inbound_email,
     normalize_division,
+    PROMO_CODES,
 )
 from collections import defaultdict
 import csv
@@ -393,13 +394,27 @@ def send_registration_email(registration_id: int, request: Request, db: Session 
     reg = db.query(Registration).get(registration_id)
     if not reg:
         raise HTTPException(status_code=404, detail="Registration not found")
-    player = reg.player
+    parent_email = reg.player.parent_email
+    regs = (
+        db.query(Registration)
+        .join(Registration.player)
+        .filter(
+            Player.parent_email == parent_email,
+            Registration.confirmation_sent == False,
+        )
+        .all()
+    )
+    players = [
+        {"name": r.player.full_name, "jersey_number": r.player.jersey_number}
+        for r in regs
+    ]
+    promo_code = PROMO_CODES.get(len(regs))
     send_confirmation_email(
-        player.parent_email,
-        player.full_name,
-        player.jersey_number,
+        parent_email,
+        players,
         "https://your-order-url.com",
-        reg,
+        regs,
         db,
+        promo_code=promo_code,
     )
     return {"message": "Email sent"}
