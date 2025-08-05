@@ -83,18 +83,21 @@ def send_confirmation_email(to_email, players, registrations=None, db=None):
         subject="Your POSA Jersey Numbers",
         html_content=html,
     )
-    try:
-        sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
-        response = sg.send(message)
-        print(response.status_code)
-        print(response.body)
-        print(response.headers)
-        if registrations and db and 200 <= response.status_code < 300:
-            for reg in registrations:
-                reg.confirmation_sent = True
-            db.commit()
-    except Exception as e:
-        print(e)
+    # Email sending disabled for production.
+    # The following block can be reinstated to re-enable SendGrid emails:
+    # try:
+    #     sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
+    #     response = sg.send(message)
+    #     print(response.status_code)
+    #     print(response.body)
+    #     print(response.headers)
+    #     if registrations and db and 200 <= response.status_code < 300:
+    #         for reg in registrations:
+    #             reg.confirmation_sent = True
+    #         db.commit()
+    # except Exception as e:
+    #     print(e)
+    print("✉️ Email sending is currently disabled.")
 
 # Utility for capturing raw inbound emails
 def save_inbound_email(email_body: str, filename: str | None = None) -> None:
