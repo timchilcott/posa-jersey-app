@@ -412,7 +412,7 @@ def send_registration_email(registration_id: int, request: Request, db: Session 
     send_confirmation_email(
         parent_email,
         players,
-        "https://your-order-url.com",
+        "https://treblemade.com/search?q=pines&sort_by=relevance",
         regs,
         db,
         promo_code=promo_code,
