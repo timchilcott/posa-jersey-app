@@ -396,10 +396,9 @@ def send_registration_email(registration_id: int, request: Request, db: Session 
     player = reg.player
     send_confirmation_email(
         player.parent_email,
-        player.full_name,
-        player.jersey_number,
+        [{"name": player.full_name, "jersey_number": player.jersey_number}],
         "https://your-order-url.com",
-        reg,
-        db,
+        registrations=[reg],
+        db=db,
     )
     return {"message": "Email sent"}

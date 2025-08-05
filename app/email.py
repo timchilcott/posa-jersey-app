@@ -56,28 +56,75 @@ def normalize_division(raw: str) -> str:
 print("📬 Loaded email.py")
 
 # Simplified for local/dev use – no actual email sending, just update flag
-def send_confirmation_email(to_email, player_name, jersey_number, order_url, registration=None, db=None, promo_code=None):
-    promo_msg = f" Promo code: {promo_code}" if promo_code else ""
-    print(f"[DEV MODE] Skipping sending email to {to_email} for {player_name} (#{jersey_number}){promo_msg}")
+def send_confirmation_email(
+    to_email, players, order_url, registrations=None, db=None, promo_code=None
+):
+    """Send a confirmation email listing all players and their jersey numbers.
 
-    if registration and db:
-        registration.confirmation_sent = True
+    In development, this simply logs the email body. When used in production
+    (see commented block below), the same body is provided to SendGrid.
+    """
+
+    intro = (
+        "Hello POSA family,\n\n"
+        "Thank you for registering with Pend Oreille Sports Association. "
+        "Below are the jersey numbers for your players:\n\n"
+    )
+
+    lines = [intro]
+    for player in players:
+        lines.append(player["name"])
+        lines.append(f"Jersey Number: {player['jersey_number']}")
+        if promo_code:
+            lines.append(f"Promo Code: {promo_code}")
+        lines.append("")
+
+    lines.append(
+        "Please keep this email for your records. You can order uniforms at the "
+        "link below.\n"
+    )
+    lines.append(order_url)
+    lines.append("")
+    lines.append("Thank you for supporting POSA!")
+
+    body = "\n".join(lines)
+
+    print(f"[DEV MODE] Skipping sending email to {to_email} with body:\n{body}")
+
+    if registrations and db:
+        for reg in registrations:
+            reg.confirmation_sent = True
         db.commit()
 
 # Optional: uncomment to send actual emails in production
-# def send_confirmation_email(to_email, player_name, jersey_number, order_url, registration=None, db=None, promo_code=None):
-#     html = f"""
-#         <p>Hi {player_name},</p>
-#         <p>Your jersey number is <strong>{jersey_number}</strong>.</p>
-#     """
-#     if promo_code:
-#         html += f"<p>Your promo code is <strong>{promo_code}</strong>. Use it during checkout for your free jersey.</p>"
-#     html += f'<p>You can order your uniform here: <a href="{order_url}">Order Jersey</a></p>'
+# def send_confirmation_email(
+#     to_email, players, order_url, registrations=None, db=None, promo_code=None
+# ):
+#     intro = (
+#         "Hello POSA family,\n\n"
+#         "Thank you for registering with Pend Oreille Sports Association. "
+#         "Below are the jersey numbers for your players:\n\n"
+#     )
+#     lines = [intro]
+#     for player in players:
+#         lines.append(player["name"])
+#         lines.append(f"Jersey Number: {player['jersey_number']}")
+#         if promo_code:
+#             lines.append(f"Promo Code: {promo_code}")
+#         lines.append("")
+#     lines.append(
+#         "Please keep this email for your records. You can order uniforms at the "
+#         "link below.\n"
+#     )
+#     lines.append(order_url)
+#     lines.append("")
+#     lines.append("Thank you for supporting POSA!")
+#     body = "\n".join(lines)
 #     message = Mail(
 #         from_email="noreply@posasports.org",
 #         to_emails=to_email,
-#         subject="Your POSA Jersey Number",
-#         html_content=html,
+#         subject="Your POSA Jersey Numbers",
+#         plain_text_content=body,
 #     )
 #     try:
 #         sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
@@ -85,8 +132,9 @@ def send_confirmation_email(to_email, player_name, jersey_number, order_url, reg
 #         print(response.status_code)
 #         print(response.body)
 #         print(response.headers)
-#         if registration and db:
-#             registration.confirmation_sent = True
+#         if registrations and db:
+#             for reg in registrations:
+#                 reg.confirmation_sent = True
 #             db.commit()
 #     except Exception as e:
 #         print(e)
