@@ -20,6 +20,9 @@ PROMO_CODES = {
     7: "Pines7Players",
 }
 
+# URL for ordering uniforms
+UNIFORM_ORDER_URL = "https://treblemade.com/search?q=pines&sort_by=relevance"
+
 # Canonical division definitions and normalization mapping
 DIVISION_ORDER = {
     "U4": 0,
@@ -54,20 +57,26 @@ def normalize_division(raw: str) -> str:
     return division
 
 print("📬 Loaded email.py")
-def send_confirmation_email(
-    to_email, player_name, jersey_number, order_url, registration=None, db=None, promo_code=None
-):
-    html = f"""
-        <p>Hi {player_name},</p>
-        <p>Your jersey number is <strong>{jersey_number}</strong>.</p>
-    """
-    if promo_code:
-        html += f"<p>Your promo code is <strong>{promo_code}</strong>. Use it during checkout for your free jersey.</p>"
-    html += f'<p>You can order your uniform here: <a href="{order_url}">Order Jersey</a></p>'
+
+
+def send_confirmation_email(to_email, players, registrations=None, db=None):
+    greeting = ", ".join(p["name"] for p in players)
+    html = f"<p>Hi {greeting},</p>\n<ul>"
+    for p in players:
+        html += f"<li>Jersey #{p['jersey_number']} for {p['name']}"
+        promo = p.get("promo_code")
+        if promo:
+            html += f" (Promo Code: <strong>{promo}</strong>)"
+        html += "</li>"
+    html += "</ul>"
+    html += (
+        f'<p>You can order your uniform here: '
+        f'<a href="{UNIFORM_ORDER_URL}">Order Jersey</a></p>'
+    )
     message = Mail(
         from_email="noreply@posasports.org",
         to_emails=to_email,
-        subject="Your POSA Jersey Number",
+        subject="Your POSA Jersey Numbers",
         html_content=html,
     )
     try:
@@ -76,8 +85,9 @@ def send_confirmation_email(
         print(response.status_code)
         print(response.body)
         print(response.headers)
-        if registration and db:
-            registration.confirmation_sent = True
+        if registrations and db and 200 <= response.status_code < 300:
+            for reg in registrations:
+                reg.confirmation_sent = True
             db.commit()
     except Exception as e:
         print(e)
