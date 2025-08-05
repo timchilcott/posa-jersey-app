@@ -56,14 +56,25 @@ def normalize_division(raw: str) -> str:
 print("📬 Loaded email.py")
 
 # Simplified for local/dev use – no actual email sending, just update flag
+i1yhf4-codex/refactor-send_confirmation_email-body-assembly
 def send_confirmation_email(to_email, players, registrations=None, db=None):
     body = (
         "Thanks for signing up for soccer with the Pend Oreille Pines. We're excited to have your family with us this season!\n\n"
         "Here's the jersey info for your player(s):\n\n"
+
+def send_confirmation_email(
+    to_email, players, order_url, registrations=None, db=None, promo_code=None
+):
+    body = (
+        "Hi there,\n\n"
+        "Thank you for registering with POSA. We're excited for the upcoming season.\n\n"
+        "Here's the jersey info for your player(s):\n"
+main
     )
 
     for p in players:
         body += (
+i1yhf4-codex/refactor-send_confirmation_email-body-assembly
             f"{p['name']}\n"
             f"Jersey Number: {p['jersey_number']}\n"
             f"Promo Code: {p['promo_code']}\n\n"
@@ -81,6 +92,22 @@ def send_confirmation_email(to_email, players, registrations=None, db=None):
         "❤️ The heart of sports starts with us."
     )
 
+            f"\n{p['name']}\n"
+            f"Jersey Number: {p['jersey_number']}\n"
+        )
+        if promo_code:
+            body += f"Promo Code: {promo_code}\n"
+
+    body += (
+        f"\nOrder your uniform here: {order_url}\n\n"
+        "If your player already has a POSA jersey that fits, you're all set. Otherwise, use the link above and enter the promo code during checkout to receive the free jersey included with registration.\n\n"
+        "For games, players need white pants, a white belt, and white socks. Additional uniform items are available through the store if needed.\n\n"
+        "Thanks,\n"
+        "Tim Chilcott\n"
+        "POSA Equipment Manager"
+    )
+
+main
     body = body.strip()
 
     message = Mail(
