@@ -56,12 +56,18 @@ def normalize_division(raw: str) -> str:
 print("📬 Loaded email.py")
 
 # Simplified for local/dev use – no actual email sending, just update flag
-def send_confirmation_email(to_email, player_name, jersey_number, order_url, registration=None, db=None, promo_code=None):
+def send_confirmation_email(to_email, players, order_url, registrations=None, db=None, promo_code=None):
     promo_msg = f" Promo code: {promo_code}" if promo_code else ""
-    print(f"[DEV MODE] Skipping sending email to {to_email} for {player_name} (#{jersey_number}){promo_msg}")
+    player_list = ", ".join(
+        f"{p['name']} (#{p['jersey_number']})" for p in players
+    )
+    print(
+        f"[DEV MODE] Skipping sending email to {to_email} for {player_list}{promo_msg}"
+    )
 
-    if registration and db:
-        registration.confirmation_sent = True
+    if registrations and db:
+        for reg in registrations:
+            reg.confirmation_sent = True
         db.commit()
 
 # Optional: uncomment to send actual emails in production
@@ -340,10 +346,9 @@ def process_inbound_email(email_body: str, db):
             # Auto email sending disabled. Uncomment to enable.
             # send_confirmation_email(
             #     player.parent_email,
-            #     player.full_name,
-            #     player.jersey_number,
+            #     [{"name": player.full_name, "jersey_number": player.jersey_number}],
             #     "https://your-order-url.com",
-            #     reg,
+            #     [reg],
             #     db,
             #     promo_code=promo_code,
             # )
