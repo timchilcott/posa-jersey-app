@@ -131,6 +131,7 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
     unassigned_by_sport = defaultdict(list)
     missing_emails = 0
     missing_jerseys = 0
+    counted_player_ids = set()
 
     for player in players:
         if not player.parent_email:
@@ -154,6 +155,7 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
                     "confirmation_sent": reg.confirmation_sent,
                 })
                 continue
+            counted_player_ids.add(player.id)
             players_by_sport[sport_key][division].append({
                 "id": player.id,
                 "registration_id": reg.id,
@@ -193,7 +195,7 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         "players_by_sport": sorted_players_by_sport,
         "division_list": division_list,
         "unassigned_players_by_sport": unassigned_by_sport,
-        "total_players": len(players),
+        "total_players": len(counted_player_ids),
         "missing_emails": missing_emails,
         "missing_jerseys": missing_jerseys,
     })
