@@ -60,25 +60,28 @@ print("📬 Loaded email.py")
 
 
 def send_confirmation_email(to_email, players, registrations=None, db=None):
-    player_items = []
+    """Send a registration confirmation email with jersey info."""
+
+    lines = []
     for p in players:
-        line = f"<li>{p['name']} – Jersey #{p['jersey_number']}"
         promo = p.get("promo_code")
         if promo:
-            line += f" (Promo Code: <strong>{promo}</strong>)"
-        line += "</li>"
-        player_items.append(line)
-
-    player_list_html = "\n".join(player_items)
+            lines.append(
+                f"{p['name']} – Jersey #{p['jersey_number']} – Promo Code: <strong>{promo}</strong>"
+            )
+        else:
+            lines.append(f"{p['name']} – Jersey #{p['jersey_number']}")
+    players_html = "<br>\n".join(lines)
 
     html = (
-        f"<p>Thanks for signing up for the Pend Oreille Softball Association!</p>\n"
-        f"<ul>\n{player_list_html}\n</ul>\n"
-        f"<p><a href=\"{UNIFORM_ORDER_URL}\">Order your jerseys here</a></p>\n"
-        "<p>All players need a glove, cleats, and black softball pants.</p>\n"
-        "<p>Optional items include a batting helmet, bat, and fielding mask.</p>\n"
-        "<p>Promo codes are made possible by the generosity of our donors.</p>\n"
-        "<p>Thanks,<br>Tim Chilcott</p>"
+        f"<p>Thanks for signing up for soccer with the Pend Oreille Pines!</p>\n\n"
+        "<p>Here’s the jersey info for your player(s):<br>\n"
+        f"{players_html}</p>\n\n"
+        f"<p>Order your jerseys here: <a href=\"{UNIFORM_ORDER_URL}\">{UNIFORM_ORDER_URL}</a></p>\n\n"
+        "<p>The green/white reversible jersey is required for all players.</p>\n"
+        "<p>Black shorts and black socks are optional.</p>\n"
+        "<p>Promo codes are made possible by the generosity of our donors.</p>\n\n"
+        "<p>—<br>Tim Chilcott, League Director<br>Play hard, play fair.<br>Go Pines!</p>"
     )
 
     message = Mail(
