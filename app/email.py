@@ -56,14 +56,33 @@ def normalize_division(raw: str) -> str:
 print("📬 Loaded email.py")
 
 # Simplified for local/dev use – no actual email sending, just update flag
-def send_confirmation_email(to_email, players, order_url, registrations=None, db=None, promo_code=None):
-    promo_msg = f" Promo code: {promo_code}" if promo_code else ""
-    player_list = ", ".join(
-        f"{p['name']} (#{p['jersey_number']})" for p in players
+def send_confirmation_email(
+    to_email, players, order_url, registrations=None, db=None, promo_code=None
+):
+    body_parts = []
+    for p in players:
+        block = (
+            f"{p['name']}\n"
+            f"Jersey Number: {p['jersey_number']}\n"
+            f"Order Jersey: {order_url}\n"
+        )
+        if promo_code:
+            block += f"Promo Code: {promo_code}\n"
+        body_parts.append(block)
+
+    body = "\n".join(body_parts).strip()
+
+    message = Mail(
+        from_email="noreply@posasports.org",
+        to_emails=to_email,
+        subject="Your POSA Jersey Numbers",
+        plain_text_content=body,
     )
-    print(
-        f"[DEV MODE] Skipping sending email to {to_email} for {player_list}{promo_msg}"
-    )
+    try:
+        sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
+        sg.send(message)
+    except Exception:
+        print(f"[DEV MODE] Email to {to_email}:\n{body}")
 
     if registrations and db:
         for reg in registrations:
