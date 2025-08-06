@@ -168,6 +168,23 @@
     {% endfor %}
 </div>
 <script>
+    function insertRowSorted(tbody, row) {
+        const newNumber = parseInt(row.querySelector('.jersey-number').textContent, 10);
+        const rows = Array.from(tbody.querySelectorAll('tr[data-player-id]')).filter(r => r !== row);
+        let inserted = false;
+        for (const existing of rows) {
+            const existingNumber = parseInt(existing.querySelector('.jersey-number').textContent, 10);
+            if (existingNumber > newNumber) {
+                existing.before(row);
+                inserted = true;
+                break;
+            }
+        }
+        if (!inserted) {
+            tbody.querySelector('.add-form-row').before(row);
+        }
+    }
+
     function editHandler(event) {
         const row = event.currentTarget.closest("tr");
         row.querySelectorAll("span").forEach(el => el.classList.add("d-none"));
@@ -209,6 +226,7 @@
             row.querySelector(".full-name").textContent = payload.full_name;
             row.querySelector(".jersey-number").textContent = payload.jersey_number;
             row.querySelector(".parent-email").textContent = payload.parent_email;
+            insertRowSorted(row.closest('tbody'), row);
             row.querySelectorAll("input").forEach(el => el.classList.add("d-none"));
             row.querySelectorAll("span").forEach(el => el.classList.remove("d-none"));
             row.querySelector(".btn-save").classList.add("d-none");
@@ -324,7 +342,7 @@
                         <button class="btn btn-sm btn-danger btn-delete">Delete</button>
                     </td>
                 `;
-                tbody.querySelector(".add-form-row").before(row);
+                insertRowSorted(tbody, row);
                 attachRowHandlers(row);
                 tbody.querySelector(".add-form-row").classList.add("d-none");
                 tbody.querySelector(".add-row").classList.remove("d-none");
