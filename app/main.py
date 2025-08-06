@@ -14,6 +14,7 @@ from .email import (
     save_inbound_email,
     normalize_division,
     PROMO_CODES,
+    DIVISION_ORDER,
 )
 from collections import defaultdict
 import csv
@@ -117,15 +118,7 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
             )
 
     players = query.distinct().all()
-    division_order = {
-        "U4": 0,
-        "U6": 1,
-        "U8": 2,
-        "U10": 3,
-        "U12": 4,
-        "U14": 5,
-        "Pend Oreille Pines (High School Club Team)": 6,
-    }
+    division_order = DIVISION_ORDER.copy()
     EXCLUDED_DIVISIONS = {"", "Unknown"}
     players_by_sport = defaultdict(lambda: defaultdict(list))
     unassigned_by_sport = defaultdict(list)
