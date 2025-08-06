@@ -23,6 +23,9 @@ PROMO_CODES = {
 # URL for ordering uniforms
 UNIFORM_ORDER_URL = "https://treblemade.com/search?q=pines&sort_by=relevance"
 
+# Address that should be CC'd on all outbound emails
+DEFAULT_CC_EMAIL = "tim@posasports.org"
+
 # Canonical division definitions and normalization mapping
 DIVISION_ORDER = {
     "U4": 0,
@@ -90,6 +93,7 @@ def send_confirmation_email(to_email, players, promo_code=None, registrations=No
         html_content=html,
         plain_text_content=_plain_text_from_html(html),
     )
+    message.add_cc(DEFAULT_CC_EMAIL)
     try:
         sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
         response = sg.send(message)
@@ -128,6 +132,7 @@ def send_pines_confirmation_email(to_email, players, registrations=None, db=None
         html_content=html,
         plain_text_content=_plain_text_from_html(html),
     )
+    message.add_cc(DEFAULT_CC_EMAIL)
     try:
         sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
         response = sg.send(message)
