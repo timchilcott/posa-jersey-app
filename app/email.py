@@ -325,8 +325,10 @@ def process_inbound_email(email_body: str, db):
                         if re.search(r"Order (Date|Number)", full_name, re.IGNORECASE):
                             continue
                         # Detect date-like strings in the name column
-                        date_pattern = r"(?:\d{1,2}/\d{1,2}/\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{1,2},\s+\d{4})"
+                        date_pattern = r'(?:\d{1,2}/\d{1,2}/\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{1,2}(?:,\s*|\s+)\d{4}(?:\s+\d{1,2}:\d{2}\s*(?:AM|PM))?)'
                         if re.search(date_pattern, full_name, re.IGNORECASE):
+                            continue
+                        if re.search(r'\d{1,2}:\d{2}\s*(AM|PM)', full_name, re.IGNORECASE):
                             continue
 
                         if " - " in prog_div:
