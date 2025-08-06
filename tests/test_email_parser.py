@@ -131,6 +131,36 @@ def test_timestamp_row_skipped(db_session):
     assert promo_code == PROMO_CODES.get(1)
 
 
+def test_timestamp_span_removed(db_session):
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = 'Order'
+    msg['To'] = 'parent@example.com'
+    html = """
+    <html><body>
+    <table>
+        <tr><td>Order Details</td></tr>
+        <tr>
+            <td><span>Aug 05, 2025 12:29 PM</span></td>
+            <td><span>John Doe</span></td>
+            <td><span>Fall Soccer - U10</span></td>
+        </tr>
+    </table>
+    </body></html>
+    """
+    msg.attach(MIMEText(html, 'html'))
+
+    process_inbound_email(msg.as_string(), db_session)
+
+    players = db_session.query(Player).all()
+    assert len(players) == 1
+    assert players[0].full_name == 'John Doe'
+
+    regs = db_session.query(Registration).all()
+    assert len(regs) == 1
+    assert regs[0].program == 'Fall Soccer'
+    assert regs[0].division == 'U10'
+
+
 def test_bluesombrero_fixture_parsing(db_session):
     fixture = os.path.join('tests', 'fixtures', 'bluesombrero_order.html')
     with open(fixture, 'r') as f:

@@ -315,63 +315,70 @@ def process_inbound_email(email_body: str, db):
 
                 for row in order_table.find_all("tr"):
                     spans = row.find_all("span")
-                    if len(spans) >= 2:
-                        full_name = spans[0].get_text(strip=True)
-                        prog_div = spans[1].get_text(strip=True)
+                    texts = [s.get_text(strip=True) for s in spans]
+                    if not texts:
+                        continue
 
-                        # Skip rows that don't look like player entries
-                        if not prog_div:
-                            continue
-                        if re.search(r"Order (Date|Number)", full_name, re.IGNORECASE):
-                            continue
-                        # Detect date-like strings in the name column
-                        date_pattern = r'(?:\d{1,2}/\d{1,2}/\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{1,2}(?:,\s*|\s+)\d{4}(?:\s+\d{1,2}:\d{2}\s*(?:AM|PM))?)'
-                        if re.search(date_pattern, full_name, re.IGNORECASE):
-                            continue
-                        if re.search(r'\d{1,2}:\d{2}\s*(AM|PM)', full_name, re.IGNORECASE):
-                            continue
+                    # Remove leading timestamp/date spans
+                    date_pattern = r'(?:\d{1,2}/\d{1,2}/\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{1,2}(?:,\s*|\s+)\d{4}(?:\s+\d{1,2}:\d{2}\s*(?:AM|PM))?)'
+                    while texts and (
+                        re.search(date_pattern, texts[0], re.IGNORECASE)
+                        or re.search(r"\d{1,2}:\d{2}\s*(AM|PM)", texts[0], re.IGNORECASE)
+                    ):
+                        texts.pop(0)
 
-                        if " - " in prog_div:
-                            program, division = [p.strip() for p in prog_div.split(" - ", 1)]
-                        else:
-                            program = prog_div.strip()
-                            division = ""
+                    if len(texts) < 2:
+                        continue
 
-                        if not full_name or not program:
-                            continue
+                    full_name, prog_div = texts[0], texts[1]
 
-                        division = normalize_division(division)
-                        if division == "Unknown" and "high school" in program.lower():
-                            division = "Pend Oreille Pines (High School Club Team)"
-                        parent_email = msg.get("To")
+                    # Skip rows that don't look like player entries
+                    if not prog_div:
+                        continue
+                    if re.search(r"Order (Date|Number)", full_name, re.IGNORECASE):
+                        continue
 
-                        sport = "unknown"
-                        season = "unknown"
-                        parts = program.lower().split()
-                        if "fall" in parts:
-                            season = "fall"
-                        elif "spring" in parts:
-                            season = "spring"
-                        elif "summer" in parts:
-                            season = "summer"
-                        elif "winter" in parts:
-                            season = "winter"
+                    if " - " in prog_div:
+                        program, division = [p.strip() for p in prog_div.split(" - ", 1)]
+                    else:
+                        program = prog_div.strip()
+                        division = ""
 
-                        for s in ["soccer", "basketball", "baseball", "softball", "volleyball", "flag"]:
-                            if s in parts:
-                                sport = s
-                                break
+                    if not full_name or not program:
+                        continue
 
-                        parsed_regs.append({
-                            "full_name": full_name,
-                            "program": program,
-                            "division": division,
-                            "parent_email": parent_email,
-                            "order_number": order_number,
-                            "order_date": order_date,
-                            "sport": sport,
-                            "season": season,
-                        })
+                    division = normalize_division(division)
+                    if division == "Unknown" and "high school" in program.lower():
+                        division = "Pend Oreille Pines (High School Club Team)"
+                    parent_email = msg.get("To")
+
+                    sport = "unknown"
+                    season = "unknown"
+                    parts = program.lower().split()
+                    if "fall" in parts:
+                        season = "fall"
+                    elif "spring" in parts:
+                        season = "spring"
+                    elif "summer" in parts:
+                        season = "summer"
+                    elif "winter" in parts:
+                        season = "winter"
+
+                    for s in ["soccer", "basketball", "baseball", "softball", "volleyball", "flag"]:
+                        if s in parts:
+                            sport = s
+                            break
+
+                    parsed_regs.append({
+                        "full_name": full_name,
+                        "program": program,
+                        "division": division,
+                        "parent_email": parent_email,
+                        "order_number": order_number,
+                        "order_date": order_date,
+                        "sport": sport,
+                        "season": season,
+                    })
         except Exception as e:
             print(f"❌ Error parsing order details table: {e}")
 
