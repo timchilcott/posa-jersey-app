@@ -318,11 +318,26 @@ def process_inbound_email(email_body: str, db):
                     if len(spans) >= 2:
                         full_name = spans[0].get_text(strip=True)
                         prog_div = spans[1].get_text(strip=True)
+
+                        # Skip rows that don't look like player entries
+                        if not prog_div:
+                            continue
+                        if re.search(r"Order (Date|Number)", full_name, re.IGNORECASE):
+                            continue
+                        # Detect date-like strings in the name column
+                        date_pattern = r"(?:\d{1,2}/\d{1,2}/\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{1,2},\s+\d{4})"
+                        if re.search(date_pattern, full_name, re.IGNORECASE):
+                            continue
+
                         if " - " in prog_div:
                             program, division = [p.strip() for p in prog_div.split(" - ", 1)]
                         else:
                             program = prog_div.strip()
                             division = ""
+
+                        if not full_name or not program:
+                            continue
+
                         division = normalize_division(division)
                         if division == "Unknown" and "high school" in program.lower():
                             division = "Pend Oreille Pines (High School Club Team)"
