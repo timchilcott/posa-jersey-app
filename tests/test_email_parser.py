@@ -193,6 +193,36 @@ def test_order_details_row_three_spans(db_session):
     assert regs[0].division == 'U10'
 
 
+def test_price_row_skipped_and_promo_code(db_session):
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = 'Order'
+    msg['To'] = 'parent@example.com'
+    html = """
+    <html><body>
+    <table>
+        <tr><td>Order Details</td></tr>
+        <tr><td>Order Number</td><td>ABC123</td></tr>
+        <tr><td>Order Date</td><td>January 2, 2024</td></tr>
+        <tr><td><span>$35.00</span></td><td><span>Fall Soccer - U10</span></td></tr>
+        <tr><td><span>John Doe</span></td><td><span>Fall Soccer - U10</span></td></tr>
+        <tr><td><span>Jane Smith</span></td><td><span>Fall Soccer - U8</span></td></tr>
+    </table>
+    </body></html>
+    """
+    msg.attach(MIMEText(html, 'html'))
+
+    process_inbound_email(msg.as_string(), db_session)
+
+    players = db_session.query(Player).order_by(Player.full_name).all()
+    assert [p.full_name for p in players] == ['Jane Smith', 'John Doe']
+    assert db_session.query(Player).filter_by(full_name='$35.00').first() is None
+
+    regs = db_session.query(Registration).order_by(Registration.division).all()
+    assert len(regs) == 2
+    promo_code = PROMO_CODES.get(len(regs))
+    assert promo_code == PROMO_CODES.get(2)
+
+
 def test_bluesombrero_fixture_parsing(db_session):
     fixture = os.path.join('tests', 'fixtures', 'bluesombrero_order.html')
     with open(fixture, 'r') as f:

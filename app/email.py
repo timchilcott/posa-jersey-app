@@ -327,6 +327,11 @@ def process_inbound_email(email_body: str, db):
                     ):
                         texts.pop(0)
 
+                    # Skip rows where first span looks like a price or non-name token
+                    price_pattern = r"^\$?\d+(?:\.\d{2})?$"
+                    if texts and re.match(price_pattern, texts[0]):
+                        continue
+
                     if len(texts) < 2:
                         continue
 
