@@ -77,6 +77,31 @@ def test_order_details_table_parsing(db_session):
     assert len(regs) == 2
     assert all(r.order_number == 'ABC123' for r in regs)
     assert all(r.order_date.date() == datetime(2024, 1, 2).date() for r in regs)
+
+
+def test_order_date_row_skipped(db_session):
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = 'Order'
+    msg['To'] = 'parent@example.com'
+    html = """
+    <html><body>
+    <table>
+        <tr><td>Order Details</td></tr>
+        <tr><td><span>Order Date</span></td><td><span>January 2, 2024</span></td></tr>
+        <tr><td><span>John Doe</span></td><td><span>Fall Soccer - U10</span></td></tr>
+    </table>
+    </body></html>
+    """
+    msg.attach(MIMEText(html, 'html'))
+
+    process_inbound_email(msg.as_string(), db_session)
+
+    players = db_session.query(Player).all()
+    assert len(players) == 1
+    assert players[0].full_name == 'John Doe'
+
+    regs = db_session.query(Registration).all()
+    assert len(regs) == 1
 def test_bluesombrero_fixture_parsing(db_session):
     fixture = os.path.join('tests', 'fixtures', 'bluesombrero_order.html')
     with open(fixture, 'r') as f:
