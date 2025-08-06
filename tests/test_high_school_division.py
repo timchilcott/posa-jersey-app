@@ -29,15 +29,15 @@ def db_session():
         session.close()
 
 
-def test_manual_high_school_registration(db_session):
-    jersey = assign_jersey_number(db_session, 'High School')
+def test_manual_pines_registration(db_session):
+    jersey = assign_jersey_number(db_session, 'Pend Oreille Pines (High School Club Team)')
     player = Player(full_name='HS Player', parent_email='parent@example.com', jersey_number=jersey)
     db_session.add(player)
     db_session.flush()
     reg = Registration(
         player_id=player.id,
         program='Fall Soccer',
-        division='High School',
+        division='Pend Oreille Pines (High School Club Team)',
         sport='soccer',
         season='fall',
     )
@@ -45,7 +45,7 @@ def test_manual_high_school_registration(db_session):
     db_session.commit()
 
     stored = db_session.query(Registration).filter_by(player_id=player.id).first()
-    assert stored.division == 'High School'
+    assert stored.division == 'Pend Oreille Pines (High School Club Team)'
     assert player.jersey_number == 1
 
 
@@ -65,13 +65,13 @@ def test_email_high_school_normalization(db_session):
     process_inbound_email(msg.as_string(), db_session)
 
     reg = db_session.query(Registration).first()
-    assert reg.division == 'High School'
+    assert reg.division == 'Pend Oreille Pines (High School Club Team)'
     player = db_session.query(Player).first()
     assert player.jersey_number == 1
 
 
-def test_admin_shows_high_school(db_session):
-    jersey = assign_jersey_number(db_session, 'High School')
+def test_admin_shows_pines_division(db_session):
+    jersey = assign_jersey_number(db_session, 'Pend Oreille Pines (High School Club Team)')
     player = Player(full_name='Admin HS', parent_email='admin@example.com', jersey_number=jersey)
     db_session.add(player)
     db_session.flush()
@@ -97,22 +97,11 @@ def test_admin_shows_high_school(db_session):
     )
     db_session.add(blank_reg)
 
-    custom_player = Player(full_name='Custom', parent_email='custom@example.com', jersey_number=assign_jersey_number(db_session, "Pend O'reille Pines (High School Club Team)"))
-    db_session.add(custom_player)
-    db_session.flush()
-    custom_reg = Registration(
-        player_id=custom_player.id,
-        program='Fall Soccer',
-        division="Pend O'reille Pines (High School Club Team)",
-        sport='soccer',
-        season='fall',
-    )
-    db_session.add(custom_reg)
     db_session.commit()
 
     req = Request({'type': 'http', 'session': {'user_id': 1}})
     response = admin_dashboard(req, db_session)
     divisions = response.context['division_list']
-    assert 'High School' in divisions
+    assert 'Pend Oreille Pines (High School Club Team)' in divisions
     assert '' not in divisions
-    assert "Pend O'reille Pines (High School Club Team)" not in divisions
+    assert 'High School' not in divisions

@@ -31,8 +31,7 @@ DIVISION_ORDER = {
     "U10": 3,
     "U12": 4,
     "U14": 5,
-    "High School": 6,
-    "Pend Oreille Pines (High School Club Team)": 7,
+    "Pend Oreille Pines (High School Club Team)": 6,
 }
 DIVISION_ALIASES = {
     "UNDER4": "U4",
@@ -41,8 +40,8 @@ DIVISION_ALIASES = {
     "UNDER10": "U10",
     "UNDER12": "U12",
     "UNDER14": "U14",
-    "HIGHSCHOOL": "High School",
-    "HS": "High School",
+    "HIGHSCHOOL": "Pend Oreille Pines (High School Club Team)",
+    "HS": "Pend Oreille Pines (High School Club Team)",
     "PENDOREILLEPINESHIGHSCHOOLCLUBTEAM": "Pend Oreille Pines (High School Club Team)",
 }
 
@@ -200,7 +199,7 @@ def process_inbound_email(email_body: str, db):
             division_raw = division_match.group(1).strip() if division_match else ""
             division = normalize_division(division_raw)
             if division == "Unknown" and "high school" in program.lower():
-                division = "High School"
+                division = "Pend Oreille Pines (High School Club Team)"
             parent_email = parent_email_match.group(1).strip()
             order_number = order_number_match.group(1).strip() if order_number_match else None
             order_date = datetime.strptime(order_date_match.group(1).strip(), "%B %d, %Y") if order_date_match else None
@@ -276,7 +275,7 @@ def process_inbound_email(email_body: str, db):
                             division = ""
                         division = normalize_division(division)
                         if division == "Unknown" and "high school" in program.lower():
-                            division = "High School"
+                            division = "Pend Oreille Pines (High School Club Team)"
                         parent_email = msg.get("To")
 
                         sport = "unknown"
