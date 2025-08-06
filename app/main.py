@@ -186,6 +186,11 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         for division in division_list:
             players_by_sport[sport].setdefault(division, [])
 
+    # Sort players within each division by jersey number
+    for sport, divisions in players_by_sport.items():
+        for division, player_list in divisions.items():
+            player_list.sort(key=lambda p: (p["jersey_number"] is None, p["jersey_number"]))
+
     sorted_players_by_sport = {}
     for sport, divisions in players_by_sport.items():
         sorted_divisions = dict(sorted(divisions.items(), key=lambda x: division_rank[x[0]]))
