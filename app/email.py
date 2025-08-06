@@ -90,21 +90,18 @@ def send_confirmation_email(to_email, players, promo_code=None, registrations=No
         html_content=html,
         plain_text_content=_plain_text_from_html(html),
     )
-    # Email sending disabled for production.
-    # The following block can be reinstated to re-enable SendGrid emails:
-    # try:
-    #     sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
-    #     response = sg.send(message)
-    #     print(response.status_code)
-    #     print(response.body)
-    #     print(response.headers)
-    #     if registrations and db and 200 <= response.status_code < 300:
-    #         for reg in registrations:
-    #             reg.confirmation_sent = True
-    #         db.commit()
-    # except Exception as e:
-    #     print(e)
-    print("✉️ Email sending is currently disabled.")
+    try:
+        sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
+        response = sg.send(message)
+        print(response.status_code)
+        print(response.body)
+        print(response.headers)
+        if registrations and db and 200 <= response.status_code < 300:
+            for reg in registrations:
+                reg.confirmation_sent = True
+            db.commit()
+    except Exception as e:
+        print(e)
 
 
 def send_pines_confirmation_email(to_email, players, registrations=None, db=None):
@@ -131,20 +128,18 @@ def send_pines_confirmation_email(to_email, players, registrations=None, db=None
         html_content=html,
         plain_text_content=_plain_text_from_html(html),
     )
-    # Email sending disabled for production.
-    # try:
-    #     sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
-    #     response = sg.send(message)
-    #     print(response.status_code)
-    #     print(response.body)
-    #     print(response.headers)
-    #     if registrations and db and 200 <= response.status_code < 300:
-    #         for reg in registrations:
-    #             reg.confirmation_sent = True
-    #         db.commit()
-    # except Exception as e:
-    #     print(e)
-    print("✉️ Email sending is currently disabled.")
+    try:
+        sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
+        response = sg.send(message)
+        print(response.status_code)
+        print(response.body)
+        print(response.headers)
+        if registrations and db and 200 <= response.status_code < 300:
+            for reg in registrations:
+                reg.confirmation_sent = True
+            db.commit()
+    except Exception as e:
+        print(e)
 
 # Utility for capturing raw inbound emails
 def save_inbound_email(email_body: str, filename: str | None = None) -> None:
