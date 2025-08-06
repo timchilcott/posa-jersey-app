@@ -10,6 +10,7 @@ from .auth import authenticate_user, create_user
 from .services.assign import assign_jersey_number
 from .email import (
     send_confirmation_email,
+    send_pines_confirmation_email,
     process_inbound_email,
     save_inbound_email,
     normalize_division,
@@ -398,14 +399,23 @@ def send_registration_email(registration_id: int, request: Request, db: Session 
         .filter(Player.parent_email == parent_email)
         .all()
     )
-    promo_code = PROMO_CODES.get(len(regs))
-    players = [
-        {
-            "name": r.player.full_name,
-            "jersey_number": r.player.jersey_number,
-            "promo_code": promo_code,
-        }
-        for r in regs
-    ]
-    send_confirmation_email(parent_email, players, regs, db)
+    pines_division = "Pend Oreille Pines (High School Club Team)"
+    regular_regs = [r for r in regs if r.division != pines_division]
+    pines_regs = [r for r in regs if r.division == pines_division]
+
+    if regular_regs:
+        promo_code = PROMO_CODES.get(len(regular_regs))
+        players = [
+            {"name": r.player.full_name, "jersey_number": r.player.jersey_number}
+            for r in regular_regs
+        ]
+        send_confirmation_email(parent_email, players, promo_code, regular_regs, db)
+
+    if pines_regs:
+        players = [
+            {"name": r.player.full_name, "jersey_number": r.player.jersey_number}
+            for r in pines_regs
+        ]
+        send_pines_confirmation_email(parent_email, players, pines_regs, db)
+
     return {"message": "Email sent"}

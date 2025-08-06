@@ -55,9 +55,10 @@ def test_group_registration_email(client, monkeypatch):
 
     captured = {}
 
-    def fake_send_confirmation_email(to_email, players, registrations=None, db=None):
+    def fake_send_confirmation_email(to_email, players, promo_code=None, registrations=None, db=None):
         captured['to_email'] = to_email
         captured['players'] = players
+        captured['promo_code'] = promo_code
         if registrations and db:
             for reg in registrations:
                 reg.confirmation_sent = True
@@ -70,7 +71,7 @@ def test_group_registration_email(client, monkeypatch):
     assert captured['to_email'] == 'parent@example.com'
     assert len(captured['players']) == 2
     expected = PROMO_CODES.get(2)
-    assert {p['promo_code'] for p in captured['players']} == {expected}
+    assert captured['promo_code'] == expected
     assert {p['jersey_number'] for p in captured['players']} == {12, 34}
 
     db = client.SessionLocal()
@@ -79,15 +80,16 @@ def test_group_registration_email(client, monkeypatch):
     db.close()
 
 def _mock_email(monkeypatch, captured):
-    def fake_send_confirmation_email(to_email, players, registrations=None, db=None):
-        body = "\n".join(
-            f"{p['name']} (#{p['jersey_number']}) {p['promo_code']}" for p in players
-        )
-        captured['body'] = body
+    def fake_send_confirmation_email(to_email, players, promo_code=None, registrations=None, db=None):
+        lines = [f"{p['name']} (#{p['jersey_number']})" for p in players]
+        if promo_code:
+            lines.append(promo_code)
+        captured['body'] = "\n".join(lines)
         if registrations and db:
             for reg in registrations:
                 reg.confirmation_sent = True
             db.commit()
+
     monkeypatch.setattr(app_main, 'send_confirmation_email', fake_send_confirmation_email)
 
 
@@ -110,10 +112,10 @@ def test_single_player_email_body(client, monkeypatch):
 
     body_lines = captured['body'].splitlines()
     promo = PROMO_CODES.get(1)
-    assert len(body_lines) == 1
+    assert len(body_lines) == 2
     assert 'Solo' in body_lines[0]
-    assert promo in body_lines[0]
     assert '#7' in body_lines[0]
+    assert body_lines[1] == promo
 
     db = client.SessionLocal()
     assert db.query(Registration).get(reg_id).confirmation_sent
@@ -143,13 +145,12 @@ def test_three_player_email_body(client, monkeypatch):
 
     body_lines = captured['body'].splitlines()
     promo = PROMO_CODES.get(3)
-    assert len(body_lines) == 3
+    assert len(body_lines) == 4
     for name in names:
-        assert any(name in line for line in body_lines)
-    for line in body_lines:
-        assert promo in line
+        assert any(name in line for line in body_lines[:-1])
+    assert body_lines[-1] == promo
     for num in [10, 20, 30]:
-        assert any(f'#{num}' in line for line in body_lines)
+        assert any(f'#{num}' in line for line in body_lines[:-1])
 
     db = client.SessionLocal()
     for rid in reg_ids:

@@ -58,18 +58,25 @@ def normalize_division(raw: str) -> str:
 print("📬 Loaded email.py")
 
 
-def send_confirmation_email(to_email, players, registrations=None, db=None):
-    """Send a registration confirmation email with jersey info."""
+def _plain_text_from_html(html: str) -> str:
+    """Derive a plain-text version of HTML content."""
+    return BeautifulSoup(html, "html.parser").get_text("\n")
+
+
+def send_confirmation_email(to_email, players, promo_code=None, registrations=None, db=None):
+    """Send a registration confirmation email with jersey info for standard divisions."""
 
     players_html = "\n".join(
-        f"<p>Player: {p['name']} (#{p['jersey_number']})<br>Promo Code: {p.get('promo_code', '')}</p>"
-        for p in players
+        f"<p>Player: {p['name']} (#{p['jersey_number']})</p>" for p in players
     )
+
+    promo_html = f"<p>Promo Code: {promo_code}</p>" if promo_code else ""
 
     html = (
         "<p>Thanks for signing up for soccer with the Pend Oreille Pines. We’re excited to have your family with us this season!</p>"
         "<p>Here’s the jersey info for your player(s):</p>"
         f"{players_html}"
+        f"{promo_html}"
         f"<p>Order your jerseys here:<br><a href=\"{UNIFORM_ORDER_URL}\">{UNIFORM_ORDER_URL}</a></p>"
         "<p>Only the reversible Pines jersey is required for games. You’re welcome to add Pines-branded black shorts and socks to your order, or use your own. Any plain black shorts and socks are just fine as long as they don’t have other team logos or colors.</p>"
         "<p>If your family is in a position to purchase the jerseys without using the promo codes, it helps us stretch our nonprofit funds to support other families and improve the program. But either way, jerseys are covered and we’re thrilled to have your kids on the field.</p>"
@@ -79,11 +86,52 @@ def send_confirmation_email(to_email, players, registrations=None, db=None):
     message = Mail(
         from_email="noreply@posasports.org",
         to_emails=to_email,
-        subject="Your POSA Jersey Numbers",
+        subject="Jersey Numbers and Uniform Info for Your Player(s)",
         html_content=html,
+        plain_text_content=_plain_text_from_html(html),
     )
     # Email sending disabled for production.
     # The following block can be reinstated to re-enable SendGrid emails:
+    # try:
+    #     sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
+    #     response = sg.send(message)
+    #     print(response.status_code)
+    #     print(response.body)
+    #     print(response.headers)
+    #     if registrations and db and 200 <= response.status_code < 300:
+    #         for reg in registrations:
+    #             reg.confirmation_sent = True
+    #         db.commit()
+    # except Exception as e:
+    #     print(e)
+    print("✉️ Email sending is currently disabled.")
+
+
+def send_pines_confirmation_email(to_email, players, registrations=None, db=None):
+    """Send a registration confirmation email for Pend Oreille Pines High School Club Team."""
+
+    players_html = "\n".join(
+        f"<p>{p['name']}<br>Jersey Number: {p['jersey_number']}</p>" for p in players
+    )
+
+    html = (
+        "<p>Thanks for registering with the Pend Oreille Pines High School Club Team. We’re looking forward to a strong season ahead.</p>"
+        "<p>Here’s the jersey info for your player(s):</p>"
+        f"{players_html}"
+        f"<p>Order your full kit here:<br><a href=\"{UNIFORM_ORDER_URL}\">{UNIFORM_ORDER_URL}</a></p>"
+        "<p><strong>Uniform Requirements:</strong><br>All High School Club Team players are required to wear the full Pines kit:<br>• Reversible Pines jersey<br>• Pines black shorts<br>• Pines black socks</p>"
+        "<p>Please complete your order as soon as possible to ensure everything arrives before the first match. Promo codes are not used for this team, as club players are responsible for purchasing their full kits.</p>"
+        "<p>—<br>Tim Chilcott<br>President - POSA<br>🌲 Pines stand tall.<br>❤️ The heart of sports starts with us.</p>"
+    )
+
+    message = Mail(
+        from_email="noreply@posasports.org",
+        to_emails=to_email,
+        subject="Jersey Numbers and Uniform Info for Your Player(s)",
+        html_content=html,
+        plain_text_content=_plain_text_from_html(html),
+    )
+    # Email sending disabled for production.
     # try:
     #     sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
     #     response = sg.send(message)
