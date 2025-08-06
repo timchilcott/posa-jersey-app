@@ -342,7 +342,9 @@
                         <button class="btn btn-sm btn-danger btn-delete">Delete</button>
                     </td>
                 `;
+                // Insert the new player row in jersey-number order
                 insertRowSorted(tbody, row);
+                // Bind standard handlers to the newly added row
                 attachRowHandlers(row);
                 tbody.querySelector(".add-form-row").classList.add("d-none");
                 tbody.querySelector(".add-row").classList.remove("d-none");
