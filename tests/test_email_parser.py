@@ -177,7 +177,7 @@ def test_unknown_division_defaults(db_session, capsys):
     assert reg.division == 'Unknown'
 
 
-def test_missing_division_defaults_to_high_school(db_session):
+def test_missing_division_defaults_to_pines_team(db_session):
     msg = MIMEMultipart('alternative')
     msg['Subject'] = 'Missing Division'
     html = """
@@ -192,4 +192,4 @@ def test_missing_division_defaults_to_high_school(db_session):
     process_inbound_email(msg.as_string(), db_session)
 
     reg = db_session.query(Registration).first()
-    assert reg.division == 'High School'
+    assert reg.division == 'Pend Oreille Pines (High School Club Team)'

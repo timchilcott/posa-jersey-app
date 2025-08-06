@@ -124,8 +124,7 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         "U10": 3,
         "U12": 4,
         "U14": 5,
-        "High School": 6,
-        "Pend Oreille Pines (High School Club Team)": 7,
+        "Pend Oreille Pines (High School Club Team)": 6,
     }
     EXCLUDED_DIVISIONS = {"", "Unknown"}
     players_by_sport = defaultdict(lambda: defaultdict(list))
