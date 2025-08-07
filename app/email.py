@@ -327,6 +327,10 @@ def process_inbound_email(email_body: str, db):
                     ):
                         texts.pop(0)
 
+                    # Remove any leading "Jersey Number" spans
+                    while texts and texts[0].lower().startswith("jersey number"):
+                        texts.pop(0)
+
                     # Skip rows where the first span looks like a price or lacks letters
                     currency_pattern = r"^\$?[\d,]+(?:\.\d{2})?(?:\s*[:A-Za-z].*)?$"
                     if texts and (
