@@ -400,8 +400,15 @@ def send_registration_email(registration_id: int, request: Request, db: Session 
         .all()
     )
     pines_division = "Pend Oreille Pines (High School Club Team)"
-    regular_regs = [r for r in regs if r.division != pines_division]
-    pines_regs = [r for r in regs if r.division == pines_division]
+
+    regular_regs = []
+    pines_regs = []
+    for r in regs:
+        division = normalize_division(r.division)
+        if division == pines_division:
+            pines_regs.append(r)
+        else:
+            regular_regs.append(r)
 
     if regular_regs:
         promo_code = PROMO_CODES.get(len(regular_regs))
