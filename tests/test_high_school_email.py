@@ -50,6 +50,19 @@ def test_high_school_email_no_promo(client, monkeypatch):
     reg_id = r.id
     db.close()
 
+
+def test_high_school_alias_uses_pines_email(client, monkeypatch):
+    db = client.SessionLocal()
+    p = Player(full_name='HS Player', parent_email='parent@example.com', jersey_number=9)
+    db.add(p)
+    db.flush()
+    # Use alias division that should normalize to the Pines division
+    r = Registration(player_id=p.id, program='prog', division='High School', sport='soccer', season='2024', confirmation_sent=False)
+    db.add(r)
+    db.commit()
+    reg_id = r.id
+    db.close()
+
     captured = {}
 
     def fake_pines_email(to_email, players, registrations=None, db=None):
