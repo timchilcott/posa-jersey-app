@@ -1,8 +1,12 @@
 import argparse
+import logging
 from app.database import SessionLocal
 from app.models import Player, Registration
 from app.services.assign import assign_jersey_number
 from app.email import normalize_division
+
+
+logger = logging.getLogger(__name__)
 
 
 def main():
@@ -30,7 +34,12 @@ def main():
         )
         db.add(reg)
         db.commit()
-        print(f"Added player {player.full_name} (ID {player.id}) with jersey #{jersey}")
+        logger.info(
+            "Added player %s (ID %s) with jersey #%s",
+            player.full_name,
+            player.id,
+            jersey,
+        )
     finally:
         db.close()
 

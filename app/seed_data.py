@@ -1,8 +1,12 @@
 from datetime import date, datetime
+import logging
 from sqlalchemy.orm import Session
 
 from .database import SessionLocal
 from .models import Player, Registration
+
+
+logger = logging.getLogger(__name__)
 
 def seed_data():
     db: Session = SessionLocal()
@@ -72,7 +76,7 @@ def seed_data():
 
     db.commit()
     db.close()
-    print("✅ Sample data seeded.")
+    logger.info("Sample data seeded.")
 
 if __name__ == "__main__":
     seed_data()

@@ -1,6 +1,7 @@
 import os
 import re
 import email
+import logging
 from bs4 import BeautifulSoup
 from datetime import datetime
 from sendgrid import SendGridAPIClient
@@ -8,6 +9,9 @@ from sendgrid.helpers.mail import Mail
 
 from .models import Player, Registration
 from .services.assign import assign_jersey_number
+
+
+logger = logging.getLogger(__name__)
 
 # Promo code mapping based on number of registrations in a single email
 PROMO_CODES = {
@@ -54,11 +58,9 @@ def normalize_division(raw: str) -> str:
     key = re.sub(r"[^A-Za-z0-9]", "", raw or "").upper()
     division = DIVISION_ALIASES.get(key, key)
     if division not in DIVISION_ORDER:
-        print(f"⚠️ Unknown division '{raw}', defaulting to 'Unknown'")
+        logger.warning("Unknown division '%s', defaulting to 'Unknown'", raw)
         return "Unknown"
     return division
-
-print("📬 Loaded email.py")
 
 
 def _plain_text_from_html(html: str) -> str:
@@ -98,15 +100,18 @@ def send_confirmation_email(to_email, players, promo_code=None, registrations=No
     try:
         sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
         response = sg.send(message)
-        print(response.status_code)
-        print(response.body)
-        print(response.headers)
+        logger.debug(
+            "SendGrid response status=%s body=%s headers=%s",
+            response.status_code,
+            response.body,
+            response.headers,
+        )
         if registrations and db and 200 <= response.status_code < 300:
             for reg in registrations:
                 reg.confirmation_sent = True
             db.commit()
     except Exception as e:
-        print(e)
+        logger.error("Error sending confirmation email: %s", e)
 
 
 def send_pines_confirmation_email(to_email, players, registrations=None, db=None):
@@ -138,15 +143,18 @@ def send_pines_confirmation_email(to_email, players, registrations=None, db=None
     try:
         sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
         response = sg.send(message)
-        print(response.status_code)
-        print(response.body)
-        print(response.headers)
+        logger.debug(
+            "SendGrid response status=%s body=%s headers=%s",
+            response.status_code,
+            response.body,
+            response.headers,
+        )
         if registrations and db and 200 <= response.status_code < 300:
             for reg in registrations:
                 reg.confirmation_sent = True
             db.commit()
     except Exception as e:
-        print(e)
+        logger.error("Error sending pines confirmation email: %s", e)
 
 # Utility for capturing raw inbound emails
 def save_inbound_email(email_body: str, filename: str | None = None) -> None:
@@ -159,12 +167,12 @@ def save_inbound_email(email_body: str, filename: str | None = None) -> None:
     try:
         with open(path, "w") as f:
             f.write(email_body)
-        print(f"📩 Saved inbound email to {path}")
+        logger.info("Saved inbound email to %s", path)
     except Exception as e:
-        print(f"❌ Failed to save inbound email: {e}")
+        logger.error("Failed to save inbound email: %s", e)
 
 def process_inbound_email(email_body: str, db):
-    print("📥 Processing inbound email")
+    logger.info("Processing inbound email")
 
     msg = email.message_from_string(email_body)
     text_content = None
@@ -223,7 +231,7 @@ def process_inbound_email(email_body: str, db):
 
         # Skip adult leagues and camps
         if "Adult League Softball" in full_text or "Camp" in full_text:
-            print("⏭ Skipping non-youth program")
+            logger.info("Skipping non-youth program")
             continue
 
         try:
@@ -241,7 +249,7 @@ def process_inbound_email(email_body: str, db):
             }.items() if not match]
 
             if missing:
-                print(f"❌ Skipping entry, missing: {', '.join(missing)}")
+                logger.warning("Skipping entry, missing: %s", ", ".join(missing))
                 continue
 
             full_name = name_match.group(1).strip()
@@ -284,7 +292,7 @@ def process_inbound_email(email_body: str, db):
             })
 
         except Exception as e:
-            print(f"❌ Error processing registrant block: {e}")
+            logger.error("Error processing registrant block: %s", e)
 
     if not parsed_regs and html_content:
         try:
@@ -411,7 +419,7 @@ def process_inbound_email(email_body: str, db):
                         "season": season,
                     })
         except Exception as e:
-            print(f"❌ Error parsing order details table: {e}")
+            logger.error("Error parsing order details table: %s", e)
 
     promo_code = PROMO_CODES.get(len(parsed_regs))
 
@@ -464,6 +472,10 @@ def process_inbound_email(email_body: str, db):
             existing_reg.order_number = entry["order_number"]
             existing_reg.order_date = entry["order_date"]
             db.commit()
-            print(
-                f"✔ Updated registration for {player.full_name} to {entry['division']} in {entry['sport']} {entry['season']}"
+            logger.info(
+                "Updated registration for %s to %s in %s %s",
+                player.full_name,
+                entry["division"],
+                entry["sport"],
+                entry["season"],
             )

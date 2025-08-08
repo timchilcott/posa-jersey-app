@@ -1,4 +1,5 @@
 import os
+import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -22,25 +23,25 @@ def db_session():
         session.close()
 
 
-def test_logs_missing_single_field(db_session, capsys):
+def test_logs_missing_single_field(db_session, caplog):
     body = """
 Name: John Doe
 Program: Spring Soccer
 Parent Email: p@example.com
 """
-    process_inbound_email(body, db_session)
-    captured = capsys.readouterr().out
-    assert "Unknown division" in captured
+    with caplog.at_level(logging.WARNING):
+        process_inbound_email(body, db_session)
+    assert "Unknown division" in caplog.text
 
 
-def test_logs_missing_multiple_fields(db_session, capsys):
+def test_logs_missing_multiple_fields(db_session, caplog):
     body = """
 Program: Spring Soccer
 Division: U12
 """
-    process_inbound_email(body, db_session)
-    captured = capsys.readouterr().out
+    with caplog.at_level(logging.WARNING):
+        process_inbound_email(body, db_session)
     # Order of fields may vary
-    assert "missing:" in captured
-    assert "Name" in captured
-    assert "Parent Email" in captured
+    assert "missing:" in caplog.text
+    assert "Name" in caplog.text
+    assert "Parent Email" in caplog.text

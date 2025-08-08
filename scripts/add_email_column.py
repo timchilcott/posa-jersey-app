@@ -1,3 +1,4 @@
+import logging
 from sqlalchemy import create_engine, MetaData, Table
 
 # Use the same DATABASE_URL environment variable as app/database.py.
@@ -7,6 +8,9 @@ DATABASE_URL = "sqlite:///./posa.db"
 engine = create_engine(DATABASE_URL)
 metadata = MetaData(bind=engine)
 
+
+logger = logging.getLogger(__name__)
+
 # Reflect the existing table
 players = Table("players", metadata, autoload_with=engine)
 
@@ -14,7 +18,7 @@ players = Table("players", metadata, autoload_with=engine)
 with engine.connect() as conn:
     if "email_sent" not in players.c:
         conn.execute('ALTER TABLE players ADD COLUMN email_sent BOOLEAN DEFAULT 0')
-        print("✅ 'email_sent' column added.")
+        logger.info("'email_sent' column added.")
     else:
-        print("ℹ️ 'email_sent' column already exists.")
+        logger.info("'email_sent' column already exists.")
 
