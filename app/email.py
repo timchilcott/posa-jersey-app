@@ -332,11 +332,21 @@ def process_inbound_email(email_body: str, db):
                     ):
                         texts.pop(0)
 
+ 5t4m3o-codex/remove-numeric-span-from-inbound-email
                     # Remove any leading "Jersey Number" span and an immediate numeric value
                     if texts and texts[0].lower().startswith("jersey number"):
                         texts.pop(0)
                         if texts and re.fullmatch(r"\d+", texts[0]):
                             texts.pop(0)
+
+                    # Remove any leading "Jersey Number" spans and following numeric value
+                    jersey_label_removed = False
+                    while texts and texts[0].lower().startswith("jersey number"):
+                        texts.pop(0)
+                        jersey_label_removed = True
+                    if jersey_label_removed and texts and re.match(r"^\d+$", texts[0]):
+                        texts.pop(0)
+ main
 
                     # Skip rows where the first span looks like a price or lacks letters
                     currency_pattern = r"^\$?[\d,]+(?:\.\d{2})?(?:\s*[:A-Za-z].*)?$"
