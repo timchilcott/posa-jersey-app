@@ -1,6 +1,10 @@
 import argparse
+import logging
 from app.database import SessionLocal
 from app.models import Registration
+
+
+logger = logging.getLogger(__name__)
 
 
 def main():
@@ -23,7 +27,7 @@ def main():
             db.rollback()
         else:
             db.commit()
-        print(f"Updated {updated} registrations")
+        logger.info("Updated %d registrations", updated)
     finally:
         db.close()
 

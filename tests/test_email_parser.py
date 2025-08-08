@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import datetime
+import logging
 
 # Ensure database URL is set before importing application modules
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
@@ -424,7 +425,7 @@ def test_division_normalization(db_session):
     assert reg.division == 'U10'
 
 
-def test_unknown_division_defaults(db_session, capsys):
+def test_unknown_division_defaults(db_session, caplog):
     msg = MIMEMultipart('alternative')
     msg['Subject'] = 'Unknown'
     html = """
@@ -437,9 +438,9 @@ def test_unknown_division_defaults(db_session, capsys):
     """
     msg.attach(MIMEText(html, 'html'))
 
-    process_inbound_email(msg.as_string(), db_session)
-    captured = capsys.readouterr().out
-    assert "Unknown division" in captured
+    with caplog.at_level(logging.WARNING):
+        process_inbound_email(msg.as_string(), db_session)
+    assert "Unknown division" in caplog.text
     reg = db_session.query(Registration).first()
     assert reg.division == 'Unknown'
 
