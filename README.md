@@ -10,8 +10,8 @@ This FastAPI application manages player registrations and jersey assignments for
    ```
 
 2. **Configure environment variables**
-   - `DATABASE_URL` – SQLAlchemy connection string to your database
-   - `SECRET_KEY` – secret used for session cookies
+   - `DATABASE_URL` – SQLAlchemy connection string to your database. If unset, defaults to `sqlite:///./app.db`.
+   - `SECRET_KEY` – secret used for session cookies and must be set.
    - `ADMIN_EMAIL` – email for the initial admin account (optional)
    - `ADMIN_PASSWORD` – password for the initial admin account (optional)
 
