@@ -247,7 +247,7 @@ class PlayerUpdate(BaseModel):
 @app.put("/players/{player_id}")
 async def update_player(player_id: int, player: PlayerUpdate, request: Request, db: Session = Depends(get_db)):
     require_login(request)
-    db_player = db.query(Player).get(player_id)
+    db_player = db.get(Player, player_id)
     if db_player:
         db_player.full_name = player.full_name
         db_player.parent_email = player.parent_email
@@ -329,7 +329,7 @@ def move_player_division(
 ):
     """Move a player's registration to a new division and assign jersey."""
     require_login(request)
-    reg = db.query(Registration).get(registration_id)
+    reg = db.get(Registration, registration_id)
     if not reg:
         raise HTTPException(status_code=404, detail="Registration not found")
 
@@ -365,7 +365,7 @@ def export_players_csv(request: Request, db: Session = Depends(get_db)):
 @app.delete("/players/{player_id}")
 def delete_player(player_id: int, request: Request, db: Session = Depends(get_db)):
     require_login(request)
-    player = db.query(Player).get(player_id)
+    player = db.get(Player, player_id)
     if player:
         db.delete(player)
         db.commit()
@@ -389,7 +389,7 @@ async def receive_email(request: Request, db: Session = Depends(get_db)):
 @app.post("/registrations/{registration_id}/send_email")
 def send_registration_email(registration_id: int, request: Request, db: Session = Depends(get_db)):
     require_login(request)
-    reg = db.query(Registration).get(registration_id)
+    reg = db.get(Registration, registration_id)
     if not reg:
         raise HTTPException(status_code=404, detail="Registration not found")
     parent_email = reg.player.parent_email
