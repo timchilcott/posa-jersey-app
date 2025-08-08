@@ -320,12 +320,24 @@ def process_inbound_email(email_body: str, db):
                         continue
 
                     # Remove leading timestamp/date spans
-                    date_pattern = r'(?:\d{1,2}/\d{1,2}/\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{1,2}(?:,\s*|\s+)\d{4}(?:\s+\d{1,2}:\d{2}\s*(?:AM|PM))?)'
+                    date_pattern = (
+                        r'(?:[A-Za-z]{3,9},\s*)?'
+                        r'(?:\d{1,2}/\d{1,2}/\d{2,4}|'
+                        r'(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{1,2}(?:,\s*|\s+)\d{4})'
+                        r'(?:\s+\d{1,2}:\d{2}\s*(?:AM|PM))?'
+                    )
                     while texts and (
                         re.search(date_pattern, texts[0], re.IGNORECASE)
                         or re.search(r"\d{1,2}:\d{2}\s*(AM|PM)", texts[0], re.IGNORECASE)
                     ):
                         texts.pop(0)
+
+ 5t4m3o-codex/remove-numeric-span-from-inbound-email
+                    # Remove any leading "Jersey Number" span and an immediate numeric value
+                    if texts and texts[0].lower().startswith("jersey number"):
+                        texts.pop(0)
+                        if texts and re.fullmatch(r"\d+", texts[0]):
+                            texts.pop(0)
 
                     # Remove any leading "Jersey Number" spans and following numeric value
                     jersey_label_removed = False
@@ -334,6 +346,7 @@ def process_inbound_email(email_body: str, db):
                         jersey_label_removed = True
                     if jersey_label_removed and texts and re.match(r"^\d+$", texts[0]):
                         texts.pop(0)
+ main
 
                     # Skip rows where the first span looks like a price or lacks letters
                     currency_pattern = r"^\$?[\d,]+(?:\.\d{2})?(?:\s*[:A-Za-z].*)?$"
@@ -352,6 +365,10 @@ def process_inbound_email(email_body: str, db):
                     if not prog_div:
                         continue
                     if re.search(r"Order (Date|Number)", full_name, re.IGNORECASE):
+                        continue
+                    if re.search(date_pattern, full_name, re.IGNORECASE) or re.search(
+                        r"\d{1,2}:\d{2}\s*(AM|PM)", full_name, re.IGNORECASE
+                    ):
                         continue
 
                     if " - " in prog_div:
