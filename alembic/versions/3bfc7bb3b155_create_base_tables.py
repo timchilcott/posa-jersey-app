@@ -26,7 +26,6 @@ def upgrade() -> None:
     sa.Column('full_name', sa.String(), nullable=False),
     sa.Column('jersey_number', sa.Integer(), nullable=True),
     sa.Column('parent_email', sa.String(), nullable=False),
-    sa.Column('locked', sa.Boolean(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('full_name', name='uq_fullname')
     )
