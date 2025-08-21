@@ -147,6 +147,7 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
                     "sport": sport_key,
                     "division": division,
                     "confirmation_sent": reg.confirmation_sent,
+                    "locked": player.locked,
                 })
                 continue
             counted_player_ids.add(player.id)
@@ -159,6 +160,7 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
                 "sport": sport_key,
                 "division": division,
                 "confirmation_sent": reg.confirmation_sent,
+                "locked": player.locked,
             })
 
     # Build list of all divisions from defaults and existing data
@@ -248,15 +250,31 @@ class PlayerUpdate(BaseModel):
 async def update_player(player_id: int, player: PlayerUpdate, request: Request, db: Session = Depends(get_db)):
     require_login(request)
     db_player = db.get(Player, player_id)
-    if db_player:
-        db_player.full_name = player.full_name
-        db_player.parent_email = player.parent_email
-        db_player.jersey_number = player.jersey_number
-        db.commit()
-        db.refresh(db_player)
-        return db_player
-    else:
+    if not db_player:
         raise HTTPException(status_code=404, detail="Player not found")
+    if db_player.locked:
+        raise HTTPException(status_code=403, detail="Player is locked")
+    db_player.full_name = player.full_name
+    db_player.parent_email = player.parent_email
+    db_player.jersey_number = player.jersey_number
+    db.commit()
+    db.refresh(db_player)
+    return db_player
+
+
+class LockUpdate(BaseModel):
+    locked: bool
+
+
+@app.put("/players/{player_id}/lock")
+def update_player_lock(player_id: int, lock: LockUpdate, request: Request, db: Session = Depends(get_db)):
+    require_login(request)
+    db_player = db.get(Player, player_id)
+    if not db_player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    db_player.locked = lock.locked
+    db.commit()
+    return {"locked": db_player.locked}
 
 class PlayerCreate(BaseModel):
     full_name: str
@@ -332,6 +350,8 @@ def move_player_division(
     reg = db.get(Registration, registration_id)
     if not reg:
         raise HTTPException(status_code=404, detail="Registration not found")
+    if reg.player.locked:
+        raise HTTPException(status_code=403, detail="Player is locked")
 
     new_division = normalize_division(payload.division)
     reg.division = new_division
@@ -366,12 +386,13 @@ def export_players_csv(request: Request, db: Session = Depends(get_db)):
 def delete_player(player_id: int, request: Request, db: Session = Depends(get_db)):
     require_login(request)
     player = db.get(Player, player_id)
-    if player:
-        db.delete(player)
-        db.commit()
-        return {"message": "Player deleted"}
-    else:
+    if not player:
         raise HTTPException(status_code=404, detail="Player not found")
+    if player.locked:
+        raise HTTPException(status_code=403, detail="Player is locked")
+    db.delete(player)
+    db.commit()
+    return {"message": "Player deleted"}
 
 @app.post("/email/receive")
 async def receive_email(request: Request, db: Session = Depends(get_db)):
@@ -392,6 +413,8 @@ def send_registration_email(registration_id: int, request: Request, db: Session 
     reg = db.get(Registration, registration_id)
     if not reg:
         raise HTTPException(status_code=404, detail="Registration not found")
+    if reg.player.locked:
+        raise HTTPException(status_code=403, detail="Player is locked")
     parent_email = reg.player.parent_email
     regs = (
         db.query(Registration)
