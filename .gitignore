@@ -1,3 +1,5 @@
 .env
 __pycache__/
 *.pyc
+*.db
+create_test_data.py
