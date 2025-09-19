@@ -43,6 +43,38 @@ class Registration(Base):
     )
 
 
+class Sport(Base):
+    """Sports available in the system."""
+
+    __tablename__ = "sports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+    display_name = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    divisions = relationship("Division", back_populates="sport", cascade="all, delete-orphan")
+
+
+class Division(Base):
+    """Divisions available for each sport."""
+
+    __tablename__ = "divisions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    display_name = Column(String, nullable=False)
+    sport_id = Column(Integer, ForeignKey("sports.id"), nullable=False)
+    sort_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    sport = relationship("Sport", back_populates="divisions")
+
+    __table_args__ = (
+        UniqueConstraint("sport_id", "name", name="uq_sport_division"),
+    )
+
+
 class User(Base):
     """Application user."""
 

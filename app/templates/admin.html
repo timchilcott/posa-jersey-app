@@ -26,35 +26,45 @@
     </div>
 </div>
 <!-- Sport Tabs -->
-<ul class="nav nav-tabs" id="sportTabs" role="tablist">
-    {% for sport, divisions in players_by_sport.items() %}
-        <li class="nav-item" role="presentation">
-            <button class="nav-link {% if loop.first %}active{% endif %}" id="tab-{{ sport|lower }}" data-bs-toggle="tab" data-bs-target="#pane-{{ sport|lower }}" type="button" role="tab">
-                {{ sport.capitalize() }}
-            </button>
-        </li>
-    {% endfor %}
-</ul>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <ul class="nav nav-tabs flex-grow-1" id="sportTabs" role="tablist">
+        {% for sport, divisions in players_by_sport.items() %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if loop.first %}active{% endif %}" id="tab-{{ sport|lower }}" data-bs-toggle="tab" data-bs-target="#pane-{{ sport|lower }}" type="button" role="tab">
+                    {{ sport.capitalize() }}
+                </button>
+            </li>
+        {% endfor %}
+    </ul>
+    <button class="btn btn-success btn-sm ms-3" onclick="showAddSportModal()">
+        <i class="bi bi-plus-circle"></i> Add Sport
+    </button>
+</div>
 <div class="tab-content mt-3" id="sportTabsContent">
     {% for sport, divisions in players_by_sport.items() %}
         <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="pane-{{ sport|lower }}" role="tabpanel">
-            <ul class="nav nav-pills mb-3" id="divisionTabs-{{ sport|lower }}" role="tablist">
-                {# Loop through all divisions, including any custom ones #}
-                {% for division in division_list %}
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link {% if loop.first %}active{% endif %}" id="tab-{{ sport|lower }}-{{ division|replace(' ', '_')|replace('/', '_')|lower }}" data-bs-toggle="pill" data-bs-target="#pane-{{ sport|lower }}-{{ division|replace(' ', '_')|replace('/', '_')|lower }}" type="button" role="tab">
-                            {{ division }}
-                        </button>
-                    </li>
-                {% endfor %}
-                {% if unassigned_players_by_sport[sport] %}
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="tab-{{ sport|lower }}-unassigned" data-bs-toggle="pill" data-bs-target="#pane-{{ sport|lower }}-unassigned" type="button" role="tab">
-                            Unassigned
-                        </button>
-                    </li>
-                {% endif %}
-            </ul>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <ul class="nav nav-pills flex-grow-1" id="divisionTabs-{{ sport|lower }}" role="tablist">
+                    {# Loop through all divisions, including any custom ones #}
+                    {% for division in division_list %}
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {% if loop.first %}active{% endif %}" id="tab-{{ sport|lower }}-{{ division|replace(' ', '_')|replace('/', '_')|lower }}" data-bs-toggle="pill" data-bs-target="#pane-{{ sport|lower }}-{{ division|replace(' ', '_')|replace('/', '_')|lower }}" type="button" role="tab">
+                                {{ division }}
+                            </button>
+                        </li>
+                    {% endfor %}
+                    {% if unassigned_players_by_sport[sport] %}
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tab-{{ sport|lower }}-unassigned" data-bs-toggle="pill" data-bs-target="#pane-{{ sport|lower }}-unassigned" type="button" role="tab">
+                                Unassigned
+                            </button>
+                        </li>
+                    {% endif %}
+                </ul>
+                <button class="btn btn-primary btn-sm ms-3" onclick="showAddDivisionModal('{{ sport|lower }}')">
+                    <i class="bi bi-plus-circle"></i> Add Division
+                </button>
+            </div>
             <div class="tab-content">
                 {# Render a table for each division in division_list #}
                 {% for division in division_list %}
@@ -411,5 +421,205 @@
             }
         });
     });
+
+    // Functions for adding sports and divisions
+    function showAddSportModal() {
+        document.getElementById('addSportModal').style.display = 'block';
+    }
+
+    function closeAddSportModal() {
+        document.getElementById('addSportModal').style.display = 'none';
+        document.getElementById('sportForm').reset();
+    }
+
+    function showAddDivisionModal(sport) {
+        document.getElementById('addDivisionSport').value = sport;
+        document.getElementById('addDivisionModal').style.display = 'block';
+    }
+
+    function closeAddDivisionModal() {
+        document.getElementById('addDivisionModal').style.display = 'none';
+        document.getElementById('divisionForm').reset();
+    }
+
+    // Handle sport form submission
+    document.getElementById('sportForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = {
+            name: formData.get('name').trim().toLowerCase(),
+            display_name: formData.get('display_name').trim()
+        };
+
+        try {
+            const response = await fetch('/sports', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                closeAddSportModal();
+                showSuccessMessage('Sport added successfully! Refreshing page...');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                const error = await response.json();
+                showErrorMessage(error.detail || 'Failed to add sport');
+            }
+        } catch (error) {
+            showErrorMessage('Failed to add sport');
+        }
+    });
+
+    // Handle division form submission
+    document.getElementById('divisionForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const sport = document.getElementById('addDivisionSport').value;
+        
+        // Get sport ID from the sports API first
+        try {
+            const sportsResponse = await fetch('/sports');
+            const sports = await sportsResponse.json();
+            const sportData = sports.find(s => s.name === sport);
+            
+            if (!sportData) {
+                showErrorMessage('Sport not found');
+                return;
+            }
+
+            const data = {
+                name: formData.get('name').trim(),
+                display_name: formData.get('display_name').trim(),
+                sport_id: sportData.id,
+                sort_order: parseInt(formData.get('sort_order')) || 0
+            };
+
+            const response = await fetch('/divisions', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                closeAddDivisionModal();
+                showSuccessMessage('Division added successfully! Refreshing page...');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                const error = await response.json();
+                showErrorMessage(error.detail || 'Failed to add division');
+            }
+        } catch (error) {
+            showErrorMessage('Failed to add division');
+        }
+    });
+
+    function showSuccessMessage(message) {
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-success alert-dismissible fade show position-fixed';
+        alert.style.top = '20px';
+        alert.style.right = '20px';
+        alert.style.zIndex = '9999';
+        alert.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(alert);
+        setTimeout(() => alert.remove(), 3000);
+    }
+
+    function showErrorMessage(message) {
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+        alert.style.top = '20px';
+        alert.style.right = '20px';
+        alert.style.zIndex = '9999';
+        alert.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(alert);
+        setTimeout(() => alert.remove(), 5000);
+    }
+
+    // Close modals when clicking outside
+    window.onclick = function(event) {
+        const sportModal = document.getElementById('addSportModal');
+        const divisionModal = document.getElementById('addDivisionModal');
+        if (event.target === sportModal) {
+            closeAddSportModal();
+        }
+        if (event.target === divisionModal) {
+            closeAddDivisionModal();
+        }
+    };
 </script>
+
+<!-- Add Sport Modal -->
+<div id="addSportModal" class="modal-backdrop" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog" style="position: relative; margin: 5% auto; max-width: 500px;">
+        <div class="modal-content bg-white p-4 rounded shadow">
+            <div class="modal-header d-flex justify-content-between align-items-center mb-3">
+                <h5 class="modal-title">Add New Sport</h5>
+                <button type="button" class="btn-close" onclick="closeAddSportModal()"></button>
+            </div>
+            <form id="sportForm">
+                <div class="mb-3">
+                    <label for="sportName" class="form-label">Sport Name (internal)</label>
+                    <input type="text" class="form-control" id="sportName" name="name" required 
+                           placeholder="e.g., soccer, basketball" pattern="[a-z0-9\s]+" 
+                           title="Only lowercase letters, numbers, and spaces allowed">
+                    <div class="form-text">This will be used internally and should be lowercase.</div>
+                </div>
+                <div class="mb-3">
+                    <label for="sportDisplayName" class="form-label">Display Name</label>
+                    <input type="text" class="form-control" id="sportDisplayName" name="display_name" required 
+                           placeholder="e.g., Soccer, Basketball">
+                    <div class="form-text">This is how the sport will appear to users.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddSportModal()">Cancel</button>
+                    <button type="submit" class="btn btn-success">Add Sport</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Division Modal -->
+<div id="addDivisionModal" class="modal-backdrop" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog" style="position: relative; margin: 5% auto; max-width: 500px;">
+        <div class="modal-content bg-white p-4 rounded shadow">
+            <div class="modal-header d-flex justify-content-between align-items-center mb-3">
+                <h5 class="modal-title">Add New Division</h5>
+                <button type="button" class="btn-close" onclick="closeAddDivisionModal()"></button>
+            </div>
+            <form id="divisionForm">
+                <input type="hidden" id="addDivisionSport" value="">
+                <div class="mb-3">
+                    <label for="divisionName" class="form-label">Division Name</label>
+                    <input type="text" class="form-control" id="divisionName" name="name" required 
+                           placeholder="e.g., U6, U8, U10">
+                    <div class="form-text">This will be used for matching and normalization.</div>
+                </div>
+                <div class="mb-3">
+                    <label for="divisionDisplayName" class="form-label">Display Name</label>
+                    <input type="text" class="form-control" id="divisionDisplayName" name="display_name" required 
+                           placeholder="e.g., Under 6, Under 8, Under 10">
+                    <div class="form-text">This is how the division will appear to users.</div>
+                </div>
+                <div class="mb-3">
+                    <label for="divisionSortOrder" class="form-label">Sort Order</label>
+                    <input type="number" class="form-control" id="divisionSortOrder" name="sort_order" value="0" min="0">
+                    <div class="form-text">Lower numbers appear first. Use 0 for default ordering.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddDivisionModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Division</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

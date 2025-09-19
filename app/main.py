@@ -5,7 +5,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from .database import Base, engine, SessionLocal
-from .models import Player, Registration, User
+from .models import Player, Registration, User, Sport, Division
 from .auth import authenticate_user, create_user
 from .services.assign import assign_jersey_number
 from .email import (
@@ -405,6 +405,106 @@ async def receive_email(request: Request, db: Session = Depends(get_db)):
         return {"message": "Email received and processed"}
     else:
         return {"error": "No email content found in request"}
+
+
+class SportCreate(BaseModel):
+    name: str
+    display_name: str
+
+class DivisionCreate(BaseModel):
+    name: str
+    display_name: str
+    sport_id: int
+    sort_order: int = 0
+
+
+@app.post("/sports")
+def create_sport(sport: SportCreate, request: Request, db: Session = Depends(get_db)):
+    """Create a new sport."""
+    require_login(request)
+    
+    # Check if sport already exists (case-insensitive)
+    existing = db.query(Sport).filter(Sport.name.ilike(sport.name)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Sport already exists")
+    
+    db_sport = Sport(
+        name=sport.name.strip().lower(),
+        display_name=sport.display_name.strip()
+    )
+    db.add(db_sport)
+    db.commit()
+    db.refresh(db_sport)
+    
+    return {
+        "id": db_sport.id,
+        "name": db_sport.name,
+        "display_name": db_sport.display_name
+    }
+
+
+@app.post("/divisions")
+def create_division(division: DivisionCreate, request: Request, db: Session = Depends(get_db)):
+    """Create a new division for a sport."""
+    require_login(request)
+    
+    # Check if sport exists
+    sport = db.get(Sport, division.sport_id)
+    if not sport:
+        raise HTTPException(status_code=404, detail="Sport not found")
+    
+    # Check if division already exists for this sport
+    existing = db.query(Division).filter(
+        Division.sport_id == division.sport_id,
+        Division.name.ilike(division.name)
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Division already exists for this sport")
+    
+    db_division = Division(
+        name=division.name.strip(),
+        display_name=division.display_name.strip(),
+        sport_id=division.sport_id,
+        sort_order=division.sort_order
+    )
+    db.add(db_division)
+    db.commit()
+    db.refresh(db_division)
+    
+    return {
+        "id": db_division.id,
+        "name": db_division.name,
+        "display_name": db_division.display_name,
+        "sport_id": db_division.sport_id,
+        "sort_order": db_division.sort_order
+    }
+
+
+@app.get("/sports")
+def get_sports(request: Request, db: Session = Depends(get_db)):
+    """Get all sports with their divisions."""
+    require_login(request)
+    
+    sports = db.query(Sport).order_by(Sport.display_name).all()
+    result = []
+    for sport in sports:
+        divisions = db.query(Division).filter(Division.sport_id == sport.id).order_by(Division.sort_order, Division.display_name).all()
+        result.append({
+            "id": sport.id,
+            "name": sport.name,
+            "display_name": sport.display_name,
+            "divisions": [
+                {
+                    "id": div.id,
+                    "name": div.name,
+                    "display_name": div.display_name,
+                    "sort_order": div.sort_order
+                }
+                for div in divisions
+            ]
+        })
+    
+    return result
 
 
 @app.post("/registrations/{registration_id}/send_email")
