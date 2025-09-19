@@ -38,8 +38,57 @@ def ensure_admin_user() -> None:
             email = os.getenv("ADMIN_EMAIL", "admin@example.com")
             password = os.getenv("ADMIN_PASSWORD", "admin")
             create_user(db, email, password)
+        
+        # Seed default sports and divisions if none exist
+        if not db.query(Sport).first():
+            seed_default_sports_and_divisions(db)
     finally:
         db.close()
+
+
+def seed_default_sports_and_divisions(db: Session):
+    """Seed default sports and divisions based on existing data."""
+    # Common sports
+    sports_data = [
+        ("basketball", "Basketball"),
+        ("baseball", "Baseball"),
+        ("softball", "Softball"),
+        ("volleyball", "Volleyball"),
+        ("soccer", "Soccer"),
+        ("flag football", "Flag Football"),
+    ]
+    
+    sport_objs = {}
+    for name, display_name in sports_data:
+        sport = Sport(name=name, display_name=display_name)
+        db.add(sport)
+        sport_objs[name] = sport
+    
+    db.flush()  # Get IDs
+    
+    # Default divisions based on DIVISION_ORDER
+    divisions_data = [
+        ("U4", "Under 4", 0),
+        ("U6", "Under 6", 1),
+        ("U8", "Under 8", 2),
+        ("U10", "Under 10", 3),
+        ("U12", "Under 12", 4),
+        ("U14", "Under 14", 5),
+        ("Pend Oreille Pines (High School Club Team)", "High School Club Team", 6),
+    ]
+    
+    # Add divisions for each sport
+    for sport_name, sport_obj in sport_objs.items():
+        for div_name, div_display, sort_order in divisions_data:
+            division = Division(
+                name=div_name,
+                display_name=div_display,
+                sport_id=sport_obj.id,
+                sort_order=sort_order
+            )
+            db.add(division)
+    
+    db.commit()
 
 def get_db():
     db = SessionLocal()
