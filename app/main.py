@@ -142,6 +142,7 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
                     "id": player.id,
                     "registration_id": reg.id,
                     "full_name": player.full_name,
+                    "birth_year": player.birth_year,
                     "parent_email": player.parent_email,
                     "jersey_number": player.jersey_number,
                     "sport": sport_key,
@@ -155,6 +156,7 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
                 "id": player.id,
                 "registration_id": reg.id,
                 "full_name": player.full_name,
+                "birth_year": player.birth_year,
                 "parent_email": player.parent_email,
                 "jersey_number": player.jersey_number,
                 "sport": sport_key,
@@ -216,6 +218,7 @@ def new_player_form(request: Request):
 def create_player_manual(
     request: Request,
     full_name: str = Form(...),
+    birth_year: int = Form(None),
     parent_email: str = Form(...),
     sport: str = Form(...),
     division: str = Form(...),
@@ -227,7 +230,12 @@ def create_player_manual(
     division = normalize_division(division)
     jersey_number = assign_jersey_number(db, division)
     sport_normalized = sport.strip().lower()
-    player = Player(full_name=full_name, parent_email=parent_email, jersey_number=jersey_number)
+    player = Player(
+        full_name=full_name,
+        birth_year=birth_year,
+        parent_email=parent_email,
+        jersey_number=jersey_number
+    )
     db.add(player)
     db.flush()
     reg = Registration(
@@ -243,6 +251,7 @@ def create_player_manual(
 
 class PlayerUpdate(BaseModel):
     full_name: str
+    birth_year: int | None
     parent_email: str
     jersey_number: int
 
@@ -255,6 +264,7 @@ async def update_player(player_id: int, player: PlayerUpdate, request: Request, 
     if db_player.locked:
         raise HTTPException(status_code=403, detail="Player is locked")
     db_player.full_name = player.full_name
+    db_player.birth_year = player.birth_year
     db_player.parent_email = player.parent_email
     db_player.jersey_number = player.jersey_number
     db.commit()
@@ -278,6 +288,7 @@ def update_player_lock(player_id: int, lock: LockUpdate, request: Request, db: S
 
 class PlayerCreate(BaseModel):
     full_name: str
+    birth_year: int | None
     parent_email: str
 
 class InlinePlayerCreate(PlayerCreate):
@@ -292,6 +303,7 @@ def create_player(player: PlayerCreate, request: Request, db: Session = Depends(
     jersey_number = assign_jersey_number(db, dummy_division)
     db_player = Player(
         full_name=player.full_name,
+        birth_year=player.birth_year,
         parent_email=player.parent_email,
         jersey_number=jersey_number
     )
@@ -308,6 +320,7 @@ def create_player_inline(player: InlinePlayerCreate, request: Request, db: Sessi
     jersey_number = assign_jersey_number(db, division)
     db_player = Player(
         full_name=player.full_name,
+        birth_year=player.birth_year,
         parent_email=player.parent_email,
         jersey_number=jersey_number,
     )
@@ -326,6 +339,7 @@ def create_player_inline(player: InlinePlayerCreate, request: Request, db: Sessi
         "id": db_player.id,
         "registration_id": reg.id,
         "full_name": db_player.full_name,
+        "birth_year": db_player.birth_year,
         "parent_email": db_player.parent_email,
         "jersey_number": db_player.jersey_number,
         "sport": player.sport.strip().lower(),
@@ -363,6 +377,7 @@ def move_player_division(
         "id": reg.player.id,
         "registration_id": reg.id,
         "full_name": reg.player.full_name,
+        "birth_year": reg.player.birth_year,
         "parent_email": reg.player.parent_email,
         "jersey_number": reg.player.jersey_number,
         "sport": reg.sport,
@@ -376,9 +391,9 @@ def export_players_csv(request: Request, db: Session = Depends(get_db)):
     players = db.query(Player).all()
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Name", "Parent Email", "Jersey Number"])
+    writer.writerow(["Name", "Birth Year", "Parent Email", "Jersey Number"])
     for player in players:
-        writer.writerow([player.full_name, player.parent_email, player.jersey_number])
+        writer.writerow([player.full_name, player.birth_year or "", player.parent_email, player.jersey_number])
     output.seek(0)
     return StreamingResponse(io.BytesIO(output.getvalue().encode()), media_type="text/csv")
 
