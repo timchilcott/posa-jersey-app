@@ -9,6 +9,7 @@ class Player(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     full_name = Column(String, nullable=False)
+    birth_year = Column(Integer, nullable=True)
     jersey_number = Column(Integer, nullable=True)
     parent_email = Column(String, nullable=False)
     locked = Column(Boolean, default=False)
