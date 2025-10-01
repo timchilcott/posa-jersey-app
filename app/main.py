@@ -100,11 +100,12 @@ def invite_user(request: Request, email: str = Form(...), password: str = Form(.
     return RedirectResponse("/admin", status_code=302)
 
 @app.get("/admin", response_class=HTMLResponse)
-def admin_dashboard(request: Request, db: Session = Depends(get_db)):
+def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Depends(get_db)):
     try:
         require_login(request)
     except HTTPException as exc:
         return RedirectResponse(exc.headers["Location"], status_code=exc.status_code)
+    
     query = db.query(Player).join(Player.registrations)
 
     if CURRENT_SEASON:
@@ -119,10 +120,8 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
             )
 
     players = query.distinct().all()
-    division_order = DIVISION_ORDER.copy()
+    
     EXCLUDED_DIVISIONS = {"", "Unknown"}
-    players_by_sport = defaultdict(lambda: defaultdict(list))
-    unassigned_by_sport = defaultdict(list)
     missing_emails = 0
     missing_jerseys = 0
     counted_player_ids = set()
@@ -133,12 +132,41 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         if not player.jersey_number:
             missing_jerseys += 1
 
-        for reg in player.registrations:
-            sport_key = (reg.sport or "").strip().lower()
-            division_raw = (reg.division or "").strip()
-            division = normalize_division(division_raw) if division_raw else ""
-            if division in EXCLUDED_DIVISIONS:
-                unassigned_by_sport[sport_key].append({
+    # Detect duplicate jersey numbers within birth years
+    birth_year_jersey_map = defaultdict(lambda: defaultdict(list))
+    for player in players:
+        if player.birth_year and player.jersey_number:
+            for reg in player.registrations:
+                sport_key = (reg.sport or "").strip().lower()
+                birth_year_jersey_map[sport_key][player.birth_year].append({
+                    'player_id': player.id,
+                    'jersey_number': player.jersey_number
+                })
+
+    # Find duplicates
+    duplicate_player_ids = set()
+    for sport_jerseys in birth_year_jersey_map.values():
+        for birth_year, player_list in sport_jerseys.items():
+            jersey_counts = defaultdict(list)
+            for p in player_list:
+                jersey_counts[p['jersey_number']].append(p['player_id'])
+            for jersey_num, player_ids in jersey_counts.items():
+                if len(player_ids) > 1:
+                    duplicate_player_ids.update(player_ids)
+
+    if view == "division":
+        # Original division-based view
+        division_order = DIVISION_ORDER.copy()
+        players_by_sport = defaultdict(lambda: defaultdict(list))
+        unassigned_by_sport = defaultdict(list)
+
+        for player in players:
+            for reg in player.registrations:
+                sport_key = (reg.sport or "").strip().lower()
+                division_raw = (reg.division or "").strip()
+                division = normalize_division(division_raw) if division_raw else ""
+                
+                player_data = {
                     "id": player.id,
                     "registration_id": reg.id,
                     "full_name": player.full_name,
@@ -149,59 +177,129 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
                     "division": division,
                     "confirmation_sent": reg.confirmation_sent,
                     "locked": player.locked,
-                })
-                continue
-            counted_player_ids.add(player.id)
-            players_by_sport[sport_key][division].append({
-                "id": player.id,
-                "registration_id": reg.id,
-                "full_name": player.full_name,
-                "birth_year": player.birth_year,
-                "parent_email": player.parent_email,
-                "jersey_number": player.jersey_number,
-                "sport": sport_key,
-                "division": division,
-                "confirmation_sent": reg.confirmation_sent,
-                "locked": player.locked,
-            })
+                    "is_duplicate": player.id in duplicate_player_ids,
+                }
+                
+                if division in EXCLUDED_DIVISIONS:
+                    unassigned_by_sport[sport_key].append(player_data)
+                    continue
+                    
+                counted_player_ids.add(player.id)
+                players_by_sport[sport_key][division].append(player_data)
 
-    # Build list of all divisions from defaults and existing data
-    division_names = set(division_order.keys())
-    for divisions in players_by_sport.values():
-        for div in divisions.keys():
-            name = (div or "").strip()
-            if name not in EXCLUDED_DIVISIONS:
-                division_names.add(name)
-    division_list = sorted(
-        division_names,
-        key=lambda x: division_order.get(x, 999),
-    )
-    division_rank = {name: idx for idx, name in enumerate(division_list)}
+        # Build list of all divisions
+        division_names = set(division_order.keys())
+        for divisions in players_by_sport.values():
+            for div in divisions.keys():
+                name = (div or "").strip()
+                if name not in EXCLUDED_DIVISIONS:
+                    division_names.add(name)
+        division_list = sorted(
+            division_names,
+            key=lambda x: division_order.get(x, 999),
+        )
+        division_rank = {name: idx for idx, name in enumerate(division_list)}
 
-    # Ensure each sport has entries for every division, even if no players
-    for sport in players_by_sport.keys():
-        for division in division_list:
-            players_by_sport[sport].setdefault(division, [])
+        # Ensure each sport has entries for every division
+        for sport in players_by_sport.keys():
+            for division in division_list:
+                players_by_sport[sport].setdefault(division, [])
 
-    # Sort players within each division by jersey number
-    for sport, divisions in players_by_sport.items():
-        for division, player_list in divisions.items():
-            player_list.sort(key=lambda p: (p["jersey_number"] is None, p["jersey_number"]))
+        # Sort players within each division by jersey number
+        for sport, divisions in players_by_sport.items():
+            for division, player_list in divisions.items():
+                player_list.sort(key=lambda p: (p["jersey_number"] is None, p["jersey_number"]))
 
-    sorted_players_by_sport = {}
-    for sport, divisions in players_by_sport.items():
-        sorted_divisions = dict(sorted(divisions.items(), key=lambda x: division_rank[x[0]]))
-        sorted_players_by_sport[sport] = sorted_divisions
+        sorted_players_by_sport = {}
+        for sport, divisions in players_by_sport.items():
+            sorted_divisions = dict(sorted(divisions.items(), key=lambda x: division_rank[x[0]]))
+            sorted_players_by_sport[sport] = sorted_divisions
 
-    return templates.TemplateResponse("admin.html", {
-        "request": request,
-        "players_by_sport": sorted_players_by_sport,
-        "division_list": division_list,
-        "unassigned_players_by_sport": unassigned_by_sport,
-        "total_players": len(counted_player_ids),
-        "missing_emails": missing_emails,
-        "missing_jerseys": missing_jerseys,
-    })
+        return templates.TemplateResponse("admin.html", {
+            "request": request,
+            "view": "division",
+            "players_by_sport": sorted_players_by_sport,
+            "division_list": division_list,
+            "unassigned_players_by_sport": unassigned_by_sport,
+            "total_players": len(counted_player_ids),
+            "missing_emails": missing_emails,
+            "missing_jerseys": missing_jerseys,
+        })
+    
+    else:
+        # New birth year-based view
+        players_by_sport = defaultdict(lambda: defaultdict(list))
+        unassigned_by_sport = defaultdict(list)
+
+        for player in players:
+            for reg in player.registrations:
+                sport_key = (reg.sport or "").strip().lower()
+                division_raw = (reg.division or "").strip()
+                division = normalize_division(division_raw) if division_raw else ""
+                
+                if division in EXCLUDED_DIVISIONS:
+                    unassigned_by_sport[sport_key].append({
+                        "id": player.id,
+                        "registration_id": reg.id,
+                        "full_name": player.full_name,
+                        "birth_year": player.birth_year,
+                        "parent_email": player.parent_email,
+                        "jersey_number": player.jersey_number,
+                        "sport": sport_key,
+                        "division": division,
+                        "confirmation_sent": reg.confirmation_sent,
+                        "locked": player.locked,
+                        "is_duplicate": player.id in duplicate_player_ids,
+                    })
+                    continue
+                
+                if player.birth_year:
+                    counted_player_ids.add(player.id)
+                    players_by_sport[sport_key][player.birth_year].append({
+                        "id": player.id,
+                        "registration_id": reg.id,
+                        "full_name": player.full_name,
+                        "birth_year": player.birth_year,
+                        "parent_email": player.parent_email,
+                        "jersey_number": player.jersey_number,
+                        "sport": sport_key,
+                        "division": division,
+                        "confirmation_sent": reg.confirmation_sent,
+                        "locked": player.locked,
+                        "is_duplicate": player.id in duplicate_player_ids,
+                    })
+
+        # Get all birth years and sort them (newest to oldest)
+        birth_years = set()
+        for sport_data in players_by_sport.values():
+            birth_years.update(sport_data.keys())
+        birth_year_list = sorted(birth_years, reverse=True)
+
+        # Ensure each sport has entries for every birth year
+        for sport in players_by_sport.keys():
+            for birth_year in birth_year_list:
+                players_by_sport[sport].setdefault(birth_year, [])
+
+        # Sort players within each birth year by jersey number
+        for sport, birth_years_dict in players_by_sport.items():
+            for birth_year, player_list in birth_years_dict.items():
+                player_list.sort(key=lambda p: (p["jersey_number"] is None, p["jersey_number"]))
+
+        sorted_players_by_sport = {}
+        for sport, birth_years_dict in players_by_sport.items():
+            sorted_birth_years = dict(sorted(birth_years_dict.items(), reverse=True))
+            sorted_players_by_sport[sport] = sorted_birth_years
+
+        return templates.TemplateResponse("admin.html", {
+            "request": request,
+            "view": "birthyear",
+            "players_by_sport": sorted_players_by_sport,
+            "birth_year_list": birth_year_list,
+            "unassigned_players_by_sport": unassigned_by_sport,
+            "total_players": len(counted_player_ids),
+            "missing_emails": missing_emails,
+            "missing_jerseys": missing_jerseys,
+        })
 
 
 @app.get("/players/new", response_class=HTMLResponse)
@@ -228,7 +326,7 @@ def create_player_manual(
     """Create player and registration from form submission."""
     require_login(request)
     division = normalize_division(division)
-    jersey_number = assign_jersey_number(db, division)
+    jersey_number = assign_jersey_number(db, birth_year)
     sport_normalized = sport.strip().lower()
     player = Player(
         full_name=full_name,
@@ -299,8 +397,7 @@ class InlinePlayerCreate(PlayerCreate):
 @app.post("/players")
 def create_player(player: PlayerCreate, request: Request, db: Session = Depends(get_db)):
     require_login(request)
-    dummy_division = "U6"
-    jersey_number = assign_jersey_number(db, dummy_division)
+    jersey_number = assign_jersey_number(db, player.birth_year)
     db_player = Player(
         full_name=player.full_name,
         birth_year=player.birth_year,
@@ -317,7 +414,7 @@ def create_player(player: PlayerCreate, request: Request, db: Session = Depends(
 def create_player_inline(player: InlinePlayerCreate, request: Request, db: Session = Depends(get_db)):
     require_login(request)
     division = normalize_division(player.division)
-    jersey_number = assign_jersey_number(db, division)
+    jersey_number = assign_jersey_number(db, player.birth_year)
     db_player = Player(
         full_name=player.full_name,
         birth_year=player.birth_year,
@@ -359,7 +456,7 @@ def move_player_division(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    """Move a player's registration to a new division and assign jersey."""
+    """Update a player's registration division."""
     require_login(request)
     reg = db.get(Registration, registration_id)
     if not reg:
@@ -369,7 +466,6 @@ def move_player_division(
 
     new_division = normalize_division(payload.division)
     reg.division = new_division
-    reg.player.jersey_number = assign_jersey_number(db, new_division)
     db.commit()
     db.refresh(reg)
 
