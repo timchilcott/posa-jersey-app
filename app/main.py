@@ -152,12 +152,16 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
                 sport_key = (reg.sport or "").strip().lower()
                 key = (sport_key, player.birth_year, player.jersey_number)
                 birth_year_sport_jersey[key].append(player.id)
+                print(f"DEBUG: Added player {player.id} ({player.full_name}) to key {key}")
 
     # Find duplicates - any key with more than one player_id
     duplicate_player_ids = set()
     for key, player_ids in birth_year_sport_jersey.items():
         if len(player_ids) > 1:
             duplicate_player_ids.update(player_ids)
+            print(f"DEBUG: Found duplicate at key {key}: player IDs {player_ids}")
+    
+    print(f"DEBUG: Total duplicate player IDs: {duplicate_player_ids}")
 
     if view == "division":
         # Original division-based view
@@ -171,6 +175,9 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
                 division_raw = (reg.division or "").strip()
                 division = normalize_division(division_raw) if division_raw else ""
                 
+                is_dup = player.id in duplicate_player_ids
+                print(f"DEBUG Division View: Player {player.id} is_duplicate={is_dup}")
+                
                 player_data = {
                     "id": player.id,
                     "registration_id": reg.id,
@@ -182,7 +189,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
                     "division": division,
                     "confirmation_sent": reg.confirmation_sent,
                     "locked": player.locked,
-                    "is_duplicate": player.id in duplicate_player_ids,
+                    "is_duplicate": is_dup,
                 }
                 
                 if division in EXCLUDED_DIVISIONS:
@@ -242,6 +249,9 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
                 division_raw = (reg.division or "").strip()
                 division = normalize_division(division_raw) if division_raw else ""
                 
+                is_dup = player.id in duplicate_player_ids
+                print(f"DEBUG Birth Year View: Player {player.id} ({player.full_name}) is_duplicate={is_dup}")
+                
                 if division in EXCLUDED_DIVISIONS:
                     unassigned_by_sport[sport_key].append({
                         "id": player.id,
@@ -254,7 +264,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
                         "division": division,
                         "confirmation_sent": reg.confirmation_sent,
                         "locked": player.locked,
-                        "is_duplicate": player.id in duplicate_player_ids,
+                        "is_duplicate": is_dup,
                     })
                     continue
                 
@@ -271,7 +281,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
                         "division": division,
                         "confirmation_sent": reg.confirmation_sent,
                         "locked": player.locked,
-                        "is_duplicate": player.id in duplicate_player_ids,
+                        "is_duplicate": is_dup,
                     })
 
         # Get all birth years and sort them (newest to oldest)
