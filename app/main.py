@@ -143,26 +143,21 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
             missing_jerseys += 1
 
     # Detect duplicate jersey numbers within birth years
-    birth_year_jersey_map = defaultdict(lambda: defaultdict(list))
+    # Key is (sport, birth_year, jersey_number) -> list of player_ids
+    birth_year_sport_jersey = defaultdict(list)
+    
     for player in players:
         if player.birth_year and player.jersey_number:
             for reg in player.registrations:
                 sport_key = (reg.sport or "").strip().lower()
-                birth_year_jersey_map[sport_key][player.birth_year].append({
-                    'player_id': player.id,
-                    'jersey_number': player.jersey_number
-                })
+                key = (sport_key, player.birth_year, player.jersey_number)
+                birth_year_sport_jersey[key].append(player.id)
 
-    # Find duplicates
+    # Find duplicates - any key with more than one player_id
     duplicate_player_ids = set()
-    for sport_jerseys in birth_year_jersey_map.values():
-        for birth_year, player_list in sport_jerseys.items():
-            jersey_counts = defaultdict(list)
-            for p in player_list:
-                jersey_counts[p['jersey_number']].append(p['player_id'])
-            for jersey_num, player_ids in jersey_counts.items():
-                if len(player_ids) > 1:
-                    duplicate_player_ids.update(player_ids)
+    for key, player_ids in birth_year_sport_jersey.items():
+        if len(player_ids) > 1:
+            duplicate_player_ids.update(player_ids)
 
     if view == "division":
         # Original division-based view
