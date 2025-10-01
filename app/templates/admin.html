@@ -57,7 +57,7 @@
                     {% for birth_year in birth_year_list %}
                         <li class="nav-item" role="presentation">
                             <button class="nav-link {% if loop.first %}active{% endif %}" id="tab-{{ sport|lower }}-{{ birth_year }}" data-bs-toggle="pill" data-bs-target="#pane-{{ sport|lower }}-{{ birth_year }}" type="button" role="tab">
-                                {{ birth_year }}
+                                {{ birth_year_labels[birth_year] }}
                             </button>
                         </li>
                     {% endfor %}
