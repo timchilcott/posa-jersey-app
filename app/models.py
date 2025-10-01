@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, UniqueConstraint, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, UniqueConstraint, Boolean, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -52,3 +52,15 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
+
+
+class EmailTemplate(Base):
+    """Email template for confirmation emails."""
+
+    __tablename__ = "email_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+    subject = Column(String, nullable=False)
+    body_html = Column(Text, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
