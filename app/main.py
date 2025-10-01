@@ -29,6 +29,14 @@ templates = Jinja2Templates(directory="app/templates")
 Base.metadata.create_all(bind=engine)
 
 
+def calculate_u_division(birth_year: int, season_year: int = None) -> str:
+    """Calculate U-division based on birth year using US Soccer guidelines."""
+    if season_year is None:
+        season_year = int(CURRENT_SEASON) if CURRENT_SEASON else 2025
+    u_number = (season_year - birth_year) + 1
+    return f"U{u_number}"
+
+
 @app.on_event("startup")
 def ensure_admin_user() -> None:
     """Create initial admin user if none exist."""
@@ -107,6 +115,8 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
         return RedirectResponse(exc.headers["Location"], status_code=exc.status_code)
     
     query = db.query(Player).join(Player.registrations)
+
+    season_year = int(CURRENT_SEASON) if CURRENT_SEASON else 2025
 
     if CURRENT_SEASON:
         season_match = (
@@ -275,6 +285,12 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
             birth_years.update(sport_data.keys())
         birth_year_list = sorted(birth_years, reverse=True)
 
+        # Create birth year with U-division labels
+        birth_year_labels = {
+            by: f"{by} / {calculate_u_division(by, season_year)}"
+            for by in birth_year_list
+        }
+
         # Ensure each sport has entries for every birth year
         for sport in players_by_sport.keys():
             for birth_year in birth_year_list:
@@ -295,6 +311,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
             "view": "birthyear",
             "players_by_sport": sorted_players_by_sport,
             "birth_year_list": birth_year_list,
+            "birth_year_labels": birth_year_labels,
             "unassigned_players_by_sport": unassigned_by_sport,
             "total_players": len(counted_player_ids),
             "missing_emails": missing_emails,
