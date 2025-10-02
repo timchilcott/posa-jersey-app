@@ -5,7 +5,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from .database import Base, engine, SessionLocal
-from .models import Player, Registration, User
+from .models import Player, Registration, User, EmailTemplate
 from .auth import authenticate_user, create_user
 from .services.assign import assign_jersey_number
 from .email import (
@@ -18,6 +18,7 @@ from .email import (
     DIVISION_ORDER,
 )
 from collections import defaultdict
+from datetime import datetime
 import csv
 import io
 import os
@@ -582,3 +583,52 @@ def send_registration_email(registration_id: int, request: Request, db: Session 
         send_pines_confirmation_email(parent_email, players, pines_regs, db)
 
     return {"message": "Email sent"}
+
+
+# Email Template Management Endpoints
+
+class EmailTemplateUpdate(BaseModel):
+    name: str
+    subject: str
+    body_html: str
+
+
+@app.get("/email-templates", response_class=HTMLResponse)
+def email_templates_page(request: Request, db: Session = Depends(get_db)):
+    """Render email templates editor page."""
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        return RedirectResponse(exc.headers["Location"], status_code=exc.status_code)
+    
+    standard_template = db.query(EmailTemplate).filter(EmailTemplate.name == "standard_confirmation").first()
+    pines_template = db.query(EmailTemplate).filter(EmailTemplate.name == "pines_confirmation").first()
+    
+    return templates.TemplateResponse("email_templates.html", {
+        "request": request,
+        "standard_template": standard_template,
+        "pines_template": pines_template,
+    })
+
+
+@app.post("/email-templates")
+async def save_email_template(template: EmailTemplateUpdate, request: Request, db: Session = Depends(get_db)):
+    """Save or update an email template."""
+    require_login(request)
+    
+    existing = db.query(EmailTemplate).filter(EmailTemplate.name == template.name).first()
+    
+    if existing:
+        existing.subject = template.subject
+        existing.body_html = template.body_html
+        existing.updated_at = datetime.utcnow()
+    else:
+        new_template = EmailTemplate(
+            name=template.name,
+            subject=template.subject,
+            body_html=template.body_html
+        )
+        db.add(new_template)
+    
+    db.commit()
+    return {"message": "Template saved successfully"}
