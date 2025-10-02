@@ -70,28 +70,45 @@ def _plain_text_from_html(html: str) -> str:
 
 def send_confirmation_email(to_email, players, promo_code=None, registrations=None, db=None):
     """Send a registration confirmation email with jersey info for standard divisions."""
-
+    from .models import EmailTemplate
+    
+    # Get template from database
+    template = None
+    if db:
+        template = db.query(EmailTemplate).filter(EmailTemplate.name == "standard_confirmation").first()
+    
+    # Build player list HTML
     players_html = "\n".join(
         f"<p>Player: {p['name']} (#{p['jersey_number']})</p>" for p in players
     )
-
-    promo_html = f"<p>Promo Code: {promo_code}</p>" if promo_code else ""
-
-    html = (
-        "<p>Thanks for signing up for soccer with the Pend Oreille Pines. We’re excited to have your family with us this season!</p>"
-        "<p>Here’s the jersey info for your player(s):</p>"
-        f"{players_html}"
-        f"{promo_html}"
-        f"<p>Order your jerseys here:<br><a href=\"{UNIFORM_ORDER_URL}\">{UNIFORM_ORDER_URL}</a></p>"
-        "<p>Only the reversible Pines jersey is required for games. You’re welcome to add Pines-branded black shorts and socks to your order, or use your own. Any plain black shorts and socks are just fine as long as they don’t have other team logos or colors.</p>"
-        "<p>If your family is in a position to purchase the jerseys without using the promo codes, it helps us stretch our nonprofit funds to support other families and improve the program. But either way, jerseys are covered and we’re thrilled to have your kids on the field.</p>"
-        "<p>—<br>Tim Chilcott<br>President - POSA<br>🌲 Pines stand tall.<br>❤️ The heart of sports starts with us.</p>"
-    )
+    
+    # Use template if available, otherwise use default
+    if template:
+        subject = template.subject
+        html = template.body_html
+        # Replace placeholders
+        html = html.replace('{player_list}', players_html)
+        html = html.replace('{promo_code}', promo_code if promo_code else '')
+        html = html.replace('{uniform_url}', UNIFORM_ORDER_URL)
+    else:
+        # Fallback to default
+        promo_html = f"<p>Promo Code: {promo_code}</p>" if promo_code else ""
+        subject = "Jersey Numbers and Uniform Info for Your Player(s)"
+        html = (
+            "<p>Thanks for signing up for soccer with the Pend Oreille Pines. We're excited to have your family with us this season!</p>"
+            "<p>Here's the jersey info for your player(s):</p>"
+            f"{players_html}"
+            f"{promo_html}"
+            f"<p>Order your jerseys here:<br><a href=\"{UNIFORM_ORDER_URL}\">{UNIFORM_ORDER_URL}</a></p>"
+            "<p>Only the reversible Pines jersey is required for games. You're welcome to add Pines-branded black shorts and socks to your order, or use your own. Any plain black shorts and socks are just fine as long as they don't have other team logos or colors.</p>"
+            "<p>If your family is in a position to purchase the jerseys without using the promo codes, it helps us stretch our nonprofit funds to support other families and improve the program. But either way, jerseys are covered and we're thrilled to have your kids on the field.</p>"
+            "<p>—<br>Tim Chilcott<br>President - POSA<br>🌲 Pines stand tall.<br>❤️ The heart of sports starts with us.</p>"
+        )
 
     message = Mail(
         from_email="noreply@posasports.org",
         to_emails=to_email,
-        subject="Jersey Numbers and Uniform Info for Your Player(s)",
+        subject=subject,
         html_content=html,
         plain_text_content=_plain_text_from_html(html),
     )
@@ -116,25 +133,42 @@ def send_confirmation_email(to_email, players, promo_code=None, registrations=No
 
 def send_pines_confirmation_email(to_email, players, registrations=None, db=None):
     """Send a registration confirmation email for Pend Oreille Pines High School Club Team."""
-
+    from .models import EmailTemplate
+    
+    # Get template from database
+    template = None
+    if db:
+        template = db.query(EmailTemplate).filter(EmailTemplate.name == "pines_confirmation").first()
+    
+    # Build player list HTML
     players_html = "\n".join(
         f"<p>{p['name']}<br>Jersey Number: {p['jersey_number']}</p>" for p in players
     )
-
-    html = (
-        "<p>Thanks for registering with the Pend Oreille Pines High School Club Team. We’re looking forward to a strong season ahead.</p>"
-        "<p>Here’s the jersey info for your player(s):</p>"
-        f"{players_html}"
-        f"<p>Order your full kit here:<br><a href=\"{UNIFORM_ORDER_URL}\">{UNIFORM_ORDER_URL}</a></p>"
-        "<p><strong>Uniform Requirements:</strong><br>All High School Club Team players are required to wear the full Pines kit:<br>• Reversible Pines jersey<br>• Pines black shorts<br>• Pines black socks</p>"
-        "<p>Please complete your order as soon as possible to ensure everything arrives before the first match. Promo codes are not used for this team, as club players are responsible for purchasing their full kits.</p>"
-        "<p>—<br>Tim Chilcott<br>President - POSA<br>🌲 Pines stand tall.<br>❤️ The heart of sports starts with us.</p>"
-    )
+    
+    # Use template if available, otherwise use default
+    if template:
+        subject = template.subject
+        html = template.body_html
+        # Replace placeholders
+        html = html.replace('{player_list}', players_html)
+        html = html.replace('{uniform_url}', UNIFORM_ORDER_URL)
+    else:
+        # Fallback to default
+        subject = "Jersey Numbers and Uniform Info for Your Player(s)"
+        html = (
+            "<p>Thanks for registering with the Pend Oreille Pines High School Club Team. We're looking forward to a strong season ahead.</p>"
+            "<p>Here's the jersey info for your player(s):</p>"
+            f"{players_html}"
+            f"<p>Order your full kit here:<br><a href=\"{UNIFORM_ORDER_URL}\">{UNIFORM_ORDER_URL}</a></p>"
+            "<p><strong>Uniform Requirements:</strong><br>All High School Club Team players are required to wear the full Pines kit:<br>• Reversible Pines jersey<br>• Pines black shorts<br>• Pines black socks</p>"
+            "<p>Please complete your order as soon as possible to ensure everything arrives before the first match. Promo codes are not used for this team, as club players are responsible for purchasing their full kits.</p>"
+            "<p>—<br>Tim Chilcott<br>President - POSA<br>🌲 Pines stand tall.<br>❤️ The heart of sports starts with us.</p>"
+        )
 
     message = Mail(
         from_email="noreply@posasports.org",
         to_emails=to_email,
-        subject="Jersey Numbers and Uniform Info for Your Player(s)",
+        subject=subject,
         html_content=html,
         plain_text_content=_plain_text_from_html(html),
     )
