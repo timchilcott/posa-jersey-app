@@ -161,39 +161,65 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
             duplicate_player_ids.update(player_ids)
 
     if view == "division":
-        # Division-based view (no sport grouping)
+        # Division-based view - group by player
         division_order = DIVISION_ORDER.copy()
         players_by_division = defaultdict(list)
         unassigned_players = []
+        player_seen = {}  # Track which division we've assigned each player to
 
         for player in players:
+            # Collect all sports and divisions for this player
+            sports = set()
+            divisions = set()
+            reg_ids = []
+            confirmation_sent_any = False
+            
             for reg in player.registrations:
                 sport_key = (reg.sport or "").strip().lower()
                 division_raw = (reg.division or "").strip()
                 division = normalize_division(division_raw) if division_raw else ""
+                sports.add(sport_key)
+                divisions.add(division)
+                reg_ids.append(reg.id)
+                if reg.confirmation_sent:
+                    confirmation_sent_any = True
+            
+            # Determine primary division (prefer non-excluded)
+            valid_divisions = [d for d in divisions if d not in EXCLUDED_DIVISIONS]
+            if valid_divisions:
+                # Use the "highest" division (by order)
+                primary_division = sorted(valid_divisions, key=lambda x: division_order.get(x, 999))[0]
+            else:
+                primary_division = list(divisions)[0] if divisions else ""
+            
+            # Skip if we've already added this player
+            if player.id in player_seen:
+                continue
+            player_seen[player.id] = primary_division
+            
+            is_dup = player.id in duplicate_player_ids
+            
+            player_data = {
+                "id": player.id,
+                "registration_id": reg_ids[0] if reg_ids else None,  # Use first reg for actions
+                "full_name": player.full_name,
+                "birth_year": player.birth_year,
+                "parent_email": player.parent_email,
+                "jersey_number": player.jersey_number,
+                "sports": sorted(list(sports)),  # List of all sports
+                "division": primary_division,
+                "divisions": sorted(list(divisions)),  # All divisions they're in
+                "confirmation_sent": confirmation_sent_any,
+                "locked": player.locked,
+                "is_duplicate": is_dup,
+            }
+            
+            if primary_division in EXCLUDED_DIVISIONS:
+                unassigned_players.append(player_data)
+                continue
                 
-                is_dup = player.id in duplicate_player_ids
-                
-                player_data = {
-                    "id": player.id,
-                    "registration_id": reg.id,
-                    "full_name": player.full_name,
-                    "birth_year": player.birth_year,
-                    "parent_email": player.parent_email,
-                    "jersey_number": player.jersey_number,
-                    "sport": sport_key,
-                    "division": division,
-                    "confirmation_sent": reg.confirmation_sent,
-                    "locked": player.locked,
-                    "is_duplicate": is_dup,
-                }
-                
-                if division in EXCLUDED_DIVISIONS:
-                    unassigned_players.append(player_data)
-                    continue
-                    
-                counted_player_ids.add(player.id)
-                players_by_division[division].append(player_data)
+            counted_player_ids.add(player.id)
+            players_by_division[primary_division].append(player_data)
 
         # Build list of all divisions
         division_names = set(division_order.keys())
@@ -231,49 +257,65 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
         })
     
     else:
-        # Birth year-based view (no sport grouping)
+        # Birth year-based view - group by player
         players_by_birth_year = defaultdict(list)
         unassigned_players = []
+        player_seen = set()  # Track which players we've already added
 
         for player in players:
+            # Skip if we've already added this player
+            if player.id in player_seen:
+                continue
+            
+            # Collect all sports and divisions for this player
+            sports = set()
+            divisions = set()
+            reg_ids = []
+            confirmation_sent_any = False
+            
             for reg in player.registrations:
                 sport_key = (reg.sport or "").strip().lower()
                 division_raw = (reg.division or "").strip()
                 division = normalize_division(division_raw) if division_raw else ""
-                
-                is_dup = player.id in duplicate_player_ids
-                
-                if division in EXCLUDED_DIVISIONS:
-                    unassigned_players.append({
-                        "id": player.id,
-                        "registration_id": reg.id,
-                        "full_name": player.full_name,
-                        "birth_year": player.birth_year,
-                        "parent_email": player.parent_email,
-                        "jersey_number": player.jersey_number,
-                        "sport": sport_key,
-                        "division": division,
-                        "confirmation_sent": reg.confirmation_sent,
-                        "locked": player.locked,
-                        "is_duplicate": is_dup,
-                    })
-                    continue
-                
-                if player.birth_year:
-                    counted_player_ids.add(player.id)
-                    players_by_birth_year[player.birth_year].append({
-                        "id": player.id,
-                        "registration_id": reg.id,
-                        "full_name": player.full_name,
-                        "birth_year": player.birth_year,
-                        "parent_email": player.parent_email,
-                        "jersey_number": player.jersey_number,
-                        "sport": sport_key,
-                        "division": division,
-                        "confirmation_sent": reg.confirmation_sent,
-                        "locked": player.locked,
-                        "is_duplicate": is_dup,
-                    })
+                sports.add(sport_key)
+                divisions.add(division)
+                reg_ids.append(reg.id)
+                if reg.confirmation_sent:
+                    confirmation_sent_any = True
+            
+            # Determine primary division
+            valid_divisions = [d for d in divisions if d not in EXCLUDED_DIVISIONS]
+            if valid_divisions:
+                primary_division = sorted(valid_divisions, key=lambda x: DIVISION_ORDER.get(x, 999))[0]
+            else:
+                primary_division = list(divisions)[0] if divisions else ""
+            
+            is_dup = player.id in duplicate_player_ids
+            
+            player_data = {
+                "id": player.id,
+                "registration_id": reg_ids[0] if reg_ids else None,
+                "full_name": player.full_name,
+                "birth_year": player.birth_year,
+                "parent_email": player.parent_email,
+                "jersey_number": player.jersey_number,
+                "sports": sorted(list(sports)),
+                "division": primary_division,
+                "divisions": sorted(list(divisions)),
+                "confirmation_sent": confirmation_sent_any,
+                "locked": player.locked,
+                "is_duplicate": is_dup,
+            }
+            
+            player_seen.add(player.id)
+            
+            if primary_division in EXCLUDED_DIVISIONS:
+                unassigned_players.append(player_data)
+                continue
+            
+            if player.birth_year:
+                counted_player_ids.add(player.id)
+                players_by_birth_year[player.birth_year].append(player_data)
 
         # Get all birth years and sort them (newest to oldest)
         birth_year_list = sorted(players_by_birth_year.keys(), reverse=True)
