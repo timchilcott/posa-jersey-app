@@ -549,15 +549,24 @@ def send_registration_email(registration_id: int, request: Request, db: Session 
         raise HTTPException(status_code=404, detail="Registration not found")
     if reg.player.locked:
         raise HTTPException(status_code=403, detail="Player is locked")
+    
     parent_email = reg.player.parent_email
+    
+    # Get all registrations for this parent email
     regs = (
         db.query(Registration)
         .join(Registration.player)
         .filter(Player.parent_email == parent_email)
         .all()
     )
+    
     pines_division = "Pend Oreille Pines (High School Club Team)"
-
+    
+    # Determine which type of email to send based on the clicked registration
+    clicked_division = normalize_division(reg.division)
+    is_pines_clicked = clicked_division == pines_division
+    
+    # Separate registrations by type
     regular_regs = []
     pines_regs = []
     for r in regs:
@@ -566,21 +575,23 @@ def send_registration_email(registration_id: int, request: Request, db: Session 
             pines_regs.append(r)
         else:
             regular_regs.append(r)
-
-    if regular_regs:
+    
+    # Only send the email type that matches the clicked registration
+    if is_pines_clicked and pines_regs:
+        # Clicked on a Pines player - only send Pines email
+        players = [
+            {"name": r.player.full_name, "jersey_number": r.player.jersey_number}
+            for r in pines_regs
+        ]
+        send_pines_confirmation_email(parent_email, players, pines_regs, db)
+    elif not is_pines_clicked and regular_regs:
+        # Clicked on a regular division player - only send regular email
         promo_code = PROMO_CODES.get(len(regular_regs))
         players = [
             {"name": r.player.full_name, "jersey_number": r.player.jersey_number}
             for r in regular_regs
         ]
         send_confirmation_email(parent_email, players, promo_code, regular_regs, db)
-
-    if pines_regs:
-        players = [
-            {"name": r.player.full_name, "jersey_number": r.player.jersey_number}
-            for r in pines_regs
-        ]
-        send_pines_confirmation_email(parent_email, players, pines_regs, db)
 
     return {"message": "Email sent"}
 
