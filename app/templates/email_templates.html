@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Email Templates - POSA Jersey App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        .nav {
+            margin-bottom: 20px;
+        }
+        .nav a {
+            margin-right: 15px;
+            text-decoration: none;
+            color: #007bff;
+        }
+        .nav a:hover {
+            text-decoration: underline;
+        }
+        .template-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .template-section h2 {
+            margin-top: 0;
+            color: #444;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        textarea {
+            min-height: 300px;
+            resize: vertical;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .info-box {
+            background-color: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .info-box h3 {
+            margin-top: 0;
+            color: #1976D2;
+        }
+        .info-box code {
+            background-color: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .default-values {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-top: 10px;
+        }
+        .default-values h4 {
+            margin-top: 0;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="/admin">← Back to Admin</a>
+        <a href="/invite">Invite User</a>
+        <a href="/logout">Logout</a>
+    </div>
+
+    <h1>Email Template Editor</h1>
+
+    <div class="info-box">
+        <h3>Available Placeholders</h3>
+        <p>Use these placeholders in your email templates. They will be replaced with actual values when emails are sent:</p>
+        <ul>
+            <li><code>{player_list}</code> - List of players with jersey numbers</li>
+            <li><code>{promo_code}</code> - Promotional code (standard confirmation only)</li>
+            <li><code>{uniform_url}</code> - Link to uniform ordering site</li>
+        </ul>
+        <p><strong>Note:</strong> If no template is found in the database, the system will use built-in default templates.</p>
+    </div>
+
+    <!-- Standard Confirmation Template -->
+    <div class="template-section">
+        <h2>Standard Confirmation Email</h2>
+        <p>This template is used for regular divisions (U4, U6, U8, U10, U12, U14)</p>
+        
+        <div class="success-message" id="standard-success">Template saved successfully!</div>
+        <div class="error-message" id="standard-error">Error saving template. Please try again.</div>
+
+        <form id="standard-form">
+            <div class="form-group">
+                <label for="standard-subject">Email Subject:</label>
+                <input type="text" id="standard-subject" name="subject" 
+                       value="{{ standard_template.subject if standard_template else 'Jersey Numbers and Uniform Info for Your Player(s)' }}" 
+                       required>
+            </div>
+
+            <div class="form-group">
+                <label for="standard-body">Email Body (HTML):</label>
+                <textarea id="standard-body" name="body_html" required>{{ standard_template.body_html if standard_template else '&lt;p&gt;Thanks for signing up for soccer with the Pend Oreille Pines. We\'re excited to have your family with us this season!&lt;/p&gt;
+&lt;p&gt;Here\'s the jersey info for your player(s):&lt;/p&gt;
+{player_list}
+&lt;p&gt;Promo Code: {promo_code}&lt;/p&gt;
+&lt;p&gt;Order your jerseys here:&lt;br&gt;&lt;a href="{uniform_url}"&gt;{uniform_url}&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Only the reversible Pines jersey is required for games. You\'re welcome to add Pines-branded black shorts and socks to your order, or use your own. Any plain black shorts and socks are just fine as long as they don\'t have other team logos or colors.&lt;/p&gt;
+&lt;p&gt;If your family is in a position to purchase the jerseys without using the promo codes, it helps us stretch our nonprofit funds to support other families and improve the program. But either way, jerseys are covered and we\'re thrilled to have your kids on the field.&lt;/p&gt;
+&lt;p&gt;—&lt;br&gt;Tim Chilcott&lt;br&gt;President - POSA&lt;br&gt;🌲 Pines stand tall.&lt;br&gt;❤️ The heart of sports starts with us.&lt;/p&gt;' }}</textarea>
+            </div>
+
+            <button type="submit">Save Standard Template</button>
+        </form>
+
+        {% if standard_template %}
+        <div class="default-values">
+            <h4>Template Info</h4>
+            <p><strong>Last Updated:</strong> {{ standard_template.updated_at.strftime('%Y-%m-%d %H:%M:%S') if standard_template.updated_at else 'Never' }}</p>
+        </div>
+        {% else %}
+        <div class="default-values">
+            <h4>No Custom Template</h4>
+            <p>Currently using the built-in default template. Save this form to create a custom template.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Pines High School Template -->
+    <div class="template-section">
+        <h2>Pines High School Club Team Email</h2>
+        <p>This template is used for the Pend Oreille Pines High School Club Team</p>
+        
+        <div class="success-message" id="pines-success">Template saved successfully!</div>
+        <div class="error-message" id="pines-error">Error saving template. Please try again.</div>
+
+        <form id="pines-form">
+            <div class="form-group">
+                <label for="pines-subject">Email Subject:</label>
+                <input type="text" id="pines-subject" name="subject" 
+                       value="{{ pines_template.subject if pines_template else 'Jersey Numbers and Uniform Info for Your Player(s)' }}" 
+                       required>
+            </div>
+
+            <div class="form-group">
+                <label for="pines-body">Email Body (HTML):</label>
+                <textarea id="pines-body" name="body_html" required>{{ pines_template.body_html if pines_template else '&lt;p&gt;Thanks for registering with the Pend Oreille Pines High School Club Team. We\'re looking forward to a strong season ahead.&lt;/p&gt;
+&lt;p&gt;Here\'s the jersey info for your player(s):&lt;/p&gt;
+{player_list}
+&lt;p&gt;Order your full kit here:&lt;br&gt;&lt;a href="{uniform_url}"&gt;{uniform_url}&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Uniform Requirements:&lt;/strong&gt;&lt;br&gt;All High School Club Team players are required to wear the full Pines kit:&lt;br&gt;• Reversible Pines jersey&lt;br&gt;• Pines black shorts&lt;br&gt;• Pines black socks&lt;/p&gt;
+&lt;p&gt;Please complete your order as soon as possible to ensure everything arrives before the first match. Promo codes are not used for this team, as club players are responsible for purchasing their full kits.&lt;/p&gt;
+&lt;p&gt;—&lt;br&gt;Tim Chilcott&lt;br&gt;President - POSA&lt;br&gt;🌲 Pines stand tall.&lt;br&gt;❤️ The heart of sports starts with us.&lt;/p&gt;' }}</textarea>
+            </div>
+
+            <button type="submit">Save Pines Template</button>
+        </form>
+
+        {% if pines_template %}
+        <div class="default-values">
+            <h4>Template Info</h4>
+            <p><strong>Last Updated:</strong> {{ pines_template.updated_at.strftime('%Y-%m-%d %H:%M:%S') if pines_template.updated_at else 'Never' }}</p>
+        </div>
+        {% else %}
+        <div class="default-values">
+            <h4>No Custom Template</h4>
+            <p>Currently using the built-in default template. Save this form to create a custom template.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Handle standard template form submission
+        document.getElementById('standard-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const subject = document.getElementById('standard-subject').value;
+            const body_html = document.getElementById('standard-body').value;
+            
+            try {
+                const response = await fetch('/email-templates', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: 'standard_confirmation',
+                        subject: subject,
+                        body_html: body_html
+                    })
+                });
+                
+                if (response.ok) {
+                    const successMsg = document.getElementById('standard-success');
+                    successMsg.style.display = 'block';
+                    setTimeout(() => {
+                        successMsg.style.display = 'none';
+                    }, 3000);
+                } else {
+                    throw new Error('Failed to save template');
+                }
+            } catch (error) {
+                const errorMsg = document.getElementById('standard-error');
+                errorMsg.style.display = 'block';
+                setTimeout(() => {
+                    errorMsg.style.display = 'none';
+                }, 3000);
+            }
+        });
+
+        // Handle pines template form submission
+        document.getElementById('pines-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const subject = document.getElementById('pines-subject').value;
+            const body_html = document.getElementById('pines-body').value;
+            
+            try {
+                const response = await fetch('/email-templates', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: 'pines_confirmation',
+                        subject: subject,
+                        body_html: body_html
+                    })
+                });
+                
+                if (response.ok) {
+                    const successMsg = document.getElementById('pines-success');
+                    successMsg.style.display = 'block';
+                    setTimeout(() => {
+                        successMsg.style.display = 'none';
+                    }, 3000);
+                } else {
+                    throw new Error('Failed to save template');
+                }
+            } catch (error) {
+                const errorMsg = document.getElementById('pines-error');
+                errorMsg.style.display = 'block';
+                setTimeout(() => {
+                    errorMsg.style.display = 'none';
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>
