@@ -153,22 +153,18 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
                 sport_key = (reg.sport or "").strip().lower()
                 key = (sport_key, player.birth_year, player.jersey_number)
                 birth_year_sport_jersey[key].append(player.id)
-                print(f"DEBUG: Added player {player.id} ({player.full_name}) to key {key}")
 
     # Find duplicates - any key with more than one player_id
     duplicate_player_ids = set()
     for key, player_ids in birth_year_sport_jersey.items():
         if len(player_ids) > 1:
             duplicate_player_ids.update(player_ids)
-            print(f"DEBUG: Found duplicate at key {key}: player IDs {player_ids}")
-    
-    print(f"DEBUG: Total duplicate player IDs: {duplicate_player_ids}")
 
     if view == "division":
-        # Original division-based view
+        # Division-based view (no sport grouping)
         division_order = DIVISION_ORDER.copy()
-        players_by_sport = defaultdict(lambda: defaultdict(list))
-        unassigned_by_sport = defaultdict(list)
+        players_by_division = defaultdict(list)
+        unassigned_players = []
 
         for player in players:
             for reg in player.registrations:
@@ -177,7 +173,6 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
                 division = normalize_division(division_raw) if division_raw else ""
                 
                 is_dup = player.id in duplicate_player_ids
-                print(f"DEBUG Division View: Player {player.id} is_duplicate={is_dup}")
                 
                 player_data = {
                     "id": player.id,
@@ -194,55 +189,51 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
                 }
                 
                 if division in EXCLUDED_DIVISIONS:
-                    unassigned_by_sport[sport_key].append(player_data)
+                    unassigned_players.append(player_data)
                     continue
                     
                 counted_player_ids.add(player.id)
-                players_by_sport[sport_key][division].append(player_data)
+                players_by_division[division].append(player_data)
 
         # Build list of all divisions
         division_names = set(division_order.keys())
-        for divisions in players_by_sport.values():
-            for div in divisions.keys():
-                name = (div or "").strip()
-                if name not in EXCLUDED_DIVISIONS:
-                    division_names.add(name)
+        for div in players_by_division.keys():
+            name = (div or "").strip()
+            if name not in EXCLUDED_DIVISIONS:
+                division_names.add(name)
         division_list = sorted(
             division_names,
             key=lambda x: division_order.get(x, 999),
         )
-        division_rank = {name: idx for idx, name in enumerate(division_list)}
 
-        # Ensure each sport has entries for every division
-        for sport in players_by_sport.keys():
-            for division in division_list:
-                players_by_sport[sport].setdefault(division, [])
+        # Ensure all divisions exist
+        for division in division_list:
+            players_by_division.setdefault(division, [])
 
         # Sort players within each division by jersey number
-        for sport, divisions in players_by_sport.items():
-            for division, player_list in divisions.items():
-                player_list.sort(key=lambda p: (p["jersey_number"] is None, p["jersey_number"]))
+        for division, player_list in players_by_division.items():
+            player_list.sort(key=lambda p: (p["jersey_number"] is None, p["jersey_number"]))
 
-        sorted_players_by_sport = {}
-        for sport, divisions in players_by_sport.items():
-            sorted_divisions = dict(sorted(divisions.items(), key=lambda x: division_rank[x[0]]))
-            sorted_players_by_sport[sport] = sorted_divisions
+        sorted_players = dict(sorted(
+            players_by_division.items(),
+            key=lambda x: division_order.get(x[0], 999)
+        ))
 
         return templates.TemplateResponse("admin.html", {
             "request": request,
             "view": "division",
-            "players_by_sport": sorted_players_by_sport,
-            "division_list": division_list,
-            "unassigned_players_by_sport": unassigned_by_sport,
+            "players_by_group": sorted_players,
+            "group_list": division_list,
+            "unassigned_players": unassigned_players,
             "total_players": len(counted_player_ids),
             "missing_emails": missing_emails,
             "missing_jerseys": missing_jerseys,
         })
     
     else:
-        # New birth year-based view
-        players_by_sport = defaultdict(lambda: defaultdict(list))
-        unassigned_by_sport = defaultdict(list)
+        # Birth year-based view (no sport grouping)
+        players_by_birth_year = defaultdict(list)
+        unassigned_players = []
 
         for player in players:
             for reg in player.registrations:
@@ -251,10 +242,9 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
                 division = normalize_division(division_raw) if division_raw else ""
                 
                 is_dup = player.id in duplicate_player_ids
-                print(f"DEBUG Birth Year View: Player {player.id} ({player.full_name}) is_duplicate={is_dup}")
                 
                 if division in EXCLUDED_DIVISIONS:
-                    unassigned_by_sport[sport_key].append({
+                    unassigned_players.append({
                         "id": player.id,
                         "registration_id": reg.id,
                         "full_name": player.full_name,
@@ -271,7 +261,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
                 
                 if player.birth_year:
                     counted_player_ids.add(player.id)
-                    players_by_sport[sport_key][player.birth_year].append({
+                    players_by_birth_year[player.birth_year].append({
                         "id": player.id,
                         "registration_id": reg.id,
                         "full_name": player.full_name,
@@ -286,10 +276,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
                     })
 
         # Get all birth years and sort them (newest to oldest)
-        birth_years = set()
-        for sport_data in players_by_sport.values():
-            birth_years.update(sport_data.keys())
-        birth_year_list = sorted(birth_years, reverse=True)
+        birth_year_list = sorted(players_by_birth_year.keys(), reverse=True)
 
         # Create birth year with U-division labels
         birth_year_labels = {
@@ -297,28 +284,23 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
             for by in birth_year_list
         }
 
-        # Ensure each sport has entries for every birth year
-        for sport in players_by_sport.keys():
-            for birth_year in birth_year_list:
-                players_by_sport[sport].setdefault(birth_year, [])
+        # Ensure each birth year exists
+        for birth_year in birth_year_list:
+            players_by_birth_year.setdefault(birth_year, [])
 
         # Sort players within each birth year by jersey number
-        for sport, birth_years_dict in players_by_sport.items():
-            for birth_year, player_list in birth_years_dict.items():
-                player_list.sort(key=lambda p: (p["jersey_number"] is None, p["jersey_number"]))
+        for birth_year, player_list in players_by_birth_year.items():
+            player_list.sort(key=lambda p: (p["jersey_number"] is None, p["jersey_number"]))
 
-        sorted_players_by_sport = {}
-        for sport, birth_years_dict in players_by_sport.items():
-            sorted_birth_years = dict(sorted(birth_years_dict.items(), reverse=True))
-            sorted_players_by_sport[sport] = sorted_birth_years
+        sorted_players = dict(sorted(players_by_birth_year.items(), reverse=True))
 
         return templates.TemplateResponse("admin.html", {
             "request": request,
             "view": "birthyear",
-            "players_by_sport": sorted_players_by_sport,
-            "birth_year_list": birth_year_list,
+            "players_by_group": sorted_players,
+            "group_list": birth_year_list,
             "birth_year_labels": birth_year_labels,
-            "unassigned_players_by_sport": unassigned_by_sport,
+            "unassigned_players": unassigned_players,
             "total_players": len(counted_player_ids),
             "missing_emails": missing_emails,
             "missing_jerseys": missing_jerseys,
