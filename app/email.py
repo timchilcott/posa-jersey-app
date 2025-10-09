@@ -77,10 +77,14 @@ def send_confirmation_email(to_email, players, promo_code=None, registrations=No
     if db:
         template = db.query(EmailTemplate).filter(EmailTemplate.name == "standard_confirmation").first()
     
-    # Build player list HTML - now includes sport
+    # Build player list HTML - includes sport
     players_html = "\n".join(
         f"<p>Player: {p['name']} (#{p['jersey_number']}) - {p['sport']}</p>" for p in players
     )
+    
+    # Determine sport(s) for the {sport} placeholder
+    unique_sports = list(set(p['sport'] for p in players))
+    sport_text = ", ".join(sorted(unique_sports)) if unique_sports else "Unknown"
     
     # Use template if available, otherwise use default
     if template:
@@ -90,6 +94,7 @@ def send_confirmation_email(to_email, players, promo_code=None, registrations=No
         html = html.replace('{player_list}', players_html)
         html = html.replace('{promo_code}', promo_code if promo_code else '')
         html = html.replace('{uniform_url}', UNIFORM_ORDER_URL)
+        html = html.replace('{sport}', sport_text)
     else:
         # Fallback to default
         promo_html = f"<p>Promo Code: {promo_code}</p>" if promo_code else ""
@@ -140,10 +145,14 @@ def send_pines_confirmation_email(to_email, players, registrations=None, db=None
     if db:
         template = db.query(EmailTemplate).filter(EmailTemplate.name == "pines_confirmation").first()
     
-    # Build player list HTML - now includes sport
+    # Build player list HTML - includes sport
     players_html = "\n".join(
         f"<p>{p['name']}<br>Jersey Number: {p['jersey_number']}<br>Sport: {p['sport']}</p>" for p in players
     )
+    
+    # Determine sport(s) for the {sport} placeholder
+    unique_sports = list(set(p['sport'] for p in players))
+    sport_text = ", ".join(sorted(unique_sports)) if unique_sports else "Unknown"
     
     # Use template if available, otherwise use default
     if template:
@@ -152,6 +161,7 @@ def send_pines_confirmation_email(to_email, players, registrations=None, db=None
         # Replace placeholders
         html = html.replace('{player_list}', players_html)
         html = html.replace('{uniform_url}', UNIFORM_ORDER_URL)
+        html = html.replace('{sport}', sport_text)
     else:
         # Fallback to default
         subject = "Jersey Numbers and Uniform Info for Your Player(s)"
