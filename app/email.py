@@ -25,7 +25,7 @@ PROMO_CODES = {
 }
 
 # URL for ordering uniforms
-UNIFORM_ORDER_URL = "https://treblemade.com/search?q=pines&sort_by=relevance"
+UNIFORM_ORDER_URL = "https://treblemade.com/products/pines-soccer-reversible-jersey?_pos=1&_sid=0fa41b461&_ss=r"
 
 # Address that should be CC'd on all outbound emails
 DEFAULT_CC_EMAIL = "tim@posasports.org"
