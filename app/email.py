@@ -77,9 +77,9 @@ def send_confirmation_email(to_email, players, promo_code=None, registrations=No
     if db:
         template = db.query(EmailTemplate).filter(EmailTemplate.name == "standard_confirmation").first()
     
-    # Build player list HTML
+    # Build player list HTML - now includes sport
     players_html = "\n".join(
-        f"<p>Player: {p['name']} (#{p['jersey_number']})</p>" for p in players
+        f"<p>Player: {p['name']} (#{p['jersey_number']}) - {p['sport']}</p>" for p in players
     )
     
     # Use template if available, otherwise use default
@@ -140,9 +140,9 @@ def send_pines_confirmation_email(to_email, players, registrations=None, db=None
     if db:
         template = db.query(EmailTemplate).filter(EmailTemplate.name == "pines_confirmation").first()
     
-    # Build player list HTML
+    # Build player list HTML - now includes sport
     players_html = "\n".join(
-        f"<p>{p['name']}<br>Jersey Number: {p['jersey_number']}</p>" for p in players
+        f"<p>{p['name']}<br>Jersey Number: {p['jersey_number']}<br>Sport: {p['sport']}</p>" for p in players
     )
     
     # Use template if available, otherwise use default
