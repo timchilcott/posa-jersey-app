@@ -577,12 +577,22 @@ def send_registration_email(registration_id: int, request: Request, db: Session 
     parent_email = reg.player.parent_email
     
     # Get all registrations for this parent email
-    regs = (
+    all_regs = (
         db.query(Registration)
         .join(Registration.player)
         .filter(Player.parent_email == parent_email)
         .all()
     )
+    
+    # For each player, keep only their most recent registration
+    from collections import defaultdict
+    player_most_recent = {}
+    for r in all_regs:
+        player_id = r.player_id
+        if player_id not in player_most_recent or r.created_at > player_most_recent[player_id].created_at:
+            player_most_recent[player_id] = r
+    
+    recent_regs = list(player_most_recent.values())
     
     pines_division = "Pend Oreille Pines (High School Club Team)"
     
@@ -593,7 +603,7 @@ def send_registration_email(registration_id: int, request: Request, db: Session 
     # Separate registrations by type
     regular_regs = []
     pines_regs = []
-    for r in regs:
+    for r in recent_regs:
         division = normalize_division(r.division)
         if division == pines_division:
             pines_regs.append(r)
@@ -604,7 +614,11 @@ def send_registration_email(registration_id: int, request: Request, db: Session 
     if is_pines_clicked and pines_regs:
         # Clicked on a Pines player - only send Pines email
         players = [
-            {"name": r.player.full_name, "jersey_number": r.player.jersey_number}
+            {
+                "name": r.player.full_name, 
+                "jersey_number": r.player.jersey_number,
+                "sport": r.sport.title() if r.sport else "Unknown"
+            }
             for r in pines_regs
         ]
         send_pines_confirmation_email(parent_email, players, pines_regs, db)
@@ -612,7 +626,11 @@ def send_registration_email(registration_id: int, request: Request, db: Session 
         # Clicked on a regular division player - only send regular email
         promo_code = PROMO_CODES.get(len(regular_regs))
         players = [
-            {"name": r.player.full_name, "jersey_number": r.player.jersey_number}
+            {
+                "name": r.player.full_name, 
+                "jersey_number": r.player.jersey_number,
+                "sport": r.sport.title() if r.sport else "Unknown"
+            }
             for r in regular_regs
         ]
         send_confirmation_email(parent_email, players, promo_code, regular_regs, db)
