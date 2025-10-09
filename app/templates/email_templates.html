@@ -127,11 +127,11 @@
         <h3>Available Placeholders</h3>
         <p>Use these placeholders in your email templates. They will be replaced with actual values when emails are sent:</p>
         <ul>
-            <li><code>{player_list}</code> - List of players with jersey numbers</li>
+            <li><code>{player_list}</code> - List of players with jersey numbers and sport (e.g., "Player: John Doe (#5) - Soccer")</li>
             <li><code>{promo_code}</code> - Promotional code (standard confirmation only)</li>
             <li><code>{uniform_url}</code> - Link to uniform ordering site</li>
         </ul>
-        <p><strong>Note:</strong> If no template is found in the database, the system will use built-in default templates.</p>
+        <p><strong>Note:</strong> If no template is found in the database, the system will use built-in default templates. Only the most recently registered sport for each player will be included in the email.</p>
     </div>
 
     <!-- Standard Confirmation Template -->
