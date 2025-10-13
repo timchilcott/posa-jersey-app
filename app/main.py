@@ -28,18 +28,26 @@ import os
 # AUTOMATIC SEASON DETECTION
 # ---------------------------------------------------------------------
 def get_current_season():
-    """Detect the most recent season string from registrations."""
+    """Detect the most recent valid season string from registrations."""
     try:
         with engine.connect() as conn:
             result = conn.execute(
-                text("SELECT season FROM registrations WHERE season IS NOT NULL ORDER BY created_at DESC LIMIT 1;")
+                text("""
+                    SELECT season
+                    FROM registrations
+                    WHERE season IS NOT NULL
+                      AND season NOT ILIKE 'unknown'
+                      AND season NOT ILIKE '2024'
+                    ORDER BY created_at DESC
+                    LIMIT 1;
+                """)
             ).fetchone()
             if result and result[0]:
                 print(f"[INFO] Auto-detected CURRENT_SEASON = {result[0]}")
                 return result[0]
     except Exception as e:
         print(f"[WARN] Could not detect season automatically: {e}")
-    return "2024"  # fallback default
+    return "fall"  # fallback default
 
 CURRENT_SEASON = get_current_season()
 
@@ -53,7 +61,6 @@ templates = Jinja2Templates(directory="app/templates")
 # Only create tables locally if no DB tables exist yet
 if os.getenv("ENVIRONMENT", "development") == "development":
     Base.metadata.create_all(bind=engine)
-
 
 # ---------------------------------------------------------------------
 # UTILITIES
@@ -94,7 +101,6 @@ def require_login(request: Request):
     """Redirect to login if user not authenticated."""
     if not request.session.get("user_id"):
         raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/login"})
-
 
 # ---------------------------------------------------------------------
 # ROUTES
@@ -144,7 +150,6 @@ def invite_user(request: Request, email: str = Form(...), password: str = Form(.
     create_user(db, email, password)
     return RedirectResponse("/admin", status_code=302)
 
-
 # ---------------------------------------------------------------------
 # ADMIN DASHBOARD
 # ---------------------------------------------------------------------
@@ -169,7 +174,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
     else:
         players = query.distinct().all()
 
-    # Everything below here stays the same as before
+    # Everything below here stays as in your working version
     EXCLUDED_DIVISIONS = {"", "Unknown"}
     missing_emails = 0
     missing_jerseys = 0
@@ -194,8 +199,144 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
         if len(player_ids) > 1:
             duplicate_player_ids.update(player_ids)
 
-    # (the rest of your existing admin_dashboard logic stays unchanged)
-    # ↓↓↓ keep all grouping, template rendering, and stats exactly as in your version ↓↓↓
-    # ---------------------------------------------------------------------
-    # [Your original grouping and return code continues here...]
-    # ---------------------------------------------------------------------
+    # Keep all your existing grouping logic
+    EXCLUDED_DIVISIONS = {"", "Unknown"}
+    if view == "division":
+        division_order = DIVISION_ORDER.copy()
+        players_by_division = defaultdict(list)
+        unassigned_players = []
+        player_seen = {}
+        for player in players:
+            sports = set()
+            divisions = set()
+            reg_ids = []
+            confirmation_sent_any = False
+            for reg in player.registrations:
+                sport_key = (reg.sport or "").strip().lower()
+                division_raw = (reg.division or "").strip()
+                division = normalize_division(division_raw) if division_raw else ""
+                sports.add(sport_key)
+                divisions.add(division)
+                reg_ids.append(reg.id)
+                if reg.confirmation_sent:
+                    confirmation_sent_any = True
+            valid_divisions = [d for d in divisions if d not in EXCLUDED_DIVISIONS]
+            if valid_divisions:
+                primary_division = sorted(valid_divisions, key=lambda x: division_order.get(x, 999))[0]
+            else:
+                primary_division = list(divisions)[0] if divisions else ""
+            if player.id in player_seen:
+                continue
+            player_seen[player.id] = primary_division
+            is_dup = player.id in duplicate_player_ids
+            player_data = {
+                "id": player.id,
+                "registration_id": reg_ids[0] if reg_ids else None,
+                "full_name": player.full_name,
+                "birth_year": player.birth_year,
+                "parent_email": player.parent_email,
+                "jersey_number": player.jersey_number,
+                "sports": sorted(list(sports)),
+                "division": primary_division,
+                "divisions": sorted(list(divisions)),
+                "confirmation_sent": confirmation_sent_any,
+                "locked": player.locked,
+                "is_duplicate": is_dup,
+            }
+            if primary_division in EXCLUDED_DIVISIONS:
+                unassigned_players.append(player_data)
+                continue
+            counted_player_ids.add(player.id)
+            players_by_division[primary_division].append(player_data)
+        division_names = set(division_order.keys())
+        for div in players_by_division.keys():
+            name = (div or "").strip()
+            if name not in EXCLUDED_DIVISIONS:
+                division_names.add(name)
+        division_list = sorted(
+            division_names,
+            key=lambda x: division_order.get(x, 999),
+        )
+        for division in division_list:
+            players_by_division.setdefault(division, [])
+        for division, player_list in players_by_division.items():
+            player_list.sort(key=lambda p: (p["jersey_number"] is None, p["jersey_number"]))
+        sorted_players = dict(sorted(players_by_division.items(), key=lambda x: division_order.get(x[0], 999)))
+        return templates.TemplateResponse("admin.html", {
+            "request": request,
+            "view": "division",
+            "players_by_group": sorted_players,
+            "group_list": division_list,
+            "unassigned_players": unassigned_players,
+            "total_players": len(counted_player_ids),
+            "missing_emails": missing_emails,
+            "missing_jerseys": missing_jerseys,
+        })
+    else:
+        players_by_birth_year = defaultdict(list)
+        unassigned_players = []
+        player_seen = set()
+        for player in players:
+            if player.id in player_seen:
+                continue
+            sports = set()
+            divisions = set()
+            reg_ids = []
+            confirmation_sent_any = False
+            for reg in player.registrations:
+                sport_key = (reg.sport or "").strip().lower()
+                division_raw = (reg.division or "").strip()
+                division = normalize_division(division_raw) if division_raw else ""
+                sports.add(sport_key)
+                divisions.add(division)
+                reg_ids.append(reg.id)
+                if reg.confirmation_sent:
+                    confirmation_sent_any = True
+            valid_divisions = [d for d in divisions if d not in EXCLUDED_DIVISIONS]
+            if valid_divisions:
+                primary_division = sorted(valid_divisions, key=lambda x: DIVISION_ORDER.get(x, 999))[0]
+            else:
+                primary_division = list(divisions)[0] if divisions else ""
+            is_dup = player.id in duplicate_player_ids
+            player_data = {
+                "id": player.id,
+                "registration_id": reg_ids[0] if reg_ids else None,
+                "full_name": player.full_name,
+                "birth_year": player.birth_year,
+                "parent_email": player.parent_email,
+                "jersey_number": player.jersey_number,
+                "sports": sorted(list(sports)),
+                "division": primary_division,
+                "divisions": sorted(list(divisions)),
+                "confirmation_sent": confirmation_sent_any,
+                "locked": player.locked,
+                "is_duplicate": is_dup,
+            }
+            player_seen.add(player.id)
+            if primary_division in EXCLUDED_DIVISIONS:
+                unassigned_players.append(player_data)
+                continue
+            if player.birth_year:
+                counted_player_ids.add(player.id)
+                players_by_birth_year[player.birth_year].append(player_data)
+        birth_year_list = sorted(players_by_birth_year.keys(), reverse=True)
+        birth_year_labels = {
+            by: f"{by} / {calculate_u_division(by)}"
+            for by in birth_year_list
+        }
+        for birth_year in birth_year_list:
+            players_by_birth_year.setdefault(birth_year, [])
+        for birth_year, player_list in players_by_birth_year.items():
+            player_list.sort(key=lambda p: (p["jersey_number"] is None, p["jersey_number"]))
+        sorted_players = dict(sorted(players_by_birth_year.items(), reverse=True))
+        return templates.TemplateResponse("admin.html", {
+            "request": request,
+            "view": "birthyear",
+            "players_by_group": sorted_players,
+            "group_list": birth_year_list,
+            "birth_year_labels": birth_year_labels,
+            "unassigned_players": unassigned_players,
+            "total_players": len(counted_player_ids),
+            "missing_emails": missing_emails,
+            "missing_jerseys": missing_jerseys,
+        })
