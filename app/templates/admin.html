@@ -15,6 +15,19 @@
         background-color: #e3f2fd;
         color: #1976d2;
     }
+    .sport-checkbox-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .sport-checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .edit-sports {
+        display: none;
+    }
     .search-box {
         background: white;
         padding: 20px;
@@ -107,6 +120,142 @@
     </div>
 </div>
 
+{% macro player_table_rows(players, group) %}
+    {% for player in players %}
+        <tr data-player-id="{{ player.id }}" data-reg-id="{{ player.registration_id }}" 
+            data-search-name="{{ player.full_name|lower }}" 
+            data-search-email="{{ player.parent_email|lower }}" 
+            data-search-jersey="{{ player.jersey_number }}"
+            data-search-sports="{{ player.sports|join(',')|lower }}"
+            data-sports="{{ player.sports|join(',') }}"
+            class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %}">
+            <td>
+                <div class="form-check form-switch">
+                    <input class="form-check-input lock-toggle" type="checkbox" {% if player.locked %}checked{% endif %}>
+                </div>
+            </td>
+            <td><span class="full-name">{{ player.full_name }}</span><input class="form-control d-none edit-full-name" value="{{ player.full_name }}"></td>
+            <td>
+                <span class="birth-year">{{ player.birth_year or '-' }}</span>
+                <select class="form-select d-none edit-birth-year">
+                    <option value="">-</option>
+                    {% for year in range(2005, 2026) %}
+                        <option value="{{ year }}" {% if player.birth_year == year %}selected{% endif %}>{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+            <td>
+                <div class="view-sports">
+                    {% for sport in player.sports %}
+                        <span class="sport-tag">{{ sport }}</span>
+                    {% endfor %}
+                </div>
+                <div class="edit-sports">
+                    <div class="sport-checkbox-group">
+                        <div class="sport-checkbox-item">
+                            <input type="checkbox" class="sport-checkbox" value="soccer" id="soccer-{{ player.id }}" {% if 'soccer' in player.sports %}checked{% endif %}>
+                            <label for="soccer-{{ player.id }}">Soccer</label>
+                        </div>
+                        <div class="sport-checkbox-item">
+                            <input type="checkbox" class="sport-checkbox" value="basketball" id="basketball-{{ player.id }}" {% if 'basketball' in player.sports %}checked{% endif %}>
+                            <label for="basketball-{{ player.id }}">Basketball</label>
+                        </div>
+                        <div class="sport-checkbox-item">
+                            <input type="checkbox" class="sport-checkbox" value="baseball" id="baseball-{{ player.id }}" {% if 'baseball' in player.sports %}checked{% endif %}>
+                            <label for="baseball-{{ player.id }}">Baseball</label>
+                        </div>
+                        <div class="sport-checkbox-item">
+                            <input type="checkbox" class="sport-checkbox" value="softball" id="softball-{{ player.id }}" {% if 'softball' in player.sports %}checked{% endif %}>
+                            <label for="softball-{{ player.id }}">Softball</label>
+                        </div>
+                        <div class="sport-checkbox-item">
+                            <input type="checkbox" class="sport-checkbox" value="volleyball" id="volleyball-{{ player.id }}" {% if 'volleyball' in player.sports %}checked{% endif %}>
+                            <label for="volleyball-{{ player.id }}">Volleyball</label>
+                        </div>
+                        <div class="sport-checkbox-item">
+                            <input type="checkbox" class="sport-checkbox" value="flag" id="flag-{{ player.id }}" {% if 'flag' in player.sports %}checked{% endif %}>
+                            <label for="flag-{{ player.id }}">Flag Football</label>
+                        </div>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <span class="division">{{ player.division }}</span>
+                <select class="form-select d-none edit-division">
+                    <option value="U4" {% if player.division == 'U4' %}selected{% endif %}>U4</option>
+                    <option value="U6" {% if player.division == 'U6' %}selected{% endif %}>U6</option>
+                    <option value="U8" {% if player.division == 'U8' %}selected{% endif %}>U8</option>
+                    <option value="U10" {% if player.division == 'U10' %}selected{% endif %}>U10</option>
+                    <option value="U12" {% if player.division == 'U12' %}selected{% endif %}>U12</option>
+                    <option value="U14" {% if player.division == 'U14' %}selected{% endif %}>U14</option>
+                    <option value="Pend Oreille Pines (High School Club Team)" {% if player.division == 'Pend Oreille Pines (High School Club Team)' %}selected{% endif %}>Pend Oreille Pines (High School Club Team)</option>
+                </select>
+            </td>
+            <td><span class="jersey-number">{{ player.jersey_number }}</span><input class="form-control d-none edit-jersey-number" type="number" value="{{ player.jersey_number }}"></td>
+            <td><span class="parent-email">{{ player.parent_email }}</span><input class="form-control d-none edit-parent-email" value="{{ player.parent_email }}"></td>
+            <td class="email-status">
+                {% if player.confirmation_sent %}
+                    ✅
+                {% else %}
+                    ❌
+                {% endif %}
+            </td>
+            <td>
+                <button class="btn btn-sm btn-primary btn-edit">Edit</button>
+                <button class="btn btn-sm btn-success btn-save d-none">Save</button>
+                <button class="btn btn-sm btn-secondary btn-cancel d-none">Cancel</button>
+                <button class="btn btn-sm btn-info btn-send-email">Email</button>
+                <button class="btn btn-sm btn-danger btn-delete">Delete</button>
+            </td>
+        </tr>
+    {% endfor %}
+    <tr class="add-row">
+        <td colspan="9">
+            <button class="btn btn-sm btn-primary btn-show-add-form">Add Player</button>
+        </td>
+    </tr>
+    <tr class="add-form-row d-none">
+        <td></td>
+        <td><input class="form-control new-full-name" placeholder="Full Name"></td>
+        <td>
+            <select class="form-select new-birth-year">
+                <option value="">-</option>
+                {% for year in range(2005, 2026) %}
+                    <option value="{{ year }}" {% if year == group and group is number %}selected{% endif %}>{{ year }}</option>
+                {% endfor %}
+            </select>
+        </td>
+        <td>
+            <select class="form-select new-sport">
+                <option value="soccer">Soccer</option>
+                <option value="basketball">Basketball</option>
+                <option value="baseball">Baseball</option>
+                <option value="softball">Softball</option>
+                <option value="volleyball">Volleyball</option>
+                <option value="flag">Flag Football</option>
+            </select>
+        </td>
+        <td>
+            <select class="form-select new-division">
+                <option value="U4">U4</option>
+                <option value="U6">U6</option>
+                <option value="U8">U8</option>
+                <option value="U10">U10</option>
+                <option value="U12">U12</option>
+                <option value="U14">U14</option>
+                <option value="Pend Oreille Pines (High School Club Team)">Pend Oreille Pines (High School Club Team)</option>
+            </select>
+        </td>
+        <td>-</td>
+        <td><input class="form-control new-parent-email" placeholder="Parent Email"></td>
+        <td></td>
+        <td>
+            <button class="btn btn-sm btn-success btn-add-save">Save</button>
+            <button class="btn btn-sm btn-secondary btn-add-cancel">Cancel</button>
+        </td>
+    </tr>
+{% endmacro %}
+
 <div id="main-content">
 {% if view == 'birthyear' %}
     {# Birth Year View #}
@@ -146,108 +295,7 @@
                         </tr>
                     </thead>
                     <tbody data-group="{{ group }}">
-                        {% for player in players %}
-                            <tr data-player-id="{{ player.id }}" data-reg-id="{{ player.registration_id }}" 
-                                data-search-name="{{ player.full_name|lower }}" 
-                                data-search-email="{{ player.parent_email|lower }}" 
-                                data-search-jersey="{{ player.jersey_number }}"
-                                data-search-sports="{{ player.sports|join(',')|lower }}"
-                                class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %}">
-                                <td>
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input lock-toggle" type="checkbox" {% if player.locked %}checked{% endif %}>
-                                    </div>
-                                </td>
-                                <td><span class="full-name">{{ player.full_name }}</span><input class="form-control d-none edit-full-name" value="{{ player.full_name }}"></td>
-                                <td>
-                                    <span class="birth-year">{{ player.birth_year or '-' }}</span>
-                                    <select class="form-select d-none edit-birth-year">
-                                        <option value="">-</option>
-                                        {% for year in range(2005, 2026) %}
-                                            <option value="{{ year }}" {% if player.birth_year == year %}selected{% endif %}>{{ year }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </td>
-                                <td>
-                                    {% for sport in player.sports %}
-                                        <span class="sport-tag">{{ sport }}</span>
-                                    {% endfor %}
-                                </td>
-                                <td>
-                                    <span class="division">{{ player.division }}</span>
-                                    <select class="form-select d-none edit-division">
-                                        <option value="U4" {% if player.division == 'U4' %}selected{% endif %}>U4</option>
-                                        <option value="U6" {% if player.division == 'U6' %}selected{% endif %}>U6</option>
-                                        <option value="U8" {% if player.division == 'U8' %}selected{% endif %}>U8</option>
-                                        <option value="U10" {% if player.division == 'U10' %}selected{% endif %}>U10</option>
-                                        <option value="U12" {% if player.division == 'U12' %}selected{% endif %}>U12</option>
-                                        <option value="U14" {% if player.division == 'U14' %}selected{% endif %}>U14</option>
-                                        <option value="Pend Oreille Pines (High School Club Team)" {% if player.division == 'Pend Oreille Pines (High School Club Team)' %}selected{% endif %}>Pend Oreille Pines (High School Club Team)</option>
-                                    </select>
-                                </td>
-                                <td><span class="jersey-number">{{ player.jersey_number }}</span><input class="form-control d-none edit-jersey-number" type="number" value="{{ player.jersey_number }}"></td>
-                                <td><span class="parent-email">{{ player.parent_email }}</span><input class="form-control d-none edit-parent-email" value="{{ player.parent_email }}"></td>
-                                <td class="email-status">
-                                    {% if player.confirmation_sent %}
-                                        ✅
-                                    {% else %}
-                                        ❌
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <button class="btn btn-sm btn-primary btn-edit">Edit</button>
-                                    <button class="btn btn-sm btn-success btn-save d-none">Save</button>
-                                    <button class="btn btn-sm btn-secondary btn-cancel d-none">Cancel</button>
-                                    <button class="btn btn-sm btn-info btn-send-email">Email</button>
-                                    <button class="btn btn-sm btn-danger btn-delete">Delete</button>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                        <tr class="add-row">
-                            <td colspan="9">
-                                <button class="btn btn-sm btn-primary btn-show-add-form">Add Player</button>
-                            </td>
-                        </tr>
-                        <tr class="add-form-row d-none">
-                            <td></td>
-                            <td><input class="form-control new-full-name" placeholder="Full Name"></td>
-                            <td>
-                                <select class="form-select new-birth-year">
-                                    <option value="">-</option>
-                                    {% for year in range(2005, 2026) %}
-                                        <option value="{{ year }}" {% if year == group %}selected{% endif %}>{{ year }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                            <td>
-                                <select class="form-select new-sport">
-                                    <option value="soccer">Soccer</option>
-                                    <option value="basketball">Basketball</option>
-                                    <option value="baseball">Baseball</option>
-                                    <option value="softball">Softball</option>
-                                    <option value="volleyball">Volleyball</option>
-                                    <option value="flag">Flag Football</option>
-                                </select>
-                            </td>
-                            <td>
-                                <select class="form-select new-division">
-                                    <option value="U4">U4</option>
-                                    <option value="U6">U6</option>
-                                    <option value="U8">U8</option>
-                                    <option value="U10">U10</option>
-                                    <option value="U12">U12</option>
-                                    <option value="U14">U14</option>
-                                    <option value="Pend Oreille Pines (High School Club Team)">Pend Oreille Pines (High School Club Team)</option>
-                                </select>
-                            </td>
-                            <td>-</td>
-                            <td><input class="form-control new-parent-email" placeholder="Parent Email"></td>
-                            <td></td>
-                            <td>
-                                <button class="btn btn-sm btn-success btn-add-save">Save</button>
-                                <button class="btn btn-sm btn-secondary btn-add-cancel">Cancel</button>
-                            </td>
-                        </tr>
+                        {{ player_table_rows(players, group) }}
                     </tbody>
                 </table>
             </div>
@@ -270,108 +318,7 @@
                         </tr>
                     </thead>
                     <tbody data-group="">
-                        {% for player in unassigned_players %}
-                            <tr data-player-id="{{ player.id }}" data-reg-id="{{ player.registration_id }}" 
-                                data-search-name="{{ player.full_name|lower }}" 
-                                data-search-email="{{ player.parent_email|lower }}" 
-                                data-search-jersey="{{ player.jersey_number }}"
-                                data-search-sports="{{ player.sports|join(',')|lower }}"
-                                class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %}">
-                                <td>
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input lock-toggle" type="checkbox" {% if player.locked %}checked{% endif %}>
-                                    </div>
-                                </td>
-                                <td><span class="full-name">{{ player.full_name }}</span><input class="form-control d-none edit-full-name" value="{{ player.full_name }}"></td>
-                                <td>
-                                    <span class="birth-year">{{ player.birth_year or '-' }}</span>
-                                    <select class="form-select d-none edit-birth-year">
-                                        <option value="">-</option>
-                                        {% for year in range(2005, 2026) %}
-                                            <option value="{{ year }}" {% if player.birth_year == year %}selected{% endif %}>{{ year }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </td>
-                                <td>
-                                    {% for sport in player.sports %}
-                                        <span class="sport-tag">{{ sport }}</span>
-                                    {% endfor %}
-                                </td>
-                                <td>
-                                    <span class="division">{{ player.division }}</span>
-                                    <select class="form-select d-none edit-division">
-                                        <option value="U4" {% if player.division == 'U4' %}selected{% endif %}>U4</option>
-                                        <option value="U6" {% if player.division == 'U6' %}selected{% endif %}>U6</option>
-                                        <option value="U8" {% if player.division == 'U8' %}selected{% endif %}>U8</option>
-                                        <option value="U10" {% if player.division == 'U10' %}selected{% endif %}>U10</option>
-                                        <option value="U12" {% if player.division == 'U12' %}selected{% endif %}>U12</option>
-                                        <option value="U14" {% if player.division == 'U14' %}selected{% endif %}>U14</option>
-                                        <option value="Pend Oreille Pines (High School Club Team)" {% if player.division == 'Pend Oreille Pines (High School Club Team)' %}selected{% endif %}>Pend Oreille Pines (High School Club Team)</option>
-                                    </select>
-                                </td>
-                                <td><span class="jersey-number">{{ player.jersey_number }}</span><input class="form-control d-none edit-jersey-number" type="number" value="{{ player.jersey_number }}"></td>
-                                <td><span class="parent-email">{{ player.parent_email }}</span><input class="form-control d-none edit-parent-email" value="{{ player.parent_email }}"></td>
-                                <td class="email-status">
-                                    {% if player.confirmation_sent %}
-                                        ✅
-                                    {% else %}
-                                        ❌
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <button class="btn btn-sm btn-primary btn-edit">Edit</button>
-                                    <button class="btn btn-sm btn-success btn-save d-none">Save</button>
-                                    <button class="btn btn-sm btn-secondary btn-cancel d-none">Cancel</button>
-                                    <button class="btn btn-sm btn-info btn-send-email">Email</button>
-                                    <button class="btn btn-sm btn-danger btn-delete">Delete</button>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                        <tr class="add-row">
-                            <td colspan="9">
-                                <button class="btn btn-sm btn-primary btn-show-add-form">Add Player</button>
-                            </td>
-                        </tr>
-                        <tr class="add-form-row d-none">
-                            <td></td>
-                            <td><input class="form-control new-full-name" placeholder="Full Name"></td>
-                            <td>
-                                <select class="form-select new-birth-year">
-                                    <option value="">-</option>
-                                    {% for year in range(2005, 2026) %}
-                                        <option value="{{ year }}">{{ year }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                            <td>
-                                <select class="form-select new-sport">
-                                    <option value="soccer">Soccer</option>
-                                    <option value="basketball">Basketball</option>
-                                    <option value="baseball">Baseball</option>
-                                    <option value="softball">Softball</option>
-                                    <option value="volleyball">Volleyball</option>
-                                    <option value="flag">Flag Football</option>
-                                </select>
-                            </td>
-                            <td>
-                                <select class="form-select new-division">
-                                    <option value="U4">U4</option>
-                                    <option value="U6">U6</option>
-                                    <option value="U8">U8</option>
-                                    <option value="U10">U10</option>
-                                    <option value="U12">U12</option>
-                                    <option value="U14">U14</option>
-                                    <option value="Pend Oreille Pines (High School Club Team)">Pend Oreille Pines (High School Club Team)</option>
-                                </select>
-                            </td>
-                            <td>-</td>
-                            <td><input class="form-control new-parent-email" placeholder="Parent Email"></td>
-                            <td></td>
-                            <td>
-                                <button class="btn btn-sm btn-success btn-add-save">Save</button>
-                                <button class="btn btn-sm btn-secondary btn-add-cancel">Cancel</button>
-                            </td>
-                        </tr>
+                        {{ player_table_rows(unassigned_players, '') }}
                     </tbody>
                 </table>
             </div>
@@ -416,108 +363,7 @@
                         </tr>
                     </thead>
                     <tbody data-group="{{ group }}">
-                        {% for player in players %}
-                            <tr data-player-id="{{ player.id }}" data-reg-id="{{ player.registration_id }}" 
-                                data-search-name="{{ player.full_name|lower }}" 
-                                data-search-email="{{ player.parent_email|lower }}" 
-                                data-search-jersey="{{ player.jersey_number }}"
-                                data-search-sports="{{ player.sports|join(',')|lower }}"
-                                class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %}">
-                                <td>
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input lock-toggle" type="checkbox" {% if player.locked %}checked{% endif %}>
-                                    </div>
-                                </td>
-                                <td><span class="full-name">{{ player.full_name }}</span><input class="form-control d-none edit-full-name" value="{{ player.full_name }}"></td>
-                                <td>
-                                    <span class="birth-year">{{ player.birth_year or '-' }}</span>
-                                    <select class="form-select d-none edit-birth-year">
-                                        <option value="">-</option>
-                                        {% for year in range(2005, 2026) %}
-                                            <option value="{{ year }}" {% if player.birth_year == year %}selected{% endif %}>{{ year }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </td>
-                                <td>
-                                    {% for sport in player.sports %}
-                                        <span class="sport-tag">{{ sport }}</span>
-                                    {% endfor %}
-                                </td>
-                                <td>
-                                    <span class="division">{{ player.division }}</span>
-                                    <select class="form-select d-none edit-division">
-                                        <option value="U4" {% if player.division == 'U4' %}selected{% endif %}>U4</option>
-                                        <option value="U6" {% if player.division == 'U6' %}selected{% endif %}>U6</option>
-                                        <option value="U8" {% if player.division == 'U8' %}selected{% endif %}>U8</option>
-                                        <option value="U10" {% if player.division == 'U10' %}selected{% endif %}>U10</option>
-                                        <option value="U12" {% if player.division == 'U12' %}selected{% endif %}>U12</option>
-                                        <option value="U14" {% if player.division == 'U14' %}selected{% endif %}>U14</option>
-                                        <option value="Pend Oreille Pines (High School Club Team)" {% if player.division == 'Pend Oreille Pines (High School Club Team)' %}selected{% endif %}>Pend Oreille Pines (High School Club Team)</option>
-                                    </select>
-                                </td>
-                                <td><span class="jersey-number">{{ player.jersey_number }}</span><input class="form-control d-none edit-jersey-number" type="number" value="{{ player.jersey_number }}"></td>
-                                <td><span class="parent-email">{{ player.parent_email }}</span><input class="form-control d-none edit-parent-email" value="{{ player.parent_email }}"></td>
-                                <td class="email-status">
-                                    {% if player.confirmation_sent %}
-                                        ✅
-                                    {% else %}
-                                        ❌
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <button class="btn btn-sm btn-primary btn-edit">Edit</button>
-                                    <button class="btn btn-sm btn-success btn-save d-none">Save</button>
-                                    <button class="btn btn-sm btn-secondary btn-cancel d-none">Cancel</button>
-                                    <button class="btn btn-sm btn-info btn-send-email">Email</button>
-                                    <button class="btn btn-sm btn-danger btn-delete">Delete</button>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                        <tr class="add-row">
-                            <td colspan="9">
-                                <button class="btn btn-sm btn-primary btn-show-add-form">Add Player</button>
-                            </td>
-                        </tr>
-                        <tr class="add-form-row d-none">
-                            <td></td>
-                            <td><input class="form-control new-full-name" placeholder="Full Name"></td>
-                            <td>
-                                <select class="form-select new-birth-year">
-                                    <option value="">-</option>
-                                    {% for year in range(2005, 2026) %}
-                                        <option value="{{ year }}">{{ year }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                            <td>
-                                <select class="form-select new-sport">
-                                    <option value="soccer">Soccer</option>
-                                    <option value="basketball">Basketball</option>
-                                    <option value="baseball">Baseball</option>
-                                    <option value="softball">Softball</option>
-                                    <option value="volleyball">Volleyball</option>
-                                    <option value="flag">Flag Football</option>
-                                </select>
-                            </td>
-                            <td>
-                                <select class="form-select new-division">
-                                    <option value="U4">U4</option>
-                                    <option value="U6">U6</option>
-                                    <option value="U8">U8</option>
-                                    <option value="U10">U10</option>
-                                    <option value="U12">U12</option>
-                                    <option value="U14">U14</option>
-                                    <option value="Pend Oreille Pines (High School Club Team)">Pend Oreille Pines (High School Club Team)</option>
-                                </select>
-                            </td>
-                            <td>-</td>
-                            <td><input class="form-control new-parent-email" placeholder="Parent Email"></td>
-                            <td></td>
-                            <td>
-                                <button class="btn btn-sm btn-success btn-add-save">Save</button>
-                                <button class="btn btn-sm btn-secondary btn-add-cancel">Cancel</button>
-                            </td>
-                        </tr>
+                        {{ player_table_rows(players, group) }}
                     </tbody>
                 </table>
             </div>
@@ -540,108 +386,7 @@
                         </tr>
                     </thead>
                     <tbody data-group="">
-                        {% for player in unassigned_players %}
-                            <tr data-player-id="{{ player.id }}" data-reg-id="{{ player.registration_id }}" 
-                                data-search-name="{{ player.full_name|lower }}" 
-                                data-search-email="{{ player.parent_email|lower }}" 
-                                data-search-jersey="{{ player.jersey_number }}"
-                                data-search-sports="{{ player.sports|join(',')|lower }}"
-                                class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %}">
-                                <td>
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input lock-toggle" type="checkbox" {% if player.locked %}checked{% endif %}>
-                                    </div>
-                                </td>
-                                <td><span class="full-name">{{ player.full_name }}</span><input class="form-control d-none edit-full-name" value="{{ player.full_name }}"></td>
-                                <td>
-                                    <span class="birth-year">{{ player.birth_year or '-' }}</span>
-                                    <select class="form-select d-none edit-birth-year">
-                                        <option value="">-</option>
-                                        {% for year in range(2005, 2026) %}
-                                            <option value="{{ year }}" {% if player.birth_year == year %}selected{% endif %}>{{ year }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </td>
-                                <td>
-                                    {% for sport in player.sports %}
-                                        <span class="sport-tag">{{ sport }}</span>
-                                    {% endfor %}
-                                </td>
-                                <td>
-                                    <span class="division">{{ player.division }}</span>
-                                    <select class="form-select d-none edit-division">
-                                        <option value="U4" {% if player.division == 'U4' %}selected{% endif %}>U4</option>
-                                        <option value="U6" {% if player.division == 'U6' %}selected{% endif %}>U6</option>
-                                        <option value="U8" {% if player.division == 'U8' %}selected{% endif %}>U8</option>
-                                        <option value="U10" {% if player.division == 'U10' %}selected{% endif %}>U10</option>
-                                        <option value="U12" {% if player.division == 'U12' %}selected{% endif %}>U12</option>
-                                        <option value="U14" {% if player.division == 'U14' %}selected{% endif %}>U14</option>
-                                        <option value="Pend Oreille Pines (High School Club Team)" {% if player.division == 'Pend Oreille Pines (High School Club Team)' %}selected{% endif %}>Pend Oreille Pines (High School Club Team)</option>
-                                    </select>
-                                </td>
-                                <td><span class="jersey-number">{{ player.jersey_number }}</span><input class="form-control d-none edit-jersey-number" type="number" value="{{ player.jersey_number }}"></td>
-                                <td><span class="parent-email">{{ player.parent_email }}</span><input class="form-control d-none edit-parent-email" value="{{ player.parent_email }}"></td>
-                                <td class="email-status">
-                                    {% if player.confirmation_sent %}
-                                        ✅
-                                    {% else %}
-                                        ❌
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <button class="btn btn-sm btn-primary btn-edit">Edit</button>
-                                    <button class="btn btn-sm btn-success btn-save d-none">Save</button>
-                                    <button class="btn btn-sm btn-secondary btn-cancel d-none">Cancel</button>
-                                    <button class="btn btn-sm btn-info btn-send-email">Email</button>
-                                    <button class="btn btn-sm btn-danger btn-delete">Delete</button>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                        <tr class="add-row">
-                            <td colspan="9">
-                                <button class="btn btn-sm btn-primary btn-show-add-form">Add Player</button>
-                            </td>
-                        </tr>
-                        <tr class="add-form-row d-none">
-                            <td></td>
-                            <td><input class="form-control new-full-name" placeholder="Full Name"></td>
-                            <td>
-                                <select class="form-select new-birth-year">
-                                    <option value="">-</option>
-                                    {% for year in range(2005, 2026) %}
-                                        <option value="{{ year }}">{{ year }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                            <td>
-                                <select class="form-select new-sport">
-                                    <option value="soccer">Soccer</option>
-                                    <option value="basketball">Basketball</option>
-                                    <option value="baseball">Baseball</option>
-                                    <option value="softball">Softball</option>
-                                    <option value="volleyball">Volleyball</option>
-                                    <option value="flag">Flag Football</option>
-                                </select>
-                            </td>
-                            <td>
-                                <select class="form-select new-division">
-                                    <option value="U4">U4</option>
-                                    <option value="U6">U6</option>
-                                    <option value="U8">U8</option>
-                                    <option value="U10">U10</option>
-                                    <option value="U12">U12</option>
-                                    <option value="U14">U14</option>
-                                    <option value="Pend Oreille Pines (High School Club Team)">Pend Oreille Pines (High School Club Team)</option>
-                                </select>
-                            </td>
-                            <td>-</td>
-                            <td><input class="form-control new-parent-email" placeholder="Parent Email"></td>
-                            <td></td>
-                            <td>
-                                <button class="btn btn-sm btn-success btn-add-save">Save</button>
-                                <button class="btn btn-sm btn-secondary btn-add-cancel">Cancel</button>
-                            </td>
-                        </tr>
+                        {{ player_table_rows(unassigned_players, '') }}
                     </tbody>
                 </table>
             </div>
@@ -669,7 +414,6 @@
             return;
         }
 
-        // Find all matching rows across all tabs
         const allRows = document.querySelectorAll('tr[data-player-id]');
         const matches = [];
 
@@ -687,7 +431,6 @@
             }
         });
 
-        // Display results
         if (matches.length > 0) {
             searchResultsBody.innerHTML = '';
             matches.forEach(row => {
@@ -727,7 +470,20 @@
     });
     clearSearch.addEventListener('click', clearSearchResults);
 
-    // Existing functions
+    function updateSportTags(row, sports) {
+        const viewSports = row.querySelector('.view-sports');
+        viewSports.innerHTML = '';
+        sports.forEach(sport => {
+            const tag = document.createElement('span');
+            tag.className = 'sport-tag';
+            tag.textContent = sport;
+            viewSports.appendChild(tag);
+        });
+        
+        row.dataset.searchSports = sports.join(',').toLowerCase();
+        row.dataset.sports = sports.join(',');
+    }
+
     function insertRowSorted(tbody, row) {
         const newNumber = parseInt(row.querySelector('.jersey-number').textContent, 10);
         const rows = Array.from(tbody.querySelectorAll('tr[data-player-id]')).filter(r => r !== row);
@@ -748,7 +504,9 @@
     function editHandler(event) {
         const row = event.currentTarget.closest("tr");
         row.querySelectorAll("span:not(.sport-tag)").forEach(el => el.classList.add("d-none"));
-        row.querySelectorAll("input, select").forEach(el => el.classList.remove("d-none"));
+        row.querySelectorAll("input:not(.sport-checkbox), select").forEach(el => el.classList.remove("d-none"));
+        row.querySelector(".view-sports").style.display = "none";
+        row.querySelector(".edit-sports").style.display = "block";
         row.querySelector(".btn-edit").classList.add("d-none");
         row.querySelector(".btn-save").classList.remove("d-none");
         row.querySelector(".btn-cancel").classList.remove("d-none");
@@ -756,7 +514,7 @@
 
     function cancelHandler(event) {
         const row = event.currentTarget.closest("tr");
-        row.querySelectorAll("input, select").forEach(el => {
+        row.querySelectorAll("input:not(.sport-checkbox), select").forEach(el => {
             if (el.classList.contains("edit-full-name")) {
                 el.value = row.querySelector("span.full-name").textContent;
             } else if (el.classList.contains("edit-birth-year")) {
@@ -771,7 +529,15 @@
             }
             el.classList.add("d-none");
         });
+        
+        const originalSports = (row.dataset.sports || '').split(',').filter(s => s);
+        row.querySelectorAll('.sport-checkbox').forEach(checkbox => {
+            checkbox.checked = originalSports.includes(checkbox.value);
+        });
+        
         row.querySelectorAll("span:not(.sport-tag)").forEach(el => el.classList.remove("d-none"));
+        row.querySelector(".view-sports").style.display = "block";
+        row.querySelector(".edit-sports").style.display = "none";
         row.querySelector(".btn-save").classList.add("d-none");
         row.querySelector(".btn-cancel").classList.add("d-none");
         row.querySelector(".btn-edit").classList.remove("d-none");
@@ -784,7 +550,9 @@
         const birthYearValue = row.querySelector(".edit-birth-year").value;
         const divisionValue = row.querySelector(".edit-division").value;
         
-        // Update player info
+        const selectedSports = Array.from(row.querySelectorAll('.sport-checkbox:checked'))
+            .map(cb => cb.value);
+        
         const playerPayload = {
             full_name: row.querySelector(".edit-full-name").value,
             birth_year: birthYearValue === "" ? null : parseInt(birthYearValue),
@@ -797,7 +565,13 @@
             body: JSON.stringify(playerPayload)
         });
         
-        // Update division
+        const sportsPayload = { sports: selectedSports };
+        const sportsResponse = await fetch(`/players/${id}/sports`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(sportsPayload)
+        });
+        
         const divisionPayload = { division: divisionValue };
         const divisionResponse = await fetch(`/registrations/${regId}/division`, {
             method: "PUT",
@@ -805,21 +579,26 @@
             body: JSON.stringify(divisionPayload)
         });
         
-        if (playerResponse.ok && divisionResponse.ok) {
+        if (playerResponse.ok && sportsResponse.ok && divisionResponse.ok) {
+            const sportsData = await sportsResponse.json();
+            
             row.querySelector(".full-name").textContent = playerPayload.full_name;
             row.querySelector(".birth-year").textContent = playerPayload.birth_year || "-";
             row.querySelector(".division").textContent = divisionValue;
             row.querySelector(".jersey-number").textContent = playerPayload.jersey_number;
             row.querySelector(".parent-email").textContent = playerPayload.parent_email;
             
-            // Update search data attributes
+            updateSportTags(row, sportsData.sports);
+            
             row.dataset.searchName = playerPayload.full_name.toLowerCase();
             row.dataset.searchEmail = playerPayload.parent_email.toLowerCase();
             row.dataset.searchJersey = playerPayload.jersey_number;
             
             insertRowSorted(row.closest('tbody'), row);
-            row.querySelectorAll("input, select").forEach(el => el.classList.add("d-none"));
+            row.querySelectorAll("input:not(.sport-checkbox), select").forEach(el => el.classList.add("d-none"));
             row.querySelectorAll("span:not(.sport-tag)").forEach(el => el.classList.remove("d-none"));
+            row.querySelector(".view-sports").style.display = "block";
+            row.querySelector(".edit-sports").style.display = "none";
             row.querySelector(".btn-save").classList.add("d-none");
             row.querySelector(".btn-cancel").classList.add("d-none");
             row.querySelector(".btn-edit").classList.remove("d-none");
@@ -943,6 +722,7 @@
                 row.dataset.searchEmail = data.parent_email.toLowerCase();
                 row.dataset.searchJersey = data.jersey_number;
                 row.dataset.searchSports = data.sport.toLowerCase();
+                row.dataset.sports = data.sport;
                 row.innerHTML = `
                     <td>
                         <div class="form-check form-switch">
@@ -959,7 +739,39 @@
                             ).join('')}
                         </select>
                     </td>
-                    <td><span class="sport-tag">${data.sport}</span></td>
+                    <td>
+                        <div class="view-sports">
+                            <span class="sport-tag">${data.sport}</span>
+                        </div>
+                        <div class="edit-sports">
+                            <div class="sport-checkbox-group">
+                                <div class="sport-checkbox-item">
+                                    <input type="checkbox" class="sport-checkbox" value="soccer" id="soccer-${data.id}" ${data.sport === 'soccer' ? 'checked' : ''}>
+                                    <label for="soccer-${data.id}">Soccer</label>
+                                </div>
+                                <div class="sport-checkbox-item">
+                                    <input type="checkbox" class="sport-checkbox" value="basketball" id="basketball-${data.id}" ${data.sport === 'basketball' ? 'checked' : ''}>
+                                    <label for="basketball-${data.id}">Basketball</label>
+                                </div>
+                                <div class="sport-checkbox-item">
+                                    <input type="checkbox" class="sport-checkbox" value="baseball" id="baseball-${data.id}" ${data.sport === 'baseball' ? 'checked' : ''}>
+                                    <label for="baseball-${data.id}">Baseball</label>
+                                </div>
+                                <div class="sport-checkbox-item">
+                                    <input type="checkbox" class="sport-checkbox" value="softball" id="softball-${data.id}" ${data.sport === 'softball' ? 'checked' : ''}>
+                                    <label for="softball-${data.id}">Softball</label>
+                                </div>
+                                <div class="sport-checkbox-item">
+                                    <input type="checkbox" class="sport-checkbox" value="volleyball" id="volleyball-${data.id}" ${data.sport === 'volleyball' ? 'checked' : ''}>
+                                    <label for="volleyball-${data.id}">Volleyball</label>
+                                </div>
+                                <div class="sport-checkbox-item">
+                                    <input type="checkbox" class="sport-checkbox" value="flag" id="flag-${data.id}" ${data.sport === 'flag' ? 'checked' : ''}>
+                                    <label for="flag-${data.id}">Flag Football</label>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
                     <td>
                         <span class="division">${divisionValue}</span>
                         <select class="form-select d-none edit-division">
