@@ -546,12 +546,17 @@
     async function saveHandler(event) {
         const row = event.currentTarget.closest("tr");
         const id = row.dataset.playerId;
-        const regId = row.dataset.regId;
         const birthYearValue = row.querySelector(".edit-birth-year").value;
         const divisionValue = row.querySelector(".edit-division").value;
         
         const selectedSports = Array.from(row.querySelectorAll('.sport-checkbox:checked'))
             .map(cb => cb.value);
+        
+        // Validate that at least one sport is selected
+        if (selectedSports.length === 0) {
+            alert("Player must have at least one sport selected.");
+            return;
+        }
         
         const playerPayload = {
             full_name: row.querySelector(".edit-full-name").value,
@@ -572,16 +577,28 @@
             body: JSON.stringify(sportsPayload)
         });
         
-        const divisionPayload = { division: divisionValue };
-        const divisionResponse = await fetch(`/registrations/${regId}/division`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(divisionPayload)
-        });
+        if (!playerResponse.ok || !sportsResponse.ok) {
+            alert("Failed to update player.");
+            return;
+        }
         
-        if (playerResponse.ok && sportsResponse.ok && divisionResponse.ok) {
-            const sportsData = await sportsResponse.json();
+        const sportsData = await sportsResponse.json();
+        
+        // Update division if we have a valid registration_id
+        let divisionResponse = { ok: true };
+        if (sportsData.registration_id) {
+            const divisionPayload = { division: divisionValue };
+            divisionResponse = await fetch(`/registrations/${sportsData.registration_id}/division`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(divisionPayload)
+            });
             
+            // Update the row's registration_id for future operations
+            row.dataset.regId = sportsData.registration_id;
+        }
+        
+        if (divisionResponse.ok) {
             row.querySelector(".full-name").textContent = playerPayload.full_name;
             row.querySelector(".birth-year").textContent = playerPayload.birth_year || "-";
             row.querySelector(".division").textContent = divisionValue;
@@ -603,7 +620,7 @@
             row.querySelector(".btn-cancel").classList.add("d-none");
             row.querySelector(".btn-edit").classList.remove("d-none");
         } else {
-            alert("Failed to update player.");
+            alert("Failed to update division.");
         }
     }
 
