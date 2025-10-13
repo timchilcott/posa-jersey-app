@@ -28,26 +28,44 @@ import os
 # AUTOMATIC SEASON DETECTION
 # ---------------------------------------------------------------------
 def get_current_season():
-    """Detect the most recent valid season string from registrations."""
+    """Detect the most relevant current season, normalizing names like 'fall' and 'Fall 2025'."""
     try:
         with engine.connect() as conn:
-            result = conn.execute(
+            # Get all unique season values sorted alphabetically (case-insensitive)
+            results = conn.execute(
                 text("""
-                    SELECT season
+                    SELECT DISTINCT season
                     FROM registrations
                     WHERE season IS NOT NULL
                       AND season NOT ILIKE 'unknown'
-                      AND season NOT ILIKE '2024'
-                    ORDER BY created_at DESC
-                    LIMIT 1;
+                    ORDER BY LOWER(season) DESC;
                 """)
-            ).fetchone()
-            if result and result[0]:
-                print(f"[INFO] Auto-detected CURRENT_SEASON = {result[0]}")
-                return result[0]
+            ).fetchall()
+
+            seasons = [r[0].strip() for r in results if r and r[0]]
+            if not seasons:
+                raise ValueError("No valid seasons found")
+
+            # Prefer any season containing 'fall' (case-insensitive)
+            for s in seasons:
+                if "fall" in s.lower():
+                    print(f"[INFO] Auto-detected CURRENT_SEASON = {s}")
+                    return s
+
+            # Otherwise prefer the numerically highest year (like 2025)
+            numeric = [s for s in seasons if s.isdigit()]
+            if numeric:
+                chosen = sorted(numeric)[-1]
+                print(f"[INFO] Auto-detected CURRENT_SEASON = {chosen}")
+                return chosen
+
+            # Fallback to the first available valid season
+            print(f"[INFO] Auto-detected CURRENT_SEASON = {seasons[0]}")
+            return seasons[0]
+
     except Exception as e:
         print(f"[WARN] Could not detect season automatically: {e}")
-    return "fall"  # fallback default
+    return "fall"
 
 CURRENT_SEASON = get_current_season()
 
@@ -174,7 +192,6 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
     else:
         players = query.distinct().all()
 
-    # Everything below here stays as in your working version
     EXCLUDED_DIVISIONS = {"", "Unknown"}
     missing_emails = 0
     missing_jerseys = 0
@@ -199,7 +216,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
         if len(player_ids) > 1:
             duplicate_player_ids.update(player_ids)
 
-    # Keep all your existing grouping logic
+    # keep your existing grouping logic
     EXCLUDED_DIVISIONS = {"", "Unknown"}
     if view == "division":
         division_order = DIVISION_ORDER.copy()
