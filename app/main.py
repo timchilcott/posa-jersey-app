@@ -431,6 +431,80 @@ def update_player_lock(player_id: int, lock: LockUpdate, request: Request, db: S
     db.commit()
     return {"locked": db_player.locked}
 
+
+class SportsUpdate(BaseModel):
+    sports: list[str]
+
+
+@app.put("/players/{player_id}/sports")
+def update_player_sports(player_id: int, sports_update: SportsUpdate, request: Request, db: Session = Depends(get_db)):
+    """Update the sports a player is registered for."""
+    require_login(request)
+    db_player = db.get(Player, player_id)
+    if not db_player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    if db_player.locked:
+        raise HTTPException(status_code=403, detail="Player is locked")
+    
+    # Get current registrations
+    current_regs = db.query(Registration).filter(Registration.player_id == player_id).all()
+    current_sports = {reg.sport for reg in current_regs}
+    
+    # Normalize incoming sports
+    new_sports = {sport.strip().lower() for sport in sports_update.sports}
+    
+    # Determine what to add and remove
+    sports_to_add = new_sports - current_sports
+    sports_to_remove = current_sports - new_sports
+    
+    # Get primary division from existing registrations
+    primary_division = None
+    for reg in current_regs:
+        if reg.division and reg.division not in ["", "Unknown"]:
+            primary_division = reg.division
+            break
+    if not primary_division:
+        primary_division = "Unknown"
+    
+    # Remove sports
+    for sport in sports_to_remove:
+        regs_to_delete = db.query(Registration).filter(
+            Registration.player_id == player_id,
+            Registration.sport == sport
+        ).all()
+        for reg in regs_to_delete:
+            db.delete(reg)
+    
+    # Add new sports
+    current_season = CURRENT_SEASON or "2024"
+    for sport in sports_to_add:
+        # Check if registration already exists for this sport/season combo
+        existing = db.query(Registration).filter(
+            Registration.player_id == player_id,
+            Registration.sport == sport,
+            Registration.season.ilike(f"%{current_season}%")
+        ).first()
+        
+        if not existing:
+            new_reg = Registration(
+                player_id=player_id,
+                program=f"{current_season} {sport.title()}",
+                division=primary_division,
+                sport=sport,
+                season=current_season,
+                confirmation_sent=False
+            )
+            db.add(new_reg)
+    
+    db.commit()
+    
+    # Return updated sports list
+    updated_regs = db.query(Registration).filter(Registration.player_id == player_id).all()
+    updated_sports = sorted(list({reg.sport for reg in updated_regs}))
+    
+    return {"sports": updated_sports}
+
+
 class PlayerCreate(BaseModel):
     full_name: str
     birth_year: int | None
