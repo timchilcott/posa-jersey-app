@@ -47,7 +47,7 @@
 <div class="search-box">
     <div class="row">
         <div class="col-md-8">
-            <input type="text" id="athlete-search" class="form-control" placeholder="Search athletes by name, email, or jersey number...">
+            <input type="text" id="athlete-search" class="form-control" placeholder="Search athletes by name, email, jersey number, or sport...">
         </div>
         <div class="col-md-4">
             <button id="search-btn" class="btn btn-primary">Search</button>
@@ -151,6 +151,7 @@
                                 data-search-name="{{ player.full_name|lower }}" 
                                 data-search-email="{{ player.parent_email|lower }}" 
                                 data-search-jersey="{{ player.jersey_number }}"
+                                data-search-sports="{{ player.sports|join(',')|lower }}"
                                 class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %}">
                                 <td>
                                     <div class="form-check form-switch">
@@ -274,6 +275,7 @@
                                 data-search-name="{{ player.full_name|lower }}" 
                                 data-search-email="{{ player.parent_email|lower }}" 
                                 data-search-jersey="{{ player.jersey_number }}"
+                                data-search-sports="{{ player.sports|join(',')|lower }}"
                                 class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %}">
                                 <td>
                                     <div class="form-check form-switch">
@@ -377,7 +379,7 @@
     </div>
     
 {% else %}
-    {# Division View - Similar structure with search data attributes #}
+    {# Division View #}
     <ul class="nav nav-pills mb-3" id="divisionTabs" role="tablist">
         {% for group in group_list %}
             <li class="nav-item" role="presentation">
@@ -419,6 +421,7 @@
                                 data-search-name="{{ player.full_name|lower }}" 
                                 data-search-email="{{ player.parent_email|lower }}" 
                                 data-search-jersey="{{ player.jersey_number }}"
+                                data-search-sports="{{ player.sports|join(',')|lower }}"
                                 class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %}">
                                 <td>
                                     <div class="form-check form-switch">
@@ -542,6 +545,7 @@
                                 data-search-name="{{ player.full_name|lower }}" 
                                 data-search-email="{{ player.parent_email|lower }}" 
                                 data-search-jersey="{{ player.jersey_number }}"
+                                data-search-sports="{{ player.sports|join(',')|lower }}"
                                 class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %}">
                                 <td>
                                     <div class="form-check form-switch">
@@ -673,8 +677,12 @@
             const name = row.dataset.searchName || '';
             const email = row.dataset.searchEmail || '';
             const jersey = row.dataset.searchJersey || '';
+            const sports = row.dataset.searchSports || '';
             
-            if (name.includes(searchTerm) || email.includes(searchTerm) || jersey.includes(searchTerm)) {
+            if (name.includes(searchTerm) || 
+                email.includes(searchTerm) || 
+                jersey.includes(searchTerm) ||
+                sports.includes(searchTerm)) {
                 matches.push(row.cloneNode(true));
             }
         });
@@ -934,6 +942,7 @@
                 row.dataset.searchName = data.full_name.toLowerCase();
                 row.dataset.searchEmail = data.parent_email.toLowerCase();
                 row.dataset.searchJersey = data.jersey_number;
+                row.dataset.searchSports = data.sport.toLowerCase();
                 row.innerHTML = `
                     <td>
                         <div class="form-check form-switch">
