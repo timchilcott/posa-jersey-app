@@ -25,81 +25,34 @@ import io
 import os
 
 # ---------------------------------------------------------------------
-# AUTOMATIC SEASON DETECTION
-# ---------------------------------------------------------------------
-def get_current_season():
-    """Detect the most relevant current season, normalizing names like 'fall' and 'Fall 2025'."""
-    try:
-        with engine.connect() as conn:
-            results = conn.execute(
-                text("""
-                    SELECT season
-                    FROM registrations
-                    WHERE season IS NOT NULL
-                      AND season NOT ILIKE 'unknown'
-                    GROUP BY season
-                    ORDER BY MIN(LOWER(season)) DESC;
-                """)
-            ).fetchall()
-
-            seasons = [r[0].strip() for r in results if r and r[0]]
-            if not seasons:
-                raise ValueError("No valid seasons found")
-
-            # Prefer any season containing 'fall'
-            for s in seasons:
-                if "fall" in s.lower():
-                    print(f"[INFO] Auto-detected CURRENT_SEASON = {s}")
-                    return s
-
-            # Otherwise prefer the highest numeric year
-            numeric = [s for s in seasons if s.isdigit()]
-            if numeric:
-                chosen = sorted(numeric)[-1]
-                print(f"[INFO] Auto-detected CURRENT_SEASON = {chosen}")
-                return chosen
-
-            print(f"[INFO] Auto-detected CURRENT_SEASON = {seasons[0]}")
-            return seasons[0]
-
-    except Exception as e:
-        print(f"[WARN] Could not detect season automatically: {e}")
-    return "fall"
-
-
-CURRENT_SEASON = get_current_season()
-
-# ---------------------------------------------------------------------
 # FASTAPI SETUP
 # ---------------------------------------------------------------------
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "secret-key"))
 templates = Jinja2Templates(directory="app/templates")
 
-if os.getenv("ENVIRONMENT", "development") == "development":
-    Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine)
 
 # ---------------------------------------------------------------------
 # UTILITIES
 # ---------------------------------------------------------------------
 def calculate_u_division(birth_year: int, season_year: int = None) -> str:
     if season_year is None:
-        try:
-            season_year = int(str(CURRENT_SEASON)[:4])
-        except Exception:
-            season_year = 2025
+        season_year = 2025
     u_number = (season_year - birth_year) + 1
     return f"U{u_number}"
 
 
 @app.on_event("startup")
 def ensure_admin_user() -> None:
+    """Create initial admin user if none exist."""
     db = SessionLocal()
     try:
         if not db.query(User).first():
             email = os.getenv("ADMIN_EMAIL", "admin@example.com")
             password = os.getenv("ADMIN_PASSWORD", "admin")
             create_user(db, email, password)
+            print(f"[INFO] Created default admin user: {email}")
     finally:
         db.close()
 
@@ -113,6 +66,7 @@ def get_db():
 
 
 def require_login(request: Request):
+    """Redirect to login if user not authenticated."""
     if not request.session.get("user_id"):
         raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/login"})
 
@@ -165,7 +119,7 @@ def invite_user(request: Request, email: str = Form(...), password: str = Form(.
     return RedirectResponse("/admin", status_code=302)
 
 # ---------------------------------------------------------------------
-# ADMIN DASHBOARD
+# ADMIN DASHBOARD (now showing ALL players across ALL seasons)
 # ---------------------------------------------------------------------
 @app.get("/admin", response_class=HTMLResponse)
 def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Depends(get_db)):
@@ -174,19 +128,10 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
     except HTTPException as exc:
         return RedirectResponse(exc.headers["Location"], status_code=exc.status_code)
 
+    # Show all players across all seasons
     query = db.query(Player).join(Player.registrations)
-
-    # Case-insensitive partial filter for CURRENT_SEASON
-    if CURRENT_SEASON:
-        season_filter = Registration.season.ilike(f"%{CURRENT_SEASON.lower()}%")
-        filtered_players = query.filter(season_filter).distinct().all()
-        if len(filtered_players) < 5:
-            print(f"[INFO] Found only {len(filtered_players)} for season {CURRENT_SEASON}, showing all players instead.")
-            players = query.distinct().all()
-        else:
-            players = filtered_players
-    else:
-        players = query.distinct().all()
+    players = query.distinct().all()
+    print(f"[INFO] Showing all players across all seasons: {len(players)} total.")
 
     EXCLUDED_DIVISIONS = {"", "Unknown"}
     missing_emails = 0
@@ -199,6 +144,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
         if not player.jersey_number:
             missing_jerseys += 1
 
+    # Detect duplicate jersey numbers within birth years and sports
     birth_year_sport_jersey = defaultdict(list)
     for player in players:
         if player.birth_year and player.jersey_number:
@@ -212,7 +158,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
         if len(player_ids) > 1:
             duplicate_player_ids.update(player_ids)
 
-    # --- Group by Division ---
+    # --- View by Division ---
     if view == "division":
         division_order = DIVISION_ORDER.copy()
         players_by_division = defaultdict(list)
@@ -284,7 +230,8 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
             "missing_emails": missing_emails,
             "missing_jerseys": missing_jerseys,
         })
-    # --- Group by Birth Year ---
+
+    # --- View by Birth Year ---
     else:
         players_by_birth_year = defaultdict(list)
         unassigned_players = []
