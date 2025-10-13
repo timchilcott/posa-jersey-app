@@ -31,14 +31,14 @@ def get_current_season():
     """Detect the most relevant current season, normalizing names like 'fall' and 'Fall 2025'."""
     try:
         with engine.connect() as conn:
-            # Get all unique season values sorted alphabetically (case-insensitive)
             results = conn.execute(
                 text("""
-                    SELECT DISTINCT season
+                    SELECT season
                     FROM registrations
                     WHERE season IS NOT NULL
                       AND season NOT ILIKE 'unknown'
-                    ORDER BY LOWER(season) DESC;
+                    GROUP BY season
+                    ORDER BY MIN(LOWER(season)) DESC;
                 """)
             ).fetchall()
 
@@ -46,20 +46,19 @@ def get_current_season():
             if not seasons:
                 raise ValueError("No valid seasons found")
 
-            # Prefer any season containing 'fall' (case-insensitive)
+            # Prefer any season containing 'fall'
             for s in seasons:
                 if "fall" in s.lower():
                     print(f"[INFO] Auto-detected CURRENT_SEASON = {s}")
                     return s
 
-            # Otherwise prefer the numerically highest year (like 2025)
+            # Otherwise prefer the highest numeric year
             numeric = [s for s in seasons if s.isdigit()]
             if numeric:
                 chosen = sorted(numeric)[-1]
                 print(f"[INFO] Auto-detected CURRENT_SEASON = {chosen}")
                 return chosen
 
-            # Fallback to the first available valid season
             print(f"[INFO] Auto-detected CURRENT_SEASON = {seasons[0]}")
             return seasons[0]
 
@@ -67,16 +66,16 @@ def get_current_season():
         print(f"[WARN] Could not detect season automatically: {e}")
     return "fall"
 
+
 CURRENT_SEASON = get_current_season()
 
 # ---------------------------------------------------------------------
-# FASTAPI APP SETUP
+# FASTAPI SETUP
 # ---------------------------------------------------------------------
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "secret-key"))
 templates = Jinja2Templates(directory="app/templates")
 
-# Only create tables locally if no DB tables exist yet
 if os.getenv("ENVIRONMENT", "development") == "development":
     Base.metadata.create_all(bind=engine)
 
@@ -84,7 +83,6 @@ if os.getenv("ENVIRONMENT", "development") == "development":
 # UTILITIES
 # ---------------------------------------------------------------------
 def calculate_u_division(birth_year: int, season_year: int = None) -> str:
-    """Calculate U-division based on birth year using US Soccer guidelines."""
     if season_year is None:
         try:
             season_year = int(str(CURRENT_SEASON)[:4])
@@ -96,7 +94,6 @@ def calculate_u_division(birth_year: int, season_year: int = None) -> str:
 
 @app.on_event("startup")
 def ensure_admin_user() -> None:
-    """Create initial admin user if none exist."""
     db = SessionLocal()
     try:
         if not db.query(User).first():
@@ -116,7 +113,6 @@ def get_db():
 
 
 def require_login(request: Request):
-    """Redirect to login if user not authenticated."""
     if not request.session.get("user_id"):
         raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/login"})
 
@@ -180,12 +176,12 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
 
     query = db.query(Player).join(Player.registrations)
 
-    # Flexible season filtering
+    # Case-insensitive partial filter for CURRENT_SEASON
     if CURRENT_SEASON:
-        season_filter = Registration.season.ilike(f"%{CURRENT_SEASON}%")
+        season_filter = Registration.season.ilike(f"%{CURRENT_SEASON.lower()}%")
         filtered_players = query.filter(season_filter).distinct().all()
-        if len(filtered_players) < 5:  # if too few found, fall back to all players
-            print(f"[INFO] Found only {len(filtered_players)} for season {CURRENT_SEASON}, showing all instead.")
+        if len(filtered_players) < 5:
+            print(f"[INFO] Found only {len(filtered_players)} for season {CURRENT_SEASON}, showing all players instead.")
             players = query.distinct().all()
         else:
             players = filtered_players
@@ -216,8 +212,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
         if len(player_ids) > 1:
             duplicate_player_ids.update(player_ids)
 
-    # keep your existing grouping logic
-    EXCLUDED_DIVISIONS = {"", "Unknown"}
+    # --- Group by Division ---
     if view == "division":
         division_order = DIVISION_ORDER.copy()
         players_by_division = defaultdict(list)
@@ -289,6 +284,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
             "missing_emails": missing_emails,
             "missing_jerseys": missing_jerseys,
         })
+    # --- Group by Birth Year ---
     else:
         players_by_birth_year = defaultdict(list)
         unassigned_players = []
