@@ -15,10 +15,71 @@
         background-color: #e3f2fd;
         color: #1976d2;
     }
+    .search-box {
+        background: white;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    .search-results {
+        display: none;
+        background: white;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    .search-results.active {
+        display: block;
+    }
+    .highlight-match {
+        background-color: #fff3cd;
+    }
+    .clear-search {
+        cursor: pointer;
+        color: #dc3545;
+        margin-left: 10px;
+    }
 </style>
 
+<!-- Search Box -->
+<div class="search-box">
+    <div class="row">
+        <div class="col-md-8">
+            <input type="text" id="athlete-search" class="form-control" placeholder="Search athletes by name, email, or jersey number...">
+        </div>
+        <div class="col-md-4">
+            <button id="search-btn" class="btn btn-primary">Search</button>
+            <span id="clear-search" class="clear-search d-none">Clear</span>
+        </div>
+    </div>
+</div>
+
+<!-- Search Results -->
+<div id="search-results" class="search-results">
+    <h4>Search Results <span id="search-count"></span></h4>
+    <table class="table table-bordered align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Lock</th>
+                <th>Name</th>
+                <th>Birth Year</th>
+                <th>Sports</th>
+                <th>Division</th>
+                <th>Jersey #</th>
+                <th>Parent Email</th>
+                <th>Email Sent</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="search-results-body">
+        </tbody>
+    </table>
+</div>
+
 <!-- View Toggle -->
-<div class="mb-3">
+<div class="mb-3" id="view-toggle">
     <div class="btn-group" role="group">
         <a href="/admin?view=birthyear" class="btn btn-sm {% if view == 'birthyear' %}btn-primary{% else %}btn-outline-primary{% endif %}">Birth Year View</a>
         <a href="/admin?view=division" class="btn btn-sm {% if view == 'division' %}btn-primary{% else %}btn-outline-primary{% endif %}">Division View</a>
@@ -46,6 +107,7 @@
     </div>
 </div>
 
+<div id="main-content">
 {% if view == 'birthyear' %}
     {# Birth Year View #}
     <ul class="nav nav-pills mb-3" id="birthYearTabs" role="tablist">
@@ -85,7 +147,11 @@
                     </thead>
                     <tbody data-group="{{ group }}">
                         {% for player in players %}
-                            <tr data-player-id="{{ player.id }}" data-reg-id="{{ player.registration_id }}" class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %}">
+                            <tr data-player-id="{{ player.id }}" data-reg-id="{{ player.registration_id }}" 
+                                data-search-name="{{ player.full_name|lower }}" 
+                                data-search-email="{{ player.parent_email|lower }}" 
+                                data-search-jersey="{{ player.jersey_number }}"
+                                class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %}">
                                 <td>
                                     <div class="form-check form-switch">
                                         <input class="form-check-input lock-toggle" type="checkbox" {% if player.locked %}checked{% endif %}>
@@ -204,7 +270,11 @@
                     </thead>
                     <tbody data-group="">
                         {% for player in unassigned_players %}
-                            <tr data-player-id="{{ player.id }}" data-reg-id="{{ player.registration_id }}" class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %}">
+                            <tr data-player-id="{{ player.id }}" data-reg-id="{{ player.registration_id }}" 
+                                data-search-name="{{ player.full_name|lower }}" 
+                                data-search-email="{{ player.parent_email|lower }}" 
+                                data-search-jersey="{{ player.jersey_number }}"
+                                class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %}">
                                 <td>
                                     <div class="form-check form-switch">
                                         <input class="form-check-input lock-toggle" type="checkbox" {% if player.locked %}checked{% endif %}>
@@ -307,7 +377,7 @@
     </div>
     
 {% else %}
-    {# Division View #}
+    {# Division View - Similar structure with search data attributes #}
     <ul class="nav nav-pills mb-3" id="divisionTabs" role="tablist">
         {% for group in group_list %}
             <li class="nav-item" role="presentation">
@@ -345,7 +415,11 @@
                     </thead>
                     <tbody data-group="{{ group }}">
                         {% for player in players %}
-                            <tr data-player-id="{{ player.id }}" data-reg-id="{{ player.registration_id }}" class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %}">
+                            <tr data-player-id="{{ player.id }}" data-reg-id="{{ player.registration_id }}" 
+                                data-search-name="{{ player.full_name|lower }}" 
+                                data-search-email="{{ player.parent_email|lower }}" 
+                                data-search-jersey="{{ player.jersey_number }}"
+                                class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %}">
                                 <td>
                                     <div class="form-check form-switch">
                                         <input class="form-check-input lock-toggle" type="checkbox" {% if player.locked %}checked{% endif %}>
@@ -464,7 +538,11 @@
                     </thead>
                     <tbody data-group="">
                         {% for player in unassigned_players %}
-                            <tr data-player-id="{{ player.id }}" data-reg-id="{{ player.registration_id }}" class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %}">
+                            <tr data-player-id="{{ player.id }}" data-reg-id="{{ player.registration_id }}" 
+                                data-search-name="{{ player.full_name|lower }}" 
+                                data-search-email="{{ player.parent_email|lower }}" 
+                                data-search-jersey="{{ player.jersey_number }}"
+                                class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %}">
                                 <td>
                                     <div class="form-check form-switch">
                                         <input class="form-check-input lock-toggle" type="checkbox" {% if player.locked %}checked{% endif %}>
@@ -566,8 +644,82 @@
         {% endif %}
     </div>
 {% endif %}
+</div>
 
 <script>
+    // Search functionality
+    const searchInput = document.getElementById('athlete-search');
+    const searchBtn = document.getElementById('search-btn');
+    const clearSearch = document.getElementById('clear-search');
+    const searchResults = document.getElementById('search-results');
+    const searchResultsBody = document.getElementById('search-results-body');
+    const searchCount = document.getElementById('search-count');
+    const mainContent = document.getElementById('main-content');
+    const viewToggle = document.getElementById('view-toggle');
+
+    function performSearch() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        
+        if (!searchTerm) {
+            clearSearchResults();
+            return;
+        }
+
+        // Find all matching rows across all tabs
+        const allRows = document.querySelectorAll('tr[data-player-id]');
+        const matches = [];
+
+        allRows.forEach(row => {
+            const name = row.dataset.searchName || '';
+            const email = row.dataset.searchEmail || '';
+            const jersey = row.dataset.searchJersey || '';
+            
+            if (name.includes(searchTerm) || email.includes(searchTerm) || jersey.includes(searchTerm)) {
+                matches.push(row.cloneNode(true));
+            }
+        });
+
+        // Display results
+        if (matches.length > 0) {
+            searchResultsBody.innerHTML = '';
+            matches.forEach(row => {
+                row.classList.add('highlight-match');
+                searchResultsBody.appendChild(row);
+                attachRowHandlers(row);
+            });
+
+            searchCount.textContent = `(${matches.length} found)`;
+            searchResults.classList.add('active');
+            mainContent.style.display = 'none';
+            viewToggle.style.display = 'none';
+            clearSearch.classList.remove('d-none');
+        } else {
+            searchResultsBody.innerHTML = '<tr><td colspan="9" class="text-center">No athletes found</td></tr>';
+            searchCount.textContent = '(0 found)';
+            searchResults.classList.add('active');
+            mainContent.style.display = 'none';
+            viewToggle.style.display = 'none';
+            clearSearch.classList.remove('d-none');
+        }
+    }
+
+    function clearSearchResults() {
+        searchResults.classList.remove('active');
+        mainContent.style.display = 'block';
+        viewToggle.style.display = 'block';
+        searchInput.value = '';
+        clearSearch.classList.add('d-none');
+    }
+
+    searchBtn.addEventListener('click', performSearch);
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            performSearch();
+        }
+    });
+    clearSearch.addEventListener('click', clearSearchResults);
+
+    // Existing functions
     function insertRowSorted(tbody, row) {
         const newNumber = parseInt(row.querySelector('.jersey-number').textContent, 10);
         const rows = Array.from(tbody.querySelectorAll('tr[data-player-id]')).filter(r => r !== row);
@@ -651,6 +803,12 @@
             row.querySelector(".division").textContent = divisionValue;
             row.querySelector(".jersey-number").textContent = playerPayload.jersey_number;
             row.querySelector(".parent-email").textContent = playerPayload.parent_email;
+            
+            // Update search data attributes
+            row.dataset.searchName = playerPayload.full_name.toLowerCase();
+            row.dataset.searchEmail = playerPayload.parent_email.toLowerCase();
+            row.dataset.searchJersey = playerPayload.jersey_number;
+            
             insertRowSorted(row.closest('tbody'), row);
             row.querySelectorAll("input, select").forEach(el => el.classList.add("d-none"));
             row.querySelectorAll("span:not(.sport-tag)").forEach(el => el.classList.remove("d-none"));
@@ -773,6 +931,9 @@
                 const row = document.createElement("tr");
                 row.dataset.playerId = data.id;
                 row.dataset.regId = data.registration_id;
+                row.dataset.searchName = data.full_name.toLowerCase();
+                row.dataset.searchEmail = data.parent_email.toLowerCase();
+                row.dataset.searchJersey = data.jersey_number;
                 row.innerHTML = `
                     <td>
                         <div class="form-check form-switch">
