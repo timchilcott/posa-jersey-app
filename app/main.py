@@ -3,7 +3,6 @@ from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy.orm import Session
-from sqlalchemy import text
 from pydantic import BaseModel
 from .database import Base, engine, SessionLocal
 from .models import Player, Registration, User, EmailTemplate
@@ -37,8 +36,15 @@ Base.metadata.create_all(bind=engine)
 # UTILITIES
 # ---------------------------------------------------------------------
 def calculate_u_division(birth_year: int, season_year: int = None) -> str:
+    """Calculate U-division based on birth year using US Soccer guidelines,
+    with POSA-specific override for 2022 births."""
     if season_year is None:
         season_year = 2025
+
+    # POSA local rule: 2022 births = U3
+    if birth_year == 2022:
+        return "U3"
+
     u_number = (season_year - birth_year) + 1
     return f"U{u_number}"
 
@@ -53,6 +59,7 @@ def ensure_admin_user() -> None:
             password = os.getenv("ADMIN_PASSWORD", "admin")
             create_user(db, email, password)
             print(f"[INFO] Created default admin user: {email}")
+        print("[INFO] POSA local rule active: 2022 → U3")
     finally:
         db.close()
 
@@ -119,7 +126,7 @@ def invite_user(request: Request, email: str = Form(...), password: str = Form(.
     return RedirectResponse("/admin", status_code=302)
 
 # ---------------------------------------------------------------------
-# ADMIN DASHBOARD (now showing ALL players across ALL seasons)
+# ADMIN DASHBOARD — ALL SEASONS
 # ---------------------------------------------------------------------
 @app.get("/admin", response_class=HTMLResponse)
 def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Depends(get_db)):
@@ -172,7 +179,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
             for reg in player.registrations:
                 sport_key = (reg.sport or "").strip().lower()
                 division_raw = (reg.division or "").strip()
-                division = normalize_division(division_raw) if division_raw else ""
+                division = normalize_division(division_raw, player.birth_year)
                 sports.add(sport_key)
                 divisions.add(division)
                 reg_ids.append(reg.id)
@@ -246,7 +253,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
             for reg in player.registrations:
                 sport_key = (reg.sport or "").strip().lower()
                 division_raw = (reg.division or "").strip()
-                division = normalize_division(division_raw) if division_raw else ""
+                division = normalize_division(division_raw, player.birth_year)
                 sports.add(sport_key)
                 divisions.add(division)
                 reg_ids.append(reg.id)
