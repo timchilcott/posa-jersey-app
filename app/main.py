@@ -498,11 +498,17 @@ def update_player_sports(player_id: int, sports_update: SportsUpdate, request: R
     
     db.commit()
     
-    # Return updated sports list
+    # Return updated sports list and a valid registration_id
     updated_regs = db.query(Registration).filter(Registration.player_id == player_id).all()
     updated_sports = sorted(list({reg.sport for reg in updated_regs}))
     
-    return {"sports": updated_sports}
+    # Get a valid registration_id to use (first one available)
+    valid_reg_id = updated_regs[0].id if updated_regs else None
+    
+    return {
+        "sports": updated_sports,
+        "registration_id": valid_reg_id
+    }
 
 
 class PlayerCreate(BaseModel):
