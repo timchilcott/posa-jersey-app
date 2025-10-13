@@ -575,6 +575,7 @@ def send_registration_email(registration_id: int, request: Request, db: Session 
         raise HTTPException(status_code=403, detail="Player is locked")
     
     parent_email = reg.player.parent_email
+    clicked_sport = reg.sport  # The sport of the registration that was clicked
     
     # Get all registrations for this parent email
     all_regs = (
@@ -594,6 +595,9 @@ def send_registration_email(registration_id: int, request: Request, db: Session 
     
     recent_regs = list(player_most_recent.values())
     
+    # Filter to only registrations matching the clicked sport
+    sport_filtered_regs = [r for r in recent_regs if r.sport == clicked_sport]
+    
     pines_division = "Pend Oreille Pines (High School Club Team)"
     
     # Determine which type of email to send based on the clicked registration
@@ -603,7 +607,7 @@ def send_registration_email(registration_id: int, request: Request, db: Session 
     # Separate registrations by type
     regular_regs = []
     pines_regs = []
-    for r in recent_regs:
+    for r in sport_filtered_regs:
         division = normalize_division(r.division)
         if division == pines_division:
             pines_regs.append(r)
