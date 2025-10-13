@@ -48,6 +48,7 @@ def calculate_u_division(birth_year: int, season_year: int = None) -> str:
     u_number = (season_year - birth_year) + 1
     return f"U{u_number}"
 
+
 @app.on_event("startup")
 def ensure_admin_user() -> None:
     db = SessionLocal()
@@ -59,6 +60,7 @@ def ensure_admin_user() -> None:
     finally:
         db.close()
 
+
 def get_db():
     db = SessionLocal()
     try:
@@ -66,9 +68,11 @@ def get_db():
     finally:
         db.close()
 
+
 def require_login(request: Request):
     if not request.session.get("user_id"):
         raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/login"})
+
 
 # ---------------------------------------------------------------------
 # Routes
@@ -77,9 +81,11 @@ def require_login(request: Request):
 def read_root():
     return {"message": "POSA Jersey App is running!"}
 
+
 @app.get("/login", response_class=HTMLResponse)
 def login_form(request: Request):
     return templates.TemplateResponse("login.html", {"request": request, "error": None})
+
 
 @app.post("/login")
 def login(request: Request, email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
@@ -89,10 +95,12 @@ def login(request: Request, email: str = Form(...), password: str = Form(...), d
     request.session["user_id"] = user.id
     return RedirectResponse("/admin", status_code=302)
 
+
 @app.get("/logout")
 def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/login", status_code=302)
+
 
 @app.get("/invite", response_class=HTMLResponse)
 def invite_form(request: Request):
@@ -101,6 +109,7 @@ def invite_form(request: Request):
     except HTTPException as exc:
         return RedirectResponse(exc.headers["Location"], status_code=exc.status_code)
     return templates.TemplateResponse("invite_user.html", {"request": request, "error": None})
+
 
 @app.post("/invite")
 def invite_user(request: Request, email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
@@ -112,6 +121,7 @@ def invite_user(request: Request, email: str = Form(...), password: str = Form(.
         return templates.TemplateResponse("invite_user.html", {"request": request, "error": "User already exists"}, status_code=400)
     create_user(db, email, password)
     return RedirectResponse("/admin", status_code=302)
+
 
 # ---------------------------------------------------------------------
 # Admin Dashboard
@@ -126,8 +136,10 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
     query = db.query(Player).join(Player.registrations)
     season_year = int(CURRENT_SEASON) if CURRENT_SEASON.isdigit() else 2025
 
-    if CURRENT_SEASON:
-        query = query.filter(Registration.season.ilike(f"%{CURRENT_SEASON}%"))
+    # ✅ Show all registrations by default
+    selected_season = request.query_params.get("season")
+    if selected_season:
+        query = query.filter(Registration.season.ilike(f"%{selected_season}%"))
 
     players = query.distinct().all()
 
