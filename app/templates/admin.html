@@ -25,6 +25,62 @@
         min-height: 100vh;
     }
 
+    /* Page Header */
+    .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+    .page-title {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--text-dark);
+        margin: 0;
+    }
+    .header-badges {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .athlete-count-badge {
+        background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        box-shadow: var(--shadow-md);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .athlete-count-number {
+        font-size: 1.5rem;
+        font-weight: 800;
+    }
+    .waiting-alert {
+        background: rgba(255, 255, 255, 0.95);
+        border: 2px solid var(--warning-orange);
+        padding: 12px 20px;
+        border-radius: 20px;
+        color: #856404;
+        font-size: 0.95rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: var(--shadow-md);
+        font-weight: 600;
+    }
+    .waiting-count {
+        font-weight: 800;
+        color: var(--warning-orange);
+        font-size: 1.1rem;
+    }
+
     /* Table Styles */
     tr.locked td { 
         color: var(--text-light); 
@@ -167,68 +223,6 @@
     }
     .clear-search:hover {
         background: #fee;
-    }
-    
-    /* Waiting Room Badge */
-    .waiting-room-badge {
-        background: linear-gradient(135deg, var(--warning-orange) 0%, #ff6b00 100%);
-        color: white;
-        padding: 4px 12px;
-        border-radius: 16px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        margin-left: 8px;
-        box-shadow: var(--shadow-sm);
-    }
-    
-    /* Waiting Room Badge in Header */
-    .waiting-alert {
-        background: rgba(255, 255, 255, 0.95);
-        border: 2px solid var(--warning-orange);
-        padding: 12px 20px;
-        border-radius: 20px;
-        color: #856404;
-        font-size: 0.95rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 12px;
-        box-shadow: var(--shadow-md);
-        font-weight: 600;
-    }
-    .waiting-count {
-        font-weight: 800;
-        color: var(--warning-orange);
-        font-size: 1.1rem;
-    }
-    
-    /* Page Header */
-    .page-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 24px;
-    }
-    .page-title {
-        font-size: 2rem;
-        font-weight: 800;
-        color: var(--text-dark);
-        margin: 0;
-    }
-    .athlete-count-badge {
-        background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
-        color: white;
-        padding: 12px 24px;
-        border-radius: 20px;
-        font-weight: 700;
-        font-size: 1.1rem;
-        box-shadow: var(--shadow-md);
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .athlete-count-number {
-        font-size: 1.5rem;
-        font-weight: 800;
     }
     
     /* View Toggle */
@@ -485,7 +479,7 @@
 <!-- Page Header -->
 <div class="page-header">
     <h1 class="page-title">Athletes Dashboard</h1>
-    <div style="display: flex; gap: 12px; align-items: center;">
+    <div class="header-badges">
         <div class="athlete-count-badge">
             <span>Total Athletes:</span>
             <span class="athlete-count-number">{{ total_players }}</span>
@@ -541,41 +535,6 @@
     <div class="btn-group" role="group">
         <a href="/admin?view=birthyear" class="btn {% if view == 'birthyear' %}btn-primary{% else %}btn-outline-primary{% endif %}">🎂 Birth Year View</a>
         <a href="/admin?view=division" class="btn {% if view == 'division' %}btn-primary{% else %}btn-outline-primary{% endif %}">📊 Division View</a>
-    </div>
-</div>
-
-<!-- Stats Section -->
-<div class="mb-4">
-    <!-- Stats Summary -->
-    <div class="stats-summary">
-        <div class="main-stat">
-            <div class="stat-number">{{ total_players }}</div>
-            <div class="stat-label">Total Athletes<br>(assigned)</div>
-        </div>
-        {% if waiting_room_players %}
-        <div class="waiting-alert">
-            <span class="waiting-count">⚠️ {{ waiting_room_players|length }}</span>
-            <span>player{{ 's' if waiting_room_players|length != 1 else '' }} in Waiting Room</span>
-        </div>
-        {% endif %}
-    </div>
-    
-    <!-- Year Badges -->
-    <div class="year-badges-container">
-        <div class="section-title">Athletes by Birth Year</div>
-        <div>
-            {% for year, count in birth_year_counts.items() %}
-            <div class="year-badge">
-                <span class="year-badge-label">{{ year }}</span>
-                <span class="year-badge-count">{{ count }}</span>
-            </div>
-            {% endfor %}
-            {% if not birth_year_counts %}
-            <div class="text-center text-muted">
-                <small>No athletes with birth years assigned</small>
-            </div>
-            {% endif %}
-        </div>
     </div>
 </div>
 
