@@ -5,6 +5,7 @@
     tr.locked td { color: #6c757d; }
     tr.locked .btn { pointer-events: none; opacity: 0.5; }
     tr.duplicate-jersey td { background-color: #fff3cd !important; }
+    tr.waiting-room td { background-color: #fff4e6 !important; }
     .sport-tag {
         display: inline-block;
         padding: 2px 8px;
@@ -53,6 +54,15 @@
         cursor: pointer;
         color: #dc3545;
         margin-left: 10px;
+    }
+    .waiting-room-badge {
+        background-color: #ff9800;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.75em;
+        font-weight: 600;
+        margin-left: 8px;
     }
 </style>
 
@@ -104,7 +114,12 @@
     <!-- Total Athletes Card -->
     <div class="bg-white border rounded shadow-sm p-3 text-center mb-3">
         <div class="fs-3 fw-bold text-primary">{{ total_players }}</div>
-        <small class="text-muted">Total Athletes</small>
+        <small class="text-muted">Total Athletes (assigned)</small>
+        {% if waiting_room_players %}
+        <div class="mt-2">
+            <span class="waiting-room-badge">{{ waiting_room_players|length }} in Waiting Room</span>
+        </div>
+        {% endif %}
     </div>
     
     <!-- Birth Year Counts Grid -->
@@ -136,7 +151,7 @@
             data-search-jersey="{{ player.jersey_number }}"
             data-search-sports="{{ player.sports|join(',')|lower }}"
             data-sports="{{ player.sports|join(',') }}"
-            class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %}">
+            class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %} {% if player.division == 'Waiting Room' %}waiting-room{% endif %}">
             <td>
                 <div class="form-check form-switch">
                     <input class="form-check-input lock-toggle" type="checkbox" {% if player.locked %}checked{% endif %}>
@@ -190,6 +205,7 @@
             <td>
                 <span class="division">{{ player.division }}</span>
                 <select class="form-select d-none edit-division">
+                    <option value="Waiting Room" {% if player.division == 'Waiting Room' %}selected{% endif %}>Waiting Room</option>
                     <option value="U4" {% if player.division == 'U4' %}selected{% endif %}>U4</option>
                     <option value="U6" {% if player.division == 'U6' %}selected{% endif %}>U6</option>
                     <option value="U8" {% if player.division == 'U8' %}selected{% endif %}>U8</option>
@@ -199,7 +215,7 @@
                     <option value="Pend Oreille Pines (High School Club Team)" {% if player.division == 'Pend Oreille Pines (High School Club Team)' %}selected{% endif %}>Pend Oreille Pines (High School Club Team)</option>
                 </select>
             </td>
-            <td><span class="jersey-number">{{ player.jersey_number }}</span><input class="form-control d-none edit-jersey-number" type="number" value="{{ player.jersey_number }}"></td>
+            <td><span class="jersey-number">{{ player.jersey_number if player.jersey_number else '-' }}</span><input class="form-control d-none edit-jersey-number" type="number" value="{{ player.jersey_number if player.jersey_number else '' }}"></td>
             <td><span class="parent-email">{{ player.parent_email }}</span><input class="form-control d-none edit-parent-email" value="{{ player.parent_email }}"></td>
             <td class="email-status">
                 {% if player.confirmation_sent %}
@@ -268,9 +284,16 @@
 {% if view == 'birthyear' %}
     {# Birth Year View #}
     <ul class="nav nav-pills mb-3" id="birthYearTabs" role="tablist">
+        {% if waiting_room_players %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="tab-waiting-room" data-bs-toggle="pill" data-bs-target="#pane-waiting-room" type="button" role="tab">
+                    <span class="waiting-room-badge" style="background-color: #ff9800;">{{ waiting_room_players|length }}</span> Waiting Room
+                </button>
+            </li>
+        {% endif %}
         {% for group in group_list %}
             <li class="nav-item" role="presentation">
-                <button class="nav-link {% if loop.first %}active{% endif %}" id="tab-{{ group }}" data-bs-toggle="pill" data-bs-target="#pane-{{ group }}" type="button" role="tab">
+                <button class="nav-link {% if loop.first and not waiting_room_players %}active{% endif %}" id="tab-{{ group }}" data-bs-toggle="pill" data-bs-target="#pane-{{ group }}" type="button" role="tab">
                     {{ birth_year_labels[group] }}
                 </button>
             </li>
@@ -285,9 +308,35 @@
     </ul>
     
     <div class="tab-content">
+        {% if waiting_room_players %}
+            <div class="tab-pane fade show active" id="pane-waiting-room" role="tabpanel">
+                <div class="alert alert-warning">
+                    <strong>⚠️ Waiting Room:</strong> These players were imported from emails. Please assign their birth year and division to move them into the main roster.
+                </div>
+                <table class="table table-bordered align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Lock</th>
+                            <th>Name</th>
+                            <th>Birth Year</th>
+                            <th>Sports</th>
+                            <th>Division</th>
+                            <th>Jersey #</th>
+                            <th>Parent Email</th>
+                            <th>Email Sent</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody data-group="waiting-room">
+                        {{ player_table_rows(waiting_room_players, 'waiting-room') }}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+        
         {% for group in group_list %}
             {% set players = players_by_group[group] %}
-            <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="pane-{{ group }}" role="tabpanel">
+            <div class="tab-pane fade {% if loop.first and not waiting_room_players %}show active{% endif %}" id="pane-{{ group }}" role="tabpanel">
                 <table class="table table-bordered align-middle">
                     <thead class="table-light">
                         <tr>
@@ -336,9 +385,16 @@
 {% else %}
     {# Division View #}
     <ul class="nav nav-pills mb-3" id="divisionTabs" role="tablist">
+        {% if waiting_room_players %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="tab-waiting-room" data-bs-toggle="pill" data-bs-target="#pane-waiting-room" type="button" role="tab">
+                    <span class="waiting-room-badge" style="background-color: #ff9800;">{{ waiting_room_players|length }}</span> Waiting Room
+                </button>
+            </li>
+        {% endif %}
         {% for group in group_list %}
             <li class="nav-item" role="presentation">
-                <button class="nav-link {% if loop.first %}active{% endif %}" id="tab-{{ group|replace(' ', '_')|replace('/', '_')|lower }}" data-bs-toggle="pill" data-bs-target="#pane-{{ group|replace(' ', '_')|replace('/', '_')|lower }}" type="button" role="tab">
+                <button class="nav-link {% if loop.first and not waiting_room_players %}active{% endif %}" id="tab-{{ group|replace(' ', '_')|replace('/', '_')|lower }}" data-bs-toggle="pill" data-bs-target="#pane-{{ group|replace(' ', '_')|replace('/', '_')|lower }}" type="button" role="tab">
                     {{ group }}
                 </button>
             </li>
@@ -353,9 +409,35 @@
     </ul>
     
     <div class="tab-content">
+        {% if waiting_room_players %}
+            <div class="tab-pane fade show active" id="pane-waiting-room" role="tabpanel">
+                <div class="alert alert-warning">
+                    <strong>⚠️ Waiting Room:</strong> These players were imported from emails. Please assign their birth year and division to move them into the main roster.
+                </div>
+                <table class="table table-bordered align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Lock</th>
+                            <th>Name</th>
+                            <th>Birth Year</th>
+                            <th>Sports</th>
+                            <th>Division</th>
+                            <th>Jersey #</th>
+                            <th>Parent Email</th>
+                            <th>Email Sent</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody data-group="waiting-room">
+                        {{ player_table_rows(waiting_room_players, 'waiting-room') }}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+        
         {% for group in group_list %}
             {% set players = players_by_group[group] %}
-            <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="pane-{{ group|replace(' ', '_')|replace('/', '_')|lower }}" role="tabpanel">
+            <div class="tab-pane fade {% if loop.first and not waiting_room_players %}show active{% endif %}" id="pane-{{ group|replace(' ', '_')|replace('/', '_')|lower }}" role="tabpanel">
                 <table class="table table-bordered align-middle">
                     <thead class="table-light">
                         <tr>
@@ -404,6 +486,7 @@
 </div>
 
 <script>
+    // [JavaScript code remains the same as before - search functionality, edit handlers, etc.]
     // Search functionality
     const searchInput = document.getElementById('athlete-search');
     const searchBtn = document.getElementById('search-btn');
@@ -531,7 +614,8 @@
             } else if (el.classList.contains("edit-division")) {
                 el.value = row.querySelector("span.division").textContent;
             } else if (el.classList.contains("edit-jersey-number")) {
-                el.value = row.querySelector("span.jersey-number").textContent;
+                const jerseyText = row.querySelector("span.jersey-number").textContent.trim();
+                el.value = jerseyText === "-" ? "" : jerseyText;
             } else if (el.classList.contains("edit-parent-email")) {
                 el.value = row.querySelector("span.parent-email").textContent;
             }
@@ -556,6 +640,7 @@
         const id = row.dataset.playerId;
         const birthYearValue = row.querySelector(".edit-birth-year").value;
         const divisionValue = row.querySelector(".edit-division").value;
+        const jerseyValue = row.querySelector(".edit-jersey-number").value;
         
         const selectedSports = Array.from(row.querySelectorAll('.sport-checkbox:checked'))
             .map(cb => cb.value);
@@ -569,7 +654,7 @@
         const playerPayload = {
             full_name: row.querySelector(".edit-full-name").value,
             birth_year: birthYearValue === "" ? null : parseInt(birthYearValue),
-            jersey_number: parseInt(row.querySelector(".edit-jersey-number").value),
+            jersey_number: jerseyValue === "" ? 0 : parseInt(jerseyValue),
             parent_email: row.querySelector(".edit-parent-email").value
         };
         const playerResponse = await fetch(`/players/${id}`, {
@@ -604,13 +689,21 @@
             
             // Update the row's registration_id for future operations
             row.dataset.regId = sportsData.registration_id;
+            
+            // Get jersey number from response
+            if (divisionResponse.ok) {
+                const divisionData = await divisionResponse.json();
+                if (divisionData.jersey_number) {
+                    playerPayload.jersey_number = divisionData.jersey_number;
+                }
+            }
         }
         
         if (divisionResponse.ok) {
             row.querySelector(".full-name").textContent = playerPayload.full_name;
             row.querySelector(".birth-year").textContent = playerPayload.birth_year || "-";
             row.querySelector(".division").textContent = divisionValue;
-            row.querySelector(".jersey-number").textContent = playerPayload.jersey_number;
+            row.querySelector(".jersey-number").textContent = playerPayload.jersey_number || "-";
             row.querySelector(".parent-email").textContent = playerPayload.parent_email;
             
             updateSportTags(row, sportsData.sports);
@@ -618,6 +711,11 @@
             row.dataset.searchName = playerPayload.full_name.toLowerCase();
             row.dataset.searchEmail = playerPayload.parent_email.toLowerCase();
             row.dataset.searchJersey = playerPayload.jersey_number;
+            
+            // Remove waiting room styling if moved out
+            if (divisionValue !== 'Waiting Room') {
+                row.classList.remove('waiting-room');
+            }
             
             insertRowSorted(row.closest('tbody'), row);
             row.querySelectorAll("input:not(.sport-checkbox), select").forEach(el => el.classList.add("d-none"));
@@ -739,96 +837,7 @@
                 body: JSON.stringify(payload)
             });
             if (response.ok) {
-                const data = await response.json();
-                const row = document.createElement("tr");
-                row.dataset.playerId = data.id;
-                row.dataset.regId = data.registration_id;
-                row.dataset.searchName = data.full_name.toLowerCase();
-                row.dataset.searchEmail = data.parent_email.toLowerCase();
-                row.dataset.searchJersey = data.jersey_number;
-                row.dataset.searchSports = data.sport.toLowerCase();
-                row.dataset.sports = data.sport;
-                row.innerHTML = `
-                    <td>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input lock-toggle" type="checkbox">
-                        </div>
-                    </td>
-                    <td><span class="full-name">${data.full_name}</span><input class="form-control d-none edit-full-name" value="${data.full_name}"></td>
-                    <td>
-                        <span class="birth-year">${data.birth_year || '-'}</span>
-                        <select class="form-select d-none edit-birth-year">
-                            <option value="">-</option>
-                            ${Array.from({length: 21}, (_, i) => 2005 + i).map(year => 
-                                `<option value="${year}" ${data.birth_year === year ? 'selected' : ''}>${year}</option>`
-                            ).join('')}
-                        </select>
-                    </td>
-                    <td>
-                        <div class="view-sports">
-                            <span class="sport-tag">${data.sport}</span>
-                        </div>
-                        <div class="edit-sports">
-                            <div class="sport-checkbox-group">
-                                <div class="sport-checkbox-item">
-                                    <input type="checkbox" class="sport-checkbox" value="soccer" id="soccer-${data.id}" ${data.sport === 'soccer' ? 'checked' : ''}>
-                                    <label for="soccer-${data.id}">Soccer</label>
-                                </div>
-                                <div class="sport-checkbox-item">
-                                    <input type="checkbox" class="sport-checkbox" value="basketball" id="basketball-${data.id}" ${data.sport === 'basketball' ? 'checked' : ''}>
-                                    <label for="basketball-${data.id}">Basketball</label>
-                                </div>
-                                <div class="sport-checkbox-item">
-                                    <input type="checkbox" class="sport-checkbox" value="baseball" id="baseball-${data.id}" ${data.sport === 'baseball' ? 'checked' : ''}>
-                                    <label for="baseball-${data.id}">Baseball</label>
-                                </div>
-                                <div class="sport-checkbox-item">
-                                    <input type="checkbox" class="sport-checkbox" value="softball" id="softball-${data.id}" ${data.sport === 'softball' ? 'checked' : ''}>
-                                    <label for="softball-${data.id}">Softball</label>
-                                </div>
-                                <div class="sport-checkbox-item">
-                                    <input type="checkbox" class="sport-checkbox" value="volleyball" id="volleyball-${data.id}" ${data.sport === 'volleyball' ? 'checked' : ''}>
-                                    <label for="volleyball-${data.id}">Volleyball</label>
-                                </div>
-                                <div class="sport-checkbox-item">
-                                    <input type="checkbox" class="sport-checkbox" value="flag" id="flag-${data.id}" ${data.sport === 'flag' ? 'checked' : ''}>
-                                    <label for="flag-${data.id}">Flag Football</label>
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="division">${divisionValue}</span>
-                        <select class="form-select d-none edit-division">
-                            <option value="U4" ${divisionValue === 'U4' ? 'selected' : ''}>U4</option>
-                            <option value="U6" ${divisionValue === 'U6' ? 'selected' : ''}>U6</option>
-                            <option value="U8" ${divisionValue === 'U8' ? 'selected' : ''}>U8</option>
-                            <option value="U10" ${divisionValue === 'U10' ? 'selected' : ''}>U10</option>
-                            <option value="U12" ${divisionValue === 'U12' ? 'selected' : ''}>U12</option>
-                            <option value="U14" ${divisionValue === 'U14' ? 'selected' : ''}>U14</option>
-                            <option value="Pend Oreille Pines (High School Club Team)" ${divisionValue === 'Pend Oreille Pines (High School Club Team)' ? 'selected' : ''}>Pend Oreille Pines (High School Club Team)</option>
-                        </select>
-                    </td>
-                    <td><span class="jersey-number">${data.jersey_number}</span><input class="form-control d-none edit-jersey-number" type="number" value="${data.jersey_number}"></td>
-                    <td><span class="parent-email">${data.parent_email}</span><input class="form-control d-none edit-parent-email" value="${data.parent_email}"></td>
-                    <td class="email-status">❌</td>
-                    <td>
-                        <button class="btn btn-sm btn-primary btn-edit">Edit</button>
-                        <button class="btn btn-sm btn-success btn-save d-none">Save</button>
-                        <button class="btn btn-sm btn-secondary btn-cancel d-none">Cancel</button>
-                        <button class="btn btn-sm btn-info btn-send-email">Email</button>
-                        <button class="btn btn-sm btn-danger btn-delete">Delete</button>
-                    </td>
-                `;
-                insertRowSorted(tbody, row);
-                attachRowHandlers(row);
-                tbody.querySelector(".add-form-row").classList.add("d-none");
-                tbody.querySelector(".add-row").classList.remove("d-none");
-                tbody.querySelector(".new-full-name").value = "";
-                tbody.querySelector(".new-birth-year").value = "";
-                tbody.querySelector(".new-sport").value = "soccer";
-                tbody.querySelector(".new-division").value = "";
-                tbody.querySelector(".new-parent-email").value = "";
+                location.reload();
             } else {
                 alert("Failed to add player.");
             }
