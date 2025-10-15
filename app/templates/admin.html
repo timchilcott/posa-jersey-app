@@ -2,31 +2,43 @@
 {% block title %}POSA Admin{% endblock %}
 {% block content %}
 <style>
-    /* Modern Color Palette */
+    /* POSA & Pines Brand Color Palette */
     :root {
-        --primary-purple: #667eea;
-        --primary-blue: #4dabf7;
-        --success-green: #51cf66;
-        --warning-orange: #ff9800;
-        --danger-red: #ff6b6b;
+        --posa-navy: #0D1831;
+        --posa-red: #D63638;
+        --pines-green: #3C7939;
+        --pines-light-green: #519D47;
         --bg-light: #f8f9fa;
         --bg-card: #ffffff;
-        --text-dark: #1a202c;
+        --text-dark: #0D1831;
         --text-medium: #2d3748;
         --text-light: #4a5568;
         --border-color: #e2e8f0;
-        --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
-        --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-        --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+        --shadow-sm: 0 1px 3px rgba(13, 24, 49, 0.08);
+        --shadow-md: 0 4px 12px rgba(13, 24, 49, 0.10);
+        --shadow-lg: 0 8px 24px rgba(13, 24, 49, 0.15);
     }
 
     body {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        background: linear-gradient(135deg, #f5f7fa 0%, #e8f5e9 100%);
         min-height: 100vh;
     }
     
     .container {
         max-width: 1400px;
+    }
+
+    /* Pine tree watermark */
+    body::before {
+        content: "🌲";
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 40rem;
+        opacity: 0.02;
+        z-index: -1;
+        pointer-events: none;
     }
 
     /* Page Header */
@@ -41,8 +53,12 @@
     .page-title {
         font-size: 1.5rem;
         font-weight: 800;
-        color: var(--text-dark);
+        color: var(--posa-navy);
         margin: 0;
+    }
+    .page-title::before {
+        content: "🌲 ";
+        font-size: 1.3rem;
     }
     .header-badges {
         display: flex;
@@ -51,7 +67,7 @@
         flex-wrap: wrap;
     }
     .athlete-count-badge {
-        background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
+        background: linear-gradient(135deg, var(--pines-green) 0%, var(--pines-light-green) 100%);
         color: white;
         padding: 8px 16px;
         border-radius: 16px;
@@ -68,10 +84,10 @@
     }
     .waiting-alert {
         background: rgba(255, 255, 255, 0.95);
-        border: 2px solid var(--warning-orange);
+        border: 2px solid var(--posa-red);
         padding: 8px 16px;
         border-radius: 16px;
-        color: #856404;
+        color: #721c24;
         font-size: 0.85rem;
         display: inline-flex;
         align-items: center;
@@ -81,7 +97,7 @@
     }
     .waiting-count {
         font-weight: 800;
-        color: var(--warning-orange);
+        color: var(--posa-red);
         font-size: 0.95rem;
     }
 
@@ -96,20 +112,20 @@
     }
     tr.duplicate-jersey td { 
         background-color: #fff4e6 !important; 
-        border-left: 3px solid var(--warning-orange);
+        border-left: 3px solid var(--posa-red);
     }
     tr.duplicate-jersey:hover td {
         background-color: #ffe8cc !important;
     }
     tr.waiting-room td { 
         background-color: #fff9e6 !important; 
-        border-left: 3px solid var(--warning-orange);
+        border-left: 3px solid var(--posa-red);
     }
     tr.waiting-room:hover td {
         background-color: #fff3d6 !important;
     }
     
-    /* Sport Tags */
+    /* Sport Tags with Pines green */
     .sport-tag {
         display: inline-block;
         padding: 2px 8px;
@@ -117,7 +133,7 @@
         border-radius: 10px;
         font-size: 0.7rem;
         font-weight: 600;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, var(--pines-green) 0%, var(--pines-light-green) 100%);
         color: white;
         box-shadow: var(--shadow-sm);
         transition: transform 0.2s, box-shadow 0.2s;
@@ -179,15 +195,15 @@
         transition: all 0.3s;
     }
     .search-box input:focus {
-        border-color: var(--primary-purple);
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        border-color: var(--pines-green);
+        box-shadow: 0 0 0 3px rgba(60, 121, 57, 0.1);
         outline: none;
     }
     .search-box .btn-primary {
         padding: 8px 20px;
         border-radius: 8px;
         font-weight: 600;
-        background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
+        background: linear-gradient(135deg, var(--pines-green) 0%, var(--pines-light-green) 100%);
         border: none;
         box-shadow: var(--shadow-sm);
         transition: transform 0.2s, box-shadow 0.2s;
@@ -217,16 +233,16 @@
         font-size: 1.1rem;
     }
     .highlight-match {
-        background: linear-gradient(90deg, #fff9e6 0%, #ffffff 100%) !important;
+        background: linear-gradient(90deg, rgba(60, 121, 57, 0.08) 0%, rgba(81, 157, 71, 0.05) 100%) !important;
         animation: highlightPulse 2s ease-in-out infinite;
     }
     @keyframes highlightPulse {
-        0%, 100% { background: linear-gradient(90deg, #fff9e6 0%, #ffffff 100%); }
-        50% { background: linear-gradient(90deg, #fffbf0 0%, #ffffff 100%); }
+        0%, 100% { background: linear-gradient(90deg, rgba(60, 121, 57, 0.08) 0%, rgba(81, 157, 71, 0.05) 100%); }
+        50% { background: linear-gradient(90deg, rgba(60, 121, 57, 0.12) 0%, rgba(81, 157, 71, 0.08) 100%); }
     }
     .clear-search {
         cursor: pointer;
-        color: var(--danger-red);
+        color: var(--posa-red);
         font-weight: 600;
         margin-left: 10px;
         padding: 6px 12px;
@@ -272,7 +288,7 @@
         color: var(--text-dark);
     }
     .view-toggle .btn-primary {
-        background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
+        background: linear-gradient(135deg, var(--pines-green) 0%, var(--pines-light-green) 100%);
         color: white;
         box-shadow: var(--shadow-sm);
     }
@@ -309,7 +325,7 @@
         font-weight: 600;
         font-size: 0.75rem;
         border: 2px solid var(--border-color);
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        background: white;
         color: var(--text-dark);
         cursor: pointer;
         transition: all 0.3s ease;
@@ -318,23 +334,23 @@
         position: relative;
     }
     .sport-filter-pill:hover {
-        border-color: var(--primary-purple);
-        background: linear-gradient(135deg, #f0f2ff 0%, #e6e9ff 100%);
+        border-color: var(--pines-green);
+        background: rgba(60, 121, 57, 0.05);
         transform: translateY(-1px);
     }
     .sport-filter-pill.active {
-        background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
+        background: linear-gradient(135deg, var(--pines-green) 0%, var(--pines-light-green) 100%);
         color: white;
         border-color: transparent;
         box-shadow: var(--shadow-sm);
     }
     .sport-filter-pill.all {
-        background: linear-gradient(135deg, #868e96 0%, #6c757d 100%);
+        background: linear-gradient(135deg, var(--posa-navy) 0%, #1a2845 100%);
         color: white;
         border-color: transparent;
     }
     .sport-filter-pill.all.active {
-        background: linear-gradient(135deg, var(--text-dark) 0%, var(--text-medium) 100%);
+        background: linear-gradient(135deg, var(--posa-navy) 0%, #1a2845 100%);
     }
     
     /* Navigation Pills with Counts */
@@ -357,19 +373,19 @@
         color: var(--text-dark);
         border: 2px solid var(--border-color);
         transition: all 0.3s ease;
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        background: white;
         display: inline-flex;
         align-items: center;
         gap: 8px;
     }
     .nav-pills .nav-link:hover {
-        border-color: var(--primary-purple);
-        background: linear-gradient(135deg, #f0f2ff 0%, #e6e9ff 100%);
+        border-color: var(--pines-green);
+        background: rgba(60, 121, 57, 0.05);
         transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+        box-shadow: 0 2px 8px rgba(60, 121, 57, 0.2);
     }
     .nav-pills .nav-link.active {
-        background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
+        background: linear-gradient(135deg, var(--pines-green) 0%, var(--pines-light-green) 100%);
         color: white;
         border-color: transparent;
         box-shadow: var(--shadow-sm);
@@ -380,7 +396,7 @@
         color: white;
     }
     .tab-count {
-        background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
+        background: linear-gradient(135deg, var(--pines-green) 0%, var(--pines-light-green) 100%);
         color: white;
         padding: 3px 10px;
         border-radius: 12px;
@@ -408,11 +424,11 @@
         border-radius: 4px;
     }
     .table-container::-webkit-scrollbar-thumb {
-        background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
+        background: linear-gradient(135deg, var(--pines-green) 0%, var(--pines-light-green) 100%);
         border-radius: 4px;
     }
     .table-container::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(135deg, #5568d3 0%, #3b9de8 100%);
+        background: linear-gradient(135deg, #2e5e2d 0%, #3d803b 100%);
     }
     .table {
         margin: 0;
@@ -456,13 +472,13 @@
         background-color: #f8f9fa;
     }
     .table tbody tr:hover:not(.add-row):not(.add-form-row) {
-        background: linear-gradient(90deg, #e7f0ff 0%, #f0f4ff 100%) !important;
+        background: linear-gradient(90deg, rgba(60, 121, 57, 0.05) 0%, rgba(81, 157, 71, 0.03) 100%) !important;
     }
     .table tbody tr:last-child td {
         border-bottom: none;
     }
     
-    /* Modern Buttons */
+    /* Modern Buttons with POSA/Pines colors */
     .btn {
         border-radius: 6px;
         font-weight: 600;
@@ -477,16 +493,17 @@
         font-size: 0.7rem;
     }
     .btn-primary {
-        background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
+        background: linear-gradient(135deg, var(--pines-green) 0%, var(--pines-light-green) 100%);
         color: white;
         box-shadow: var(--shadow-sm);
     }
     .btn-primary:hover {
+        background: linear-gradient(135deg, #2e5e2d 0%, #3d803b 100%);
         transform: translateY(-1px);
         box-shadow: var(--shadow-md);
     }
     .btn-success {
-        background: linear-gradient(135deg, var(--success-green) 0%, #40c057 100%);
+        background: linear-gradient(135deg, var(--pines-green) 0%, var(--pines-light-green) 100%);
         color: white;
         box-shadow: var(--shadow-sm);
     }
@@ -495,7 +512,7 @@
         box-shadow: var(--shadow-md);
     }
     .btn-info {
-        background: linear-gradient(135deg, var(--primary-blue) 0%, #339af0 100%);
+        background: linear-gradient(135deg, #4dabf7 0%, #339af0 100%);
         color: white;
         box-shadow: var(--shadow-sm);
     }
@@ -504,11 +521,12 @@
         box-shadow: var(--shadow-md);
     }
     .btn-danger {
-        background: linear-gradient(135deg, var(--danger-red) 0%, #fa5252 100%);
+        background: linear-gradient(135deg, var(--posa-red) 0%, #c02c2e 100%);
         color: white;
         box-shadow: var(--shadow-sm);
     }
     .btn-danger:hover {
+        background: linear-gradient(135deg, #b82a2c 0%, #a32426 100%);
         transform: translateY(-1px);
         box-shadow: var(--shadow-md);
     }
@@ -532,8 +550,8 @@
         line-height: 1.2;
     }
     .form-control:focus, .form-select:focus {
-        border-color: var(--primary-purple);
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        border-color: var(--pines-green);
+        box-shadow: 0 0 0 3px rgba(60, 121, 57, 0.1);
         outline: none;
     }
     
@@ -556,8 +574,8 @@
         border: 2px solid #ddd;
     }
     .lock-toggle:checked {
-        background: var(--success-green);
-        border-color: var(--success-green);
+        background: var(--pines-green);
+        border-color: var(--pines-green);
     }
     .lock-toggle::before {
         content: '';
@@ -575,7 +593,7 @@
         transform: translateX(18px);
     }
     .lock-toggle:focus {
-        box-shadow: 0 0 0 3px rgba(81, 207, 102, 0.2);
+        box-shadow: 0 0 0 3px rgba(60, 121, 57, 0.2);
     }
     
     /* Alert Styles */
@@ -590,7 +608,7 @@
     .alert-warning {
         background: linear-gradient(135deg, #fff9e6 0%, #fff4d6 100%);
         color: #856404;
-        border-left: 4px solid var(--warning-orange);
+        border-left: 4px solid var(--posa-red);
     }
     
     /* Tab Content */
@@ -719,7 +737,7 @@
             right: 0;
             bottom: 10px;
             display: block;
-            background: linear-gradient(90deg, transparent, var(--primary-purple));
+            background: linear-gradient(90deg, transparent, var(--pines-green));
             color: white;
             padding: 8px 12px;
             font-size: 0.7rem;
@@ -856,7 +874,7 @@
         <div class="sport-filter" id="sport-filter">
             <span class="sport-filter-label">Sport:</span>
             <div class="sport-filter-pills">
-                <div class="sport-filter-pill all active" data-sport="all" title="All Sports">🌐 All</div>
+                <div class="sport-filter-pill all active" data-sport="all" title="All Sports">🌲 All</div>
                 <div class="sport-filter-pill" data-sport="soccer" title="Soccer">⚽</div>
                 <div class="sport-filter-pill" data-sport="basketball" title="Basketball">🏀</div>
                 <div class="sport-filter-pill" data-sport="baseball" title="Baseball">⚾</div>
@@ -1282,7 +1300,6 @@
             sportFilter.style.display = 'none';
             clearSearch.classList.remove('d-none');
             
-            // Update athlete count to show search results
             totalAthletesElement.textContent = matches.length;
         } else {
             searchResultsBody.innerHTML = '<tr><td colspan="9" class="text-center">No athletes found</td></tr>';
@@ -1293,7 +1310,6 @@
             sportFilter.style.display = 'none';
             clearSearch.classList.remove('d-none');
             
-            // Update athlete count to show 0
             totalAthletesElement.textContent = 0;
         }
     }
@@ -1306,7 +1322,6 @@
         searchInput.value = '';
         clearSearch.classList.add('d-none');
         
-        // Restore filtered count or original count
         if (activeSportFilter !== 'all') {
             updateAthleteCount();
         } else {
@@ -1338,14 +1353,12 @@
             }
         });
         
-        // Update the header badge with unique player count
         totalAthletesElement.textContent = uniquePlayerIds.size;
     }
     
     function filterBySport(sport) {
         activeSportFilter = sport;
         
-        // Update pill states
         document.querySelectorAll('.sport-filter-pill').forEach(pill => {
             if (pill.dataset.sport === sport) {
                 pill.classList.add('active');
@@ -1354,7 +1367,6 @@
             }
         });
         
-        // Filter visible rows in all tables
         document.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
             const playerSports = (row.dataset.searchSports || '').toLowerCase();
             
@@ -1365,13 +1377,11 @@
             }
         });
         
-        // Update tab counts and total athlete count
         updateTabCounts();
         updateAthleteCount();
     }
     
     function updateTabCounts() {
-        // Update counts for birth year tabs
         document.querySelectorAll('#birthYearTabs .nav-link').forEach(tab => {
             const targetId = tab.dataset.bsTarget;
             if (targetId) {
@@ -1387,7 +1397,6 @@
             }
         });
         
-        // Update counts for division tabs
         document.querySelectorAll('#divisionTabs .nav-link').forEach(tab => {
             const targetId = tab.dataset.bsTarget;
             if (targetId) {
@@ -1404,7 +1413,6 @@
         });
     }
     
-    // Attach sport filter click handlers
     document.querySelectorAll('.sport-filter-pill').forEach(pill => {
         pill.addEventListener('click', () => {
             const sport = pill.dataset.sport;
@@ -1496,7 +1504,6 @@
         const selectedSports = Array.from(row.querySelectorAll('.sport-checkbox:checked'))
             .map(cb => cb.value);
         
-        // Validate that at least one sport is selected
         if (selectedSports.length === 0) {
             alert("Player must have at least one sport selected.");
             return;
@@ -1528,7 +1535,6 @@
         
         const sportsData = await sportsResponse.json();
         
-        // Update division if we have a valid registration_id
         let divisionResponse = { ok: true };
         if (sportsData.registration_id) {
             const divisionPayload = { division: divisionValue };
@@ -1538,10 +1544,8 @@
                 body: JSON.stringify(divisionPayload)
             });
             
-            // Update the row's registration_id for future operations
             row.dataset.regId = sportsData.registration_id;
             
-            // Get jersey number from response
             if (divisionResponse.ok) {
                 const divisionData = await divisionResponse.json();
                 if (divisionData.jersey_number) {
@@ -1563,7 +1567,6 @@
             row.dataset.searchEmail = playerPayload.parent_email.toLowerCase();
             row.dataset.searchJersey = playerPayload.jersey_number;
             
-            // Remove waiting room styling if moved out
             if (divisionValue !== 'Waiting Room') {
                 row.classList.remove('waiting-room');
             }
@@ -1577,7 +1580,6 @@
             row.querySelector(".btn-cancel").classList.add("d-none");
             row.querySelector(".btn-edit").classList.remove("d-none");
             
-            // Reapply sport filter
             if (activeSportFilter !== 'all') {
                 filterBySport(activeSportFilter);
             }
@@ -1593,7 +1595,6 @@
             const response = await fetch(`/players/${id}`, { method: "DELETE" });
             if (response.ok) {
                 row.remove();
-                // Update counts after deletion
                 updateTabCounts();
                 updateAthleteCount();
             } else {
