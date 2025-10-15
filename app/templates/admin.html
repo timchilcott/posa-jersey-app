@@ -98,9 +98,15 @@
         background-color: #fff4e6 !important; 
         border-left: 3px solid var(--warning-orange);
     }
+    tr.duplicate-jersey:hover td {
+        background-color: #ffe8cc !important;
+    }
     tr.waiting-room td { 
         background-color: #fff9e6 !important; 
         border-left: 3px solid var(--warning-orange);
+    }
+    tr.waiting-room:hover td {
+        background-color: #fff3d6 !important;
     }
     
     /* Sport Tags */
@@ -446,8 +452,11 @@
     .table tbody tr {
         transition: background 0.2s ease;
     }
+    .table tbody tr:nth-child(even):not(.add-row):not(.add-form-row) {
+        background-color: #f8f9fa;
+    }
     .table tbody tr:hover:not(.add-row):not(.add-form-row) {
-        background: linear-gradient(90deg, #f8f9ff 0%, #ffffff 100%);
+        background: linear-gradient(90deg, #e7f0ff 0%, #f0f4ff 100%) !important;
     }
     .table tbody tr:last-child td {
         border-bottom: none;
@@ -528,26 +537,44 @@
         outline: none;
     }
     
-    /* Lock Toggle */
-    .form-check {
-        padding: 0;
-        margin: 0;
+    /* Custom Lock Toggle Switch */
+    .lock-toggle-wrapper {
+        display: inline-block;
+        position: relative;
     }
-    .form-check-input {
-        width: 36px;
-        height: 20px;
+    .lock-toggle {
+        position: relative;
+        width: 40px;
+        height: 22px;
+        -webkit-appearance: none;
+        appearance: none;
+        background: #ccc;
+        outline: none;
+        border-radius: 22px;
         cursor: pointer;
-        border-radius: 20px;
-        border: 2px solid var(--border-color);
-        background-color: #dee2e6;
-        transition: all 0.3s ease;
-        margin: 0;
+        transition: all 0.3s;
+        border: 2px solid #ddd;
     }
-    .form-check-input:checked {
-        background-color: var(--success-green);
+    .lock-toggle:checked {
+        background: var(--success-green);
         border-color: var(--success-green);
     }
-    .form-check-input:focus {
+    .lock-toggle::before {
+        content: '';
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        top: 1px;
+        left: 1px;
+        background: white;
+        transition: all 0.3s;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .lock-toggle:checked::before {
+        transform: translateX(18px);
+    }
+    .lock-toggle:focus {
         box-shadow: 0 0 0 3px rgba(81, 207, 102, 0.2);
     }
     
@@ -727,9 +754,16 @@
             padding: 2px 6px;
         }
         
-        .form-check-input {
-            width: 32px;
-            height: 18px;
+        .lock-toggle {
+            width: 36px;
+            height: 20px;
+        }
+        .lock-toggle::before {
+            width: 14px;
+            height: 14px;
+        }
+        .lock-toggle:checked::before {
+            transform: translateX(16px);
         }
     }
     
@@ -844,9 +878,7 @@
             data-sports="{{ player.sports|join(',') }}"
             class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %} {% if player.division == 'Waiting Room' %}waiting-room{% endif %}">
             <td>
-                <div class="form-check form-switch">
-                    <input class="form-check-input lock-toggle" type="checkbox" {% if player.locked %}checked{% endif %}>
-                </div>
+                <input type="checkbox" class="lock-toggle" {% if player.locked %}checked{% endif %}>
             </td>
             <td><span class="full-name">{{ player.full_name }}</span><input class="form-control d-none edit-full-name" value="{{ player.full_name }}"></td>
             <td>
@@ -1414,7 +1446,7 @@
     function editHandler(event) {
         const row = event.currentTarget.closest("tr");
         row.querySelectorAll("span:not(.sport-tag)").forEach(el => el.classList.add("d-none"));
-        row.querySelectorAll("input:not(.sport-checkbox), select").forEach(el => el.classList.remove("d-none"));
+        row.querySelectorAll("input:not(.sport-checkbox):not(.lock-toggle), select").forEach(el => el.classList.remove("d-none"));
         row.querySelector(".view-sports").style.display = "none";
         row.querySelector(".edit-sports").style.display = "block";
         row.querySelector(".btn-edit").classList.add("d-none");
@@ -1424,7 +1456,7 @@
 
     function cancelHandler(event) {
         const row = event.currentTarget.closest("tr");
-        row.querySelectorAll("input:not(.sport-checkbox), select").forEach(el => {
+        row.querySelectorAll("input:not(.sport-checkbox):not(.lock-toggle), select").forEach(el => {
             if (el.classList.contains("edit-full-name")) {
                 el.value = row.querySelector("span.full-name").textContent;
             } else if (el.classList.contains("edit-birth-year")) {
@@ -1537,7 +1569,7 @@
             }
             
             insertRowSorted(row.closest('tbody'), row);
-            row.querySelectorAll("input:not(.sport-checkbox), select").forEach(el => el.classList.add("d-none"));
+            row.querySelectorAll("input:not(.sport-checkbox):not(.lock-toggle), select").forEach(el => el.classList.add("d-none"));
             row.querySelectorAll("span:not(.sport-tag)").forEach(el => el.classList.remove("d-none"));
             row.querySelector(".view-sports").style.display = "block";
             row.querySelector(".edit-sports").style.display = "none";
