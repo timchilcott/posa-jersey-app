@@ -177,16 +177,22 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
     except HTTPException as exc:
         return RedirectResponse(exc.headers["Location"], status_code=exc.status_code)
 
-    # Get all players, all time
+    # Get all players
     players = db.query(Player).all()
     season_year = int(CURRENT_SEASON) if CURRENT_SEASON.isdigit() else 2025
 
-    # Calculate birth year counts
+    # Calculate birth year counts (exclude Waiting Room players)
     birth_year_counts = {}
     for player in players:
-        if player.birth_year and any(r.division not in {"", "Unknown"} for r in player.registrations):
-            year = player.birth_year
-            birth_year_counts[year] = birth_year_counts.get(year, 0) + 1
+        if player.birth_year:
+            # Only count if they have at least one non-Waiting Room registration
+            has_valid_division = any(
+                r.division not in {"", "Unknown", "Waiting Room"} 
+                for r in player.registrations
+            )
+            if has_valid_division:
+                year = player.birth_year
+                birth_year_counts[year] = birth_year_counts.get(year, 0) + 1
     
     # Sort birth years from newest to oldest
     birth_year_counts = dict(sorted(birth_year_counts.items(), reverse=True))
@@ -206,11 +212,32 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
     if view == "division":
         players_by_division = defaultdict(list)
         unassigned_players = []
+        waiting_room_players = []
+        
         for p in players:
             sports = sorted({(r.sport or "").strip().lower() for r in p.registrations if r.sport})
             divisions = sorted({(r.division or "").strip() for r in p.registrations if r.division})
             confirmation_sent = any(r.confirmation_sent for r in p.registrations)
             reg_id = p.registrations[0].id if p.registrations else None
+
+            # Check if player is in Waiting Room
+            if "Waiting Room" in divisions:
+                player_data = {
+                    "id": p.id,
+                    "registration_id": reg_id,
+                    "full_name": p.full_name,
+                    "birth_year": p.birth_year,
+                    "parent_email": p.parent_email,
+                    "jersey_number": p.jersey_number,
+                    "sports": sports,
+                    "division": "Waiting Room",
+                    "divisions": divisions,
+                    "confirmation_sent": confirmation_sent,
+                    "locked": p.locked,
+                    "is_duplicate": p.id in duplicate_ids,
+                }
+                waiting_room_players.append(player_data)
+                continue
 
             valid_divisions = [d for d in divisions if d not in EXCLUDED_DIVISIONS]
             primary_division = valid_divisions[0] if valid_divisions else "Unknown"
@@ -247,16 +274,38 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
             "players_by_group": sorted_players,
             "group_list": list(sorted_players.keys()),
             "unassigned_players": unassigned_players,
+            "waiting_room_players": waiting_room_players,
             "total_players": len(counted_player_ids),
             "birth_year_counts": birth_year_counts,
         })
 
     # ------------------- BIRTH YEAR VIEW -------------------
     players_by_birth_year = defaultdict(list)
+    waiting_room_players = []
+    
     for p in players:
         sports = sorted({(r.sport or "").strip().lower() for r in p.registrations if r.sport})
         confirmation_sent = any(r.confirmation_sent for r in p.registrations)
         reg_id = p.registrations[0].id if p.registrations else None
+        divisions = {(r.division or "").strip() for r in p.registrations if r.division}
+
+        # Check if player is in Waiting Room
+        if "Waiting Room" in divisions:
+            player_data = {
+                "id": p.id,
+                "registration_id": reg_id,
+                "full_name": p.full_name,
+                "birth_year": p.birth_year,
+                "parent_email": p.parent_email,
+                "jersey_number": p.jersey_number,
+                "sports": sports,
+                "division": "Waiting Room",
+                "confirmation_sent": confirmation_sent,
+                "locked": p.locked,
+                "is_duplicate": p.id in duplicate_ids,
+            }
+            waiting_room_players.append(player_data)
+            continue
 
         player_data = {
             "id": p.id,
@@ -294,6 +343,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
         "group_list": birth_year_list,
         "birth_year_labels": birth_year_labels,
         "unassigned_players": [],
+        "waiting_room_players": waiting_room_players,
         "total_players": len(counted_player_ids),
         "birth_year_counts": birth_year_counts,
     })
@@ -363,6 +413,11 @@ def update_player(player_id: int, payload: PlayerUpdate, request: Request, db: S
     player = db.query(Player).get(player_id)
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
+    
+    # If birth year is being set for the first time and they don't have a jersey, assign one
+    if payload.birth_year and not player.birth_year and not player.jersey_number:
+        from .services.assign import assign_jersey_number
+        player.jersey_number = assign_jersey_number(db, payload.birth_year)
     
     player.full_name = payload.full_name
     player.birth_year = payload.birth_year
@@ -468,8 +523,13 @@ def update_registration_division(reg_id: int, payload: DivisionUpdate, request: 
     # Update division
     reg.division = new_division
     
-    # If moving to a different division, reassign jersey number
-    if old_division != new_division:
+    # If moving OUT of Waiting Room and player needs a jersey, assign one
+    if old_division == "Waiting Room" and new_division != "Waiting Room":
+        if not reg.player.jersey_number and reg.player.birth_year:
+            new_jersey = assign_jersey_number(db, reg.player.birth_year)
+            reg.player.jersey_number = new_jersey
+    # If moving to a different division (not from Waiting Room), reassign jersey number
+    elif old_division != "Waiting Room" and old_division != new_division:
         new_jersey = assign_jersey_number(db, reg.player.birth_year)
         reg.player.jersey_number = new_jersey
     
