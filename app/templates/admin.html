@@ -235,6 +235,12 @@
     .view-toggle {
         margin-bottom: 16px;
     }
+    .view-toggle-row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
     .view-toggle .btn-group {
         background: var(--bg-card);
         padding: 4px;
@@ -262,6 +268,66 @@
         background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
         color: white;
         box-shadow: var(--shadow-sm);
+    }
+    
+    /* Sport Filter */
+    .sport-filter {
+        background: var(--bg-card);
+        padding: 4px 8px;
+        border-radius: 10px;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+        min-width: 0;
+    }
+    .sport-filter-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-medium);
+        white-space: nowrap;
+    }
+    .sport-filter-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .sport-filter-pill {
+        padding: 6px 12px;
+        border-radius: 16px;
+        font-weight: 600;
+        font-size: 0.75rem;
+        border: 2px solid var(--border-color);
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        color: var(--text-dark);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        user-select: none;
+        white-space: nowrap;
+        position: relative;
+    }
+    .sport-filter-pill:hover {
+        border-color: var(--primary-purple);
+        background: linear-gradient(135deg, #f0f2ff 0%, #e6e9ff 100%);
+        transform: translateY(-1px);
+    }
+    .sport-filter-pill.active {
+        background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
+        color: white;
+        border-color: transparent;
+        box-shadow: var(--shadow-sm);
+    }
+    .sport-filter-pill.all {
+        background: linear-gradient(135deg, #868e96 0%, #6c757d 100%);
+        color: white;
+        border-color: transparent;
+    }
+    .sport-filter-pill.all.active {
+        background: linear-gradient(135deg, var(--text-dark) 0%, var(--text-medium) 100%);
     }
     
     /* Navigation Pills with Counts */
@@ -551,10 +617,32 @@
             width: 100%;
         }
         
+        .view-toggle-row {
+            flex-direction: column;
+        }
+        
         .view-toggle .btn {
             flex: 1;
             font-size: 0.8rem;
             padding: 6px 12px;
+        }
+        
+        .sport-filter {
+            padding: 8px 10px;
+            width: 100%;
+        }
+        
+        .sport-filter-label {
+            font-size: 0.7rem;
+        }
+        
+        .sport-filter-pills {
+            gap: 4px;
+        }
+        
+        .sport-filter-pill {
+            font-size: 0.65rem;
+            padding: 5px 8px;
         }
         
         .nav-pills {
@@ -703,11 +791,26 @@
     </div>
 </div>
 
-<!-- View Toggle -->
+<!-- View Toggle and Sport Filter -->
 <div class="view-toggle" id="view-toggle">
-    <div class="btn-group" role="group">
-        <a href="/admin?view=birthyear" class="btn {% if view == 'birthyear' %}btn-primary{% else %}btn-outline-primary{% endif %}">🎂 Birth Year View</a>
-        <a href="/admin?view=division" class="btn {% if view == 'division' %}btn-primary{% else %}btn-outline-primary{% endif %}">📊 Division View</a>
+    <div class="view-toggle-row">
+        <div class="btn-group" role="group">
+            <a href="/admin?view=birthyear" class="btn {% if view == 'birthyear' %}btn-primary{% else %}btn-outline-primary{% endif %}">🎂 Birth Year View</a>
+            <a href="/admin?view=division" class="btn {% if view == 'division' %}btn-primary{% else %}btn-outline-primary{% endif %}">📊 Division View</a>
+        </div>
+        
+        <div class="sport-filter" id="sport-filter">
+            <span class="sport-filter-label">Sport:</span>
+            <div class="sport-filter-pills">
+                <div class="sport-filter-pill all active" data-sport="all" title="All Sports">🌐 All</div>
+                <div class="sport-filter-pill" data-sport="soccer" title="Soccer">⚽</div>
+                <div class="sport-filter-pill" data-sport="basketball" title="Basketball">🏀</div>
+                <div class="sport-filter-pill" data-sport="baseball" title="Baseball">⚾</div>
+                <div class="sport-filter-pill" data-sport="softball" title="Softball">🥎</div>
+                <div class="sport-filter-pill" data-sport="volleyball" title="Volleyball">🏐</div>
+                <div class="sport-filter-pill" data-sport="flag" title="Flag Football">🏈</div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1085,6 +1188,7 @@
     const searchCount = document.getElementById('search-count');
     const mainContent = document.getElementById('main-content');
     const viewToggle = document.getElementById('view-toggle');
+    const sportFilter = document.getElementById('sport-filter');
 
     function performSearch() {
         const searchTerm = searchInput.value.toLowerCase().trim();
@@ -1123,14 +1227,22 @@
             searchResults.classList.add('active');
             mainContent.style.display = 'none';
             viewToggle.style.display = 'none';
+            sportFilter.style.display = 'none';
             clearSearch.classList.remove('d-none');
+            
+            // Update athlete count to show search results
+            totalAthletesElement.textContent = matches.length;
         } else {
             searchResultsBody.innerHTML = '<tr><td colspan="9" class="text-center">No athletes found</td></tr>';
             searchCount.textContent = '(0 found)';
             searchResults.classList.add('active');
             mainContent.style.display = 'none';
             viewToggle.style.display = 'none';
+            sportFilter.style.display = 'none';
             clearSearch.classList.remove('d-none');
+            
+            // Update athlete count to show 0
+            totalAthletesElement.textContent = 0;
         }
     }
 
@@ -1138,8 +1250,16 @@
         searchResults.classList.remove('active');
         mainContent.style.display = 'block';
         viewToggle.style.display = 'block';
+        sportFilter.style.display = 'block';
         searchInput.value = '';
         clearSearch.classList.add('d-none');
+        
+        // Restore filtered count or original count
+        if (activeSportFilter !== 'all') {
+            updateAthleteCount();
+        } else {
+            totalAthletesElement.textContent = originalTotalAthletes;
+        }
     }
 
     searchBtn.addEventListener('click', performSearch);
@@ -1149,6 +1269,96 @@
         }
     });
     clearSearch.addEventListener('click', clearSearchResults);
+
+    // Sport Filter functionality
+    let activeSportFilter = 'all';
+    const totalAthletesElement = document.querySelector('.athlete-count-number');
+    const originalTotalAthletes = parseInt(totalAthletesElement.textContent);
+    
+    function updateAthleteCount() {
+        const visibleRows = document.querySelectorAll('tbody tr[data-player-id]');
+        const uniquePlayerIds = new Set();
+        
+        visibleRows.forEach(row => {
+            if (row.style.display !== 'none') {
+                const playerId = row.dataset.playerId;
+                uniquePlayerIds.add(playerId);
+            }
+        });
+        
+        // Update the header badge with unique player count
+        totalAthletesElement.textContent = uniquePlayerIds.size;
+    }
+    
+    function filterBySport(sport) {
+        activeSportFilter = sport;
+        
+        // Update pill states
+        document.querySelectorAll('.sport-filter-pill').forEach(pill => {
+            if (pill.dataset.sport === sport) {
+                pill.classList.add('active');
+            } else {
+                pill.classList.remove('active');
+            }
+        });
+        
+        // Filter visible rows in all tables
+        document.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
+            const playerSports = (row.dataset.searchSports || '').toLowerCase();
+            
+            if (sport === 'all' || playerSports.includes(sport.toLowerCase())) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        // Update tab counts and total athlete count
+        updateTabCounts();
+        updateAthleteCount();
+    }
+    
+    function updateTabCounts() {
+        // Update counts for birth year tabs
+        document.querySelectorAll('#birthYearTabs .nav-link').forEach(tab => {
+            const targetId = tab.dataset.bsTarget;
+            if (targetId) {
+                const pane = document.querySelector(targetId);
+                if (pane) {
+                    const visibleRows = pane.querySelectorAll('tbody tr[data-player-id]');
+                    const count = Array.from(visibleRows).filter(row => row.style.display !== 'none').length;
+                    const countBadge = tab.querySelector('.tab-count');
+                    if (countBadge) {
+                        countBadge.textContent = count;
+                    }
+                }
+            }
+        });
+        
+        // Update counts for division tabs
+        document.querySelectorAll('#divisionTabs .nav-link').forEach(tab => {
+            const targetId = tab.dataset.bsTarget;
+            if (targetId) {
+                const pane = document.querySelector(targetId);
+                if (pane) {
+                    const visibleRows = pane.querySelectorAll('tbody tr[data-player-id]');
+                    const count = Array.from(visibleRows).filter(row => row.style.display !== 'none').length;
+                    const countBadge = tab.querySelector('.tab-count');
+                    if (countBadge) {
+                        countBadge.textContent = count;
+                    }
+                }
+            }
+        });
+    }
+    
+    // Attach sport filter click handlers
+    document.querySelectorAll('.sport-filter-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+            const sport = pill.dataset.sport;
+            filterBySport(sport);
+        });
+    });
 
     function updateSportTags(row, sports) {
         const viewSports = row.querySelector('.view-sports');
@@ -1314,6 +1524,11 @@
             row.querySelector(".btn-save").classList.add("d-none");
             row.querySelector(".btn-cancel").classList.add("d-none");
             row.querySelector(".btn-edit").classList.remove("d-none");
+            
+            // Reapply sport filter
+            if (activeSportFilter !== 'all') {
+                filterBySport(activeSportFilter);
+            }
         } else {
             alert("Failed to update division.");
         }
@@ -1326,6 +1541,9 @@
             const response = await fetch(`/players/${id}`, { method: "DELETE" });
             if (response.ok) {
                 row.remove();
+                // Update counts after deletion
+                updateTabCounts();
+                updateAthleteCount();
             } else {
                 alert("Failed to delete player.");
             }
