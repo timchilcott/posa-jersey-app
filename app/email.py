@@ -67,7 +67,7 @@ DIVISION_ALIASES = {
 # Division normalization
 # ---------------------------------------------------------------------
 def normalize_division(raw: str, birth_year: int | None = None) -> str:
-    """Map various division strings to canonical form, applying POSA’s 2022→U3 rule."""
+    """Map various division strings to canonical form, applying POSA's 2022→U3 rule."""
     key = re.sub(r"[^A-Za-z0-9]", "", raw or "").upper()
     if key in DIVISION_ALIASES:
         return DIVISION_ALIASES[key]
@@ -122,7 +122,7 @@ def send_confirmation_email(to_email, players, promo_code=None, registrations=No
             f"{promo_html}"
             f"<p>Order jerseys here: <a href='{UNIFORM_ORDER_URL}'>{UNIFORM_ORDER_URL}</a></p>"
             "<p>Only the reversible Pines jersey is required for games. Plain black shorts and socks are fine as long as they have no other team logos or colors.</p>"
-            "<p>If your family can purchase jerseys without using promo codes, it helps our nonprofit stretch funds for others. Either way, we’re thrilled to have your kids on the field.</p>"
+            "<p>If your family can purchase jerseys without using promo codes, it helps our nonprofit stretch funds for others. Either way, we're thrilled to have your kids on the field.</p>"
             "<p>—<br>Tim Chilcott<br>President - POSA<br>🌲 Pines stand tall.<br>❤️ The heart of sports starts with us.</p>"
         )
 
@@ -207,7 +207,7 @@ def send_pines_confirmation_email(to_email, players, registrations=None, db=None
         logger.error("Error sending Pines confirmation email: %s", e)
 
 # ---------------------------------------------------------------------
-# Inbound email capture / parsing (preserved)
+# Inbound email capture / parsing
 # ---------------------------------------------------------------------
 def save_inbound_email(email_body: str, filename: str | None = None) -> None:
     root_dir = os.path.dirname(os.path.dirname(__file__))
@@ -221,24 +221,129 @@ def save_inbound_email(email_body: str, filename: str | None = None) -> None:
         logger.error("Failed to save inbound email: %s", e)
 
 def process_inbound_email(email_body: str, db):
-    """Basic inbound email parsing (trimmed version for deploy stability)."""
+    """Parse inbound email and create player/registration records in Waiting Room."""
     logger.info("Processing inbound email")
-    msg = email.message_from_string(email_body)
-    text_content = None
-    html_content = None
-
-    if msg.is_multipart():
-        for part in msg.walk():
-            if part.get_content_type() == "text/plain":
-                charset = part.get_content_charset() or "utf-8"
-                text_content = part.get_payload(decode=True).decode(charset, errors="replace")
-                break
-    else:
-        if msg.get_content_type() == "text/plain":
-            charset = msg.get_content_charset() or "utf-8"
-            text_content = msg.get_payload(decode=True).decode(charset, errors="replace")
-
-    if not text_content:
-        text_content = email_body
-
-    logger.info("Inbound email length: %d chars", len(text_content))
+    
+    try:
+        # Parse the email
+        msg = email.message_from_string(email_body)
+        
+        # Get parent email from To: field
+        parent_email = None
+        to_header = msg.get('To', '')
+        if to_header:
+            # Extract email from "Name <email@example.com>" format
+            email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', to_header)
+            if email_match:
+                parent_email = email_match.group(0)
+        
+        # Get HTML content
+        html_content = None
+        if msg.is_multipart():
+            for part in msg.walk():
+                if part.get_content_type() == "text/html":
+                    charset = part.get_content_charset() or "utf-8"
+                    html_content = part.get_payload(decode=True).decode(charset, errors="replace")
+                    break
+        else:
+            if msg.get_content_type() == "text/html":
+                charset = msg.get_content_charset() or "utf-8"
+                html_content = msg.get_payload(decode=True).decode(charset, errors="replace")
+        
+        if not html_content:
+            html_content = email_body
+        
+        # Parse HTML with BeautifulSoup
+        soup = BeautifulSoup(html_content, 'html.parser')
+        
+        # Extract order number
+        order_number = None
+        order_no_match = re.search(r'Order No:\s*(\d+)', soup.get_text())
+        if order_no_match:
+            order_number = order_no_match.group(1)
+        
+        # Extract order date
+        order_date = None
+        order_date_match = re.search(r'Order Date.*?(\w{3} \d{1,2}, \d{4})', soup.get_text())
+        if order_date_match:
+            try:
+                order_date = datetime.strptime(order_date_match.group(1), '%b %d, %Y')
+            except:
+                pass
+        
+        text_content = soup.get_text()
+        
+        # Try to find player and program pattern
+        # Pattern: "Number + Name + Year + Program"
+        # Example: "1Elise Pena2025 Pines Volleyball - 5th/6th Grade"
+        pattern1 = re.search(r'\d+([A-Z][a-z]+ [A-Z][a-z]+)\s*(\d{4})\s+Pines\s+(\w+)\s*-?\s*(.+?)(?=\$|Division|$)', text_content)
+        
+        if pattern1:
+            player_name = pattern1.group(1).strip()
+            year = pattern1.group(2)
+            sport = pattern1.group(3).strip().lower()
+            # We capture the division info but don't use it - admin will assign manually
+            division_info = pattern1.group(4).strip() if pattern1.group(4) else ""
+            
+            logger.info(f"Found player: {player_name}, sport: {sport}, captured division info: {division_info}")
+            
+            # Check if player already exists
+            existing_player = db.query(Player).filter(Player.full_name == player_name).first()
+            
+            if existing_player:
+                # Check if registration exists for this sport/season
+                existing_reg = db.query(Registration).filter(
+                    Registration.player_id == existing_player.id,
+                    Registration.sport == sport,
+                    Registration.season == year
+                ).first()
+                
+                if existing_reg:
+                    logger.info(f"Registration already exists for {player_name} in {sport} {year}")
+                else:
+                    # Add new registration to Waiting Room
+                    new_reg = Registration(
+                        player_id=existing_player.id,
+                        program=f"{year} Pines {sport.title()}",
+                        division="Waiting Room",  # Admin will assign division
+                        sport=sport,
+                        season=year,
+                        order_number=order_number,
+                        order_date=order_date,
+                        confirmation_sent=False
+                    )
+                    db.add(new_reg)
+                    logger.info(f"Added new registration to Waiting Room for {player_name}")
+            else:
+                # Create new player without jersey number or birth year - admin will assign
+                new_player = Player(
+                    full_name=player_name,
+                    parent_email=parent_email or "unknown@example.com",
+                    jersey_number=None,  # Admin will assign after setting birth year
+                    birth_year=None  # Admin will assign
+                )
+                db.add(new_player)
+                db.flush()
+                
+                # Create registration in Waiting Room
+                new_reg = Registration(
+                    player_id=new_player.id,
+                    program=f"{year} Pines {sport.title()}",
+                    division="Waiting Room",  # Admin will assign division
+                    sport=sport,
+                    season=year,
+                    order_number=order_number,
+                    order_date=order_date,
+                    confirmation_sent=False
+                )
+                db.add(new_reg)
+                logger.info(f"Created new player {player_name} in Waiting Room (no jersey/birth year yet)")
+            
+            db.commit()
+            logger.info("Email processed successfully - player in Waiting Room")
+        else:
+            logger.warning("Could not parse player information from email")
+            
+    except Exception as e:
+        logger.error(f"Error processing inbound email: {e}", exc_info=True)
+        db.rollback()
