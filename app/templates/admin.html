@@ -24,61 +24,65 @@
         background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         min-height: 100vh;
     }
+    
+    .container {
+        max-width: 1400px;
+    }
 
     /* Page Header */
     .page-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 24px;
+        margin-bottom: 16px;
         flex-wrap: wrap;
-        gap: 16px;
+        gap: 12px;
     }
     .page-title {
-        font-size: 2rem;
+        font-size: 1.5rem;
         font-weight: 800;
         color: var(--text-dark);
         margin: 0;
     }
     .header-badges {
         display: flex;
-        gap: 12px;
+        gap: 8px;
         align-items: center;
         flex-wrap: wrap;
     }
     .athlete-count-badge {
         background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
         color: white;
-        padding: 12px 24px;
-        border-radius: 20px;
+        padding: 8px 16px;
+        border-radius: 16px;
         font-weight: 700;
-        font-size: 1.1rem;
-        box-shadow: var(--shadow-md);
+        font-size: 0.95rem;
+        box-shadow: var(--shadow-sm);
         display: inline-flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
     }
     .athlete-count-number {
-        font-size: 1.5rem;
+        font-size: 1.2rem;
         font-weight: 800;
     }
     .waiting-alert {
         background: rgba(255, 255, 255, 0.95);
         border: 2px solid var(--warning-orange);
-        padding: 12px 20px;
-        border-radius: 20px;
+        padding: 8px 16px;
+        border-radius: 16px;
         color: #856404;
-        font-size: 0.95rem;
+        font-size: 0.85rem;
         display: inline-flex;
         align-items: center;
-        gap: 12px;
-        box-shadow: var(--shadow-md);
+        gap: 8px;
+        box-shadow: var(--shadow-sm);
         font-weight: 600;
     }
     .waiting-count {
         font-weight: 800;
         color: var(--warning-orange);
-        font-size: 1.1rem;
+        font-size: 0.95rem;
     }
 
     /* Table Styles */
@@ -102,10 +106,10 @@
     /* Sport Tags */
     .sport-tag {
         display: inline-block;
-        padding: 4px 12px;
+        padding: 3px 10px;
         margin: 2px;
-        border-radius: 16px;
-        font-size: 0.8rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
         font-weight: 600;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
@@ -121,30 +125,30 @@
     .sport-checkbox-group {
         display: flex;
         flex-wrap: wrap;
-        gap: 12px;
-        padding: 8px 0;
+        gap: 8px;
+        padding: 6px 0;
     }
     .sport-checkbox-item {
         display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 6px 12px;
+        gap: 5px;
+        padding: 5px 10px;
         background: var(--bg-light);
-        border-radius: 8px;
+        border-radius: 6px;
         transition: background 0.2s;
     }
     .sport-checkbox-item:hover {
         background: #e9ecef;
     }
     .sport-checkbox-item input[type="checkbox"] {
-        width: 18px;
-        height: 18px;
+        width: 16px;
+        height: 16px;
         cursor: pointer;
     }
     .sport-checkbox-item label {
         margin: 0;
         cursor: pointer;
-        font-size: 0.9rem;
+        font-size: 0.8rem;
         color: var(--text-dark);
     }
     .edit-sports {
@@ -154,17 +158,17 @@
     /* Modern Search Box */
     .search-box {
         background: var(--bg-card);
-        padding: 24px;
-        border-radius: 16px;
-        box-shadow: var(--shadow-md);
-        margin-bottom: 24px;
+        padding: 16px;
+        border-radius: 12px;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 16px;
         border: 1px solid var(--border-color);
     }
     .search-box input {
         border: 2px solid var(--border-color);
-        border-radius: 12px;
-        padding: 12px 20px;
-        font-size: 1rem;
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 0.9rem;
         transition: all 0.3s;
     }
     .search-box input:focus {
@@ -173,8 +177,8 @@
         outline: none;
     }
     .search-box .btn-primary {
-        padding: 12px 32px;
-        border-radius: 12px;
+        padding: 8px 20px;
+        border-radius: 8px;
         font-weight: 600;
         background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
         border: none;
@@ -182,7 +186,7 @@
         transition: transform 0.2s, box-shadow 0.2s;
     }
     .search-box .btn-primary:hover {
-        transform: translateY(-2px);
+        transform: translateY(-1px);
         box-shadow: var(--shadow-md);
     }
     
@@ -190,10 +194,10 @@
     .search-results {
         display: none;
         background: var(--bg-card);
-        padding: 24px;
-        border-radius: 16px;
-        box-shadow: var(--shadow-md);
-        margin-bottom: 24px;
+        padding: 16px;
+        border-radius: 12px;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 16px;
         border: 1px solid var(--border-color);
     }
     .search-results.active {
@@ -202,7 +206,8 @@
     .search-results h4 {
         color: var(--text-dark);
         font-weight: 700;
-        margin-bottom: 20px;
+        margin-bottom: 12px;
+        font-size: 1.1rem;
     }
     .highlight-match {
         background: linear-gradient(90deg, #fff9e6 0%, #ffffff 100%) !important;
@@ -216,10 +221,11 @@
         cursor: pointer;
         color: var(--danger-red);
         font-weight: 600;
-        margin-left: 12px;
-        padding: 8px 16px;
-        border-radius: 8px;
+        margin-left: 10px;
+        padding: 6px 12px;
+        border-radius: 6px;
         transition: background 0.2s;
+        font-size: 0.85rem;
     }
     .clear-search:hover {
         background: #fee;
@@ -227,20 +233,20 @@
     
     /* View Toggle */
     .view-toggle {
-        margin-bottom: 24px;
+        margin-bottom: 16px;
     }
     .view-toggle .btn-group {
         background: var(--bg-card);
-        padding: 6px;
-        border-radius: 14px;
+        padding: 4px;
+        border-radius: 10px;
         box-shadow: var(--shadow-sm);
         border: 1px solid var(--border-color);
     }
     .view-toggle .btn {
-        padding: 10px 24px;
-        border-radius: 10px;
+        padding: 8px 20px;
+        border-radius: 8px;
         font-weight: 600;
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         border: none;
         transition: all 0.3s ease;
     }
@@ -261,40 +267,40 @@
     /* Navigation Pills with Counts */
     .nav-pills {
         background: var(--bg-card);
-        padding: 8px;
-        border-radius: 16px;
-        box-shadow: var(--shadow-md);
-        margin-bottom: 24px;
+        padding: 6px;
+        border-radius: 12px;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 16px;
         border: 1px solid var(--border-color);
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 6px;
     }
     .nav-pills .nav-link {
-        padding: 10px 20px;
-        border-radius: 28px;
+        padding: 8px 16px;
+        border-radius: 20px;
         font-weight: 700;
-        font-size: 0.95rem;
+        font-size: 0.85rem;
         color: var(--text-dark);
         border: 2px solid var(--border-color);
         transition: all 0.3s ease;
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
         display: inline-flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
     }
     .nav-pills .nav-link:hover {
         border-color: var(--primary-purple);
         background: linear-gradient(135deg, #f0f2ff 0%, #e6e9ff 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
     }
     .nav-pills .nav-link.active {
         background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
         color: white;
         border-color: transparent;
-        box-shadow: var(--shadow-md);
-        transform: translateY(-2px);
+        box-shadow: var(--shadow-sm);
+        transform: translateY(-1px);
     }
     .nav-pills .nav-link.active .tab-count {
         background: rgba(255, 255, 255, 0.3);
@@ -303,22 +309,37 @@
     .tab-count {
         background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
         color: white;
-        padding: 4px 12px;
-        border-radius: 16px;
+        padding: 3px 10px;
+        border-radius: 12px;
         font-weight: 800;
-        min-width: 32px;
+        min-width: 28px;
         text-align: center;
-        font-size: 0.9rem;
+        font-size: 0.8rem;
         box-shadow: var(--shadow-sm);
     }
     
     /* Modern Tables */
     .table-container {
         background: var(--bg-card);
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: var(--shadow-md);
+        border-radius: 12px;
+        overflow-x: auto;
+        box-shadow: var(--shadow-sm);
         border: 1px solid var(--border-color);
+        position: relative;
+    }
+    .table-container::-webkit-scrollbar {
+        height: 8px;
+    }
+    .table-container::-webkit-scrollbar-track {
+        background: #f1f3f5;
+        border-radius: 4px;
+    }
+    .table-container::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
+        border-radius: 4px;
+    }
+    .table-container::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, #5568d3 0%, #3b9de8 100%);
     }
     .table {
         margin: 0;
@@ -328,18 +349,24 @@
     }
     .table thead th {
         font-weight: 700;
-        font-size: 0.85rem;
+        font-size: 0.75rem;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.3px;
         color: var(--text-dark);
-        padding: 18px 16px;
+        padding: 12px 10px;
         border-bottom: 2px solid var(--border-color);
+        white-space: nowrap;
     }
     .table tbody td {
-        padding: 16px;
+        padding: 10px;
         vertical-align: middle;
         border-bottom: 1px solid #f1f3f5;
         color: var(--text-dark);
+        font-size: 0.875rem;
+    }
+    .table tbody td:last-child {
+        white-space: nowrap;
+        width: 1%;
     }
     .table tbody tr {
         transition: background 0.2s ease;
@@ -353,10 +380,10 @@
     
     /* Modern Buttons */
     .btn {
-        border-radius: 10px;
+        border-radius: 8px;
         font-weight: 600;
-        font-size: 0.875rem;
-        padding: 8px 16px;
+        font-size: 0.8rem;
+        padding: 6px 12px;
         transition: all 0.3s ease;
         border: none;
     }
@@ -366,7 +393,7 @@
         box-shadow: var(--shadow-sm);
     }
     .btn-primary:hover {
-        transform: translateY(-2px);
+        transform: translateY(-1px);
         box-shadow: var(--shadow-md);
     }
     .btn-success {
@@ -375,7 +402,7 @@
         box-shadow: var(--shadow-sm);
     }
     .btn-success:hover {
-        transform: translateY(-2px);
+        transform: translateY(-1px);
         box-shadow: var(--shadow-md);
     }
     .btn-info {
@@ -384,7 +411,7 @@
         box-shadow: var(--shadow-sm);
     }
     .btn-info:hover {
-        transform: translateY(-2px);
+        transform: translateY(-1px);
         box-shadow: var(--shadow-md);
     }
     .btn-danger {
@@ -393,7 +420,7 @@
         box-shadow: var(--shadow-sm);
     }
     .btn-danger:hover {
-        transform: translateY(-2px);
+        transform: translateY(-1px);
         box-shadow: var(--shadow-md);
     }
     .btn-secondary {
@@ -402,16 +429,16 @@
         box-shadow: var(--shadow-sm);
     }
     .btn-secondary:hover {
-        transform: translateY(-2px);
+        transform: translateY(-1px);
         box-shadow: var(--shadow-md);
     }
     
     /* Form Controls */
     .form-control, .form-select {
         border: 2px solid var(--border-color);
-        border-radius: 10px;
-        padding: 10px 14px;
-        font-size: 0.95rem;
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 0.875rem;
         transition: all 0.3s;
     }
     .form-control:focus, .form-select:focus {
@@ -422,10 +449,10 @@
     
     /* Lock Toggle */
     .form-check-input {
-        width: 44px;
-        height: 24px;
+        width: 40px;
+        height: 22px;
         cursor: pointer;
-        border-radius: 24px;
+        border-radius: 22px;
         border: 2px solid var(--border-color);
         background-color: #dee2e6;
         transition: all 0.3s ease;
@@ -440,11 +467,12 @@
     
     /* Alert Styles */
     .alert {
-        border-radius: 12px;
-        padding: 16px 20px;
+        border-radius: 10px;
+        padding: 12px 16px;
         border: none;
         box-shadow: var(--shadow-sm);
         font-weight: 500;
+        font-size: 0.9rem;
     }
     .alert-warning {
         background: linear-gradient(135deg, #fff9e6 0%, #fff4d6 100%);
@@ -454,7 +482,7 @@
     
     /* Tab Content */
     .tab-content {
-        margin-top: 24px;
+        margin-top: 16px;
     }
     .tab-pane {
         animation: fadeIn 0.3s ease;
@@ -466,13 +494,158 @@
     
     /* Add Row Button */
     .add-row td {
-        padding: 20px !important;
+        padding: 16px !important;
         text-align: center;
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     }
     .add-row .btn-primary {
-        padding: 12px 32px;
-        font-size: 1rem;
+        padding: 10px 24px;
+        font-size: 0.9rem;
+    }
+    
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .page-title {
+            font-size: 1.25rem;
+        }
+        
+        .header-badges {
+            width: 100%;
+            justify-content: flex-start;
+        }
+        
+        .athlete-count-badge,
+        .waiting-alert {
+            font-size: 0.8rem;
+            padding: 6px 12px;
+        }
+        
+        .athlete-count-number {
+            font-size: 1rem;
+        }
+        
+        .search-box {
+            padding: 12px;
+        }
+        
+        .search-box .row {
+            flex-direction: column;
+        }
+        
+        .search-box .col-md-8,
+        .search-box .col-md-4 {
+            width: 100%;
+            margin-bottom: 8px;
+        }
+        
+        .search-box .btn-primary {
+            width: 100%;
+        }
+        
+        .view-toggle .btn-group {
+            width: 100%;
+        }
+        
+        .view-toggle .btn {
+            flex: 1;
+            font-size: 0.8rem;
+            padding: 6px 12px;
+        }
+        
+        .nav-pills {
+            padding: 4px;
+        }
+        
+        .nav-pills .nav-link {
+            font-size: 0.75rem;
+            padding: 6px 12px;
+            gap: 6px;
+        }
+        
+        .tab-count {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            min-width: 24px;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .table-container::after {
+            content: '👉 Scroll to see more';
+            position: sticky;
+            right: 0;
+            bottom: 10px;
+            display: block;
+            background: linear-gradient(90deg, transparent, var(--primary-purple));
+            color: white;
+            padding: 8px 12px;
+            font-size: 0.7rem;
+            border-radius: 8px 0 0 8px;
+            pointer-events: none;
+            float: right;
+            margin-top: -40px;
+            opacity: 0.9;
+        }
+        
+        .table {
+            min-width: 900px;
+        }
+        
+        .table thead th {
+            font-size: 0.7rem;
+            padding: 10px 8px;
+        }
+        
+        .table tbody td {
+            font-size: 0.8rem;
+            padding: 8px;
+        }
+        
+        .btn {
+            font-size: 0.7rem;
+            padding: 5px 10px;
+        }
+        
+        .sport-tag {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+        }
+        
+        .form-check-input {
+            width: 36px;
+            height: 20px;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .page-title {
+            font-size: 1.1rem;
+        }
+        
+        .athlete-count-badge {
+            font-size: 0.75rem;
+        }
+        
+        .athlete-count-number {
+            font-size: 0.9rem;
+        }
+        
+        .nav-pills .nav-link {
+            font-size: 0.7rem;
+            padding: 5px 10px;
+        }
+        
+        .table {
+            min-width: 800px;
+        }
     }
 </style>
 
@@ -620,12 +793,12 @@
                 {% endif %}
             </td>
             <td>
-                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                    <button class="btn btn-sm btn-primary btn-edit">✏️ Edit</button>
-                    <button class="btn btn-sm btn-success btn-save d-none">💾 Save</button>
-                    <button class="btn btn-sm btn-secondary btn-cancel d-none">❌ Cancel</button>
-                    <button class="btn btn-sm btn-info btn-send-email">📧 Email</button>
-                    <button class="btn btn-sm btn-danger btn-delete">🗑️ Delete</button>
+                <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                    <button class="btn btn-sm btn-primary btn-edit" title="Edit player">✏️</button>
+                    <button class="btn btn-sm btn-success btn-save d-none" title="Save changes">💾</button>
+                    <button class="btn btn-sm btn-secondary btn-cancel d-none" title="Cancel editing">✖</button>
+                    <button class="btn btn-sm btn-info btn-send-email" title="Send confirmation email">📧</button>
+                    <button class="btn btn-sm btn-danger btn-delete" title="Delete player">🗑️</button>
                 </div>
             </td>
         </tr>
@@ -671,8 +844,10 @@
         <td><input class="form-control new-parent-email" placeholder="Parent Email"></td>
         <td></td>
         <td>
-            <button class="btn btn-sm btn-success btn-add-save">Save</button>
-            <button class="btn btn-sm btn-secondary btn-add-cancel">Cancel</button>
+            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                <button class="btn btn-sm btn-success btn-add-save">💾</button>
+                <button class="btn btn-sm btn-secondary btn-add-cancel">✖</button>
+            </div>
         </td>
     </tr>
 {% endmacro %}
