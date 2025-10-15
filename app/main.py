@@ -181,8 +181,15 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
     players = db.query(Player).all()
     season_year = int(CURRENT_SEASON) if CURRENT_SEASON.isdigit() else 2025
 
-    missing_emails = sum(1 for p in players if not p.parent_email)
-    missing_jerseys = sum(1 for p in players if not p.jersey_number)
+    # Calculate birth year counts
+    birth_year_counts = {}
+    for player in players:
+        if player.birth_year and any(r.division not in {"", "Unknown"} for r in player.registrations):
+            year = player.birth_year
+            birth_year_counts[year] = birth_year_counts.get(year, 0) + 1
+    
+    # Sort birth years from newest to oldest
+    birth_year_counts = dict(sorted(birth_year_counts.items(), reverse=True))
 
     # Identify duplicates by birth year + sport + jersey number
     birth_year_sport_jersey = defaultdict(list)
@@ -241,8 +248,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
             "group_list": list(sorted_players.keys()),
             "unassigned_players": unassigned_players,
             "total_players": len(counted_player_ids),
-            "missing_emails": missing_emails,
-            "missing_jerseys": missing_jerseys,
+            "birth_year_counts": birth_year_counts,
         })
 
     # ------------------- BIRTH YEAR VIEW -------------------
@@ -289,8 +295,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
         "birth_year_labels": birth_year_labels,
         "unassigned_players": [],
         "total_players": len(counted_player_ids),
-        "missing_emails": missing_emails,
-        "missing_jerseys": missing_jerseys,
+        "birth_year_counts": birth_year_counts,
     })
 
 # ---------------------------------------------------------------------
