@@ -550,15 +550,23 @@ def send_registration_email(reg_id: int, request: Request, db: Session = Depends
     if not reg:
         raise HTTPException(status_code=404, detail="Registration not found")
     
-    # Get all registrations for this parent email
+    # Get registrations that came in together (same order)
     parent_email = reg.player.parent_email
-    all_regs = (
-        db.query(Registration)
-        .join(Player)
-        .filter(Player.parent_email == parent_email)
-        .filter(Registration.confirmation_sent == False)
-        .all()
-    )
+    
+    # If this registration has an order number, batch by order number
+    # Otherwise, only send this single registration
+    if reg.order_number:
+        all_regs = (
+            db.query(Registration)
+            .join(Player)
+            .filter(Player.parent_email == parent_email)
+            .filter(Registration.order_number == reg.order_number)
+            .filter(Registration.confirmation_sent == False)
+            .all()
+        )
+    else:
+        # No order number means this was manually added, only send this one
+        all_regs = [reg] if not reg.confirmation_sent else []
     
     if not all_regs:
         return {"status": "no unsent registrations"}
