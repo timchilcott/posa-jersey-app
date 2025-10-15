@@ -181,45 +181,19 @@
         box-shadow: var(--shadow-sm);
     }
     
-    /* Stats Summary */
-    .stats-summary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 16px;
-        padding: 32px;
-        box-shadow: var(--shadow-lg);
-        margin-bottom: 24px;
-        color: white;
-    }
-    .main-stat {
-        display: inline-flex;
-        align-items: baseline;
-        gap: 16px;
-        margin-right: 32px;
-        margin-bottom: 16px;
-    }
-    .stat-number {
-        font-size: 3rem;
-        font-weight: 800;
-        color: white;
-        line-height: 1;
-        text-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    }
-    .stat-label {
-        color: rgba(255,255,255,0.9);
-        font-size: 0.95rem;
-        font-weight: 500;
-    }
+    /* Waiting Room Badge in Header */
     .waiting-alert {
-        background: rgba(255,255,255,0.95);
-        border-left: 4px solid var(--warning-orange);
-        padding: 16px 20px;
-        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.95);
+        border: 2px solid var(--warning-orange);
+        padding: 12px 20px;
+        border-radius: 20px;
         color: #856404;
         font-size: 0.95rem;
         display: inline-flex;
         align-items: center;
         gap: 12px;
-        box-shadow: var(--shadow-sm);
+        box-shadow: var(--shadow-md);
+        font-weight: 600;
     }
     .waiting-count {
         font-weight: 800;
@@ -227,55 +201,34 @@
         font-size: 1.1rem;
     }
     
-    /* Year Badges Container */
-    .year-badges-container {
-        background: var(--bg-card);
-        border-radius: 16px;
-        padding: 28px;
-        box-shadow: var(--shadow-md);
-        border: 1px solid var(--border-color);
-    }
-    .year-badge {
-        display: inline-flex;
+    /* Page Header */
+    .page-header {
+        display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 10px 20px;
-        margin: 6px;
-        border-radius: 28px;
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border: 2px solid var(--border-color);
-        transition: all 0.3s ease;
-        cursor: pointer;
-        font-size: 0.95rem;
+        justify-content: space-between;
+        margin-bottom: 24px;
     }
-    .year-badge:hover {
-        border-color: var(--primary-purple);
-        background: linear-gradient(135deg, #f0f2ff 0%, #e6e9ff 100%);
-        transform: translateY(-3px);
-        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.25);
+    .page-title {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--text-dark);
+        margin: 0;
     }
-    .year-badge-count {
+    .athlete-count-badge {
         background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
         color: white;
-        padding: 4px 14px;
-        border-radius: 16px;
+        padding: 12px 24px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        box-shadow: var(--shadow-md);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .athlete-count-number {
+        font-size: 1.5rem;
         font-weight: 800;
-        min-width: 36px;
-        text-align: center;
-        font-size: 1.05rem;
-        box-shadow: var(--shadow-sm);
-    }
-    .year-badge-label {
-        font-weight: 700;
-        color: var(--text-dark);
-    }
-    .section-title {
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        color: var(--text-medium);
-        font-weight: 700;
-        margin-bottom: 20px;
     }
     
     /* View Toggle */
@@ -311,7 +264,7 @@
         box-shadow: var(--shadow-sm);
     }
     
-    /* Navigation Pills */
+    /* Navigation Pills with Counts */
     .nav-pills {
         background: var(--bg-card);
         padding: 8px;
@@ -324,23 +277,44 @@
         gap: 8px;
     }
     .nav-pills .nav-link {
-        padding: 12px 24px;
-        border-radius: 12px;
-        font-weight: 600;
+        padding: 10px 20px;
+        border-radius: 28px;
+        font-weight: 700;
         font-size: 0.95rem;
-        color: var(--text-medium);
-        border: 2px solid transparent;
+        color: var(--text-dark);
+        border: 2px solid var(--border-color);
         transition: all 0.3s ease;
-        background: transparent;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
     }
     .nav-pills .nav-link:hover {
-        background: var(--bg-light);
-        color: var(--text-dark);
+        border-color: var(--primary-purple);
+        background: linear-gradient(135deg, #f0f2ff 0%, #e6e9ff 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
     }
     .nav-pills .nav-link.active {
         background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
         color: white;
         border-color: transparent;
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+    .nav-pills .nav-link.active .tab-count {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+    }
+    .tab-count {
+        background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-weight: 800;
+        min-width: 32px;
+        text-align: center;
+        font-size: 0.9rem;
         box-shadow: var(--shadow-sm);
     }
     
@@ -507,6 +481,23 @@
         font-size: 1rem;
     }
 </style>
+
+<!-- Page Header -->
+<div class="page-header">
+    <h1 class="page-title">Athletes Dashboard</h1>
+    <div style="display: flex; gap: 12px; align-items: center;">
+        <div class="athlete-count-badge">
+            <span>Total Athletes:</span>
+            <span class="athlete-count-number">{{ total_players }}</span>
+        </div>
+        {% if waiting_room_players %}
+        <div class="waiting-alert">
+            <span class="waiting-count">⚠️ {{ waiting_room_players|length }}</span>
+            <span>in Waiting Room</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
 
 <!-- Search Box -->
 <div class="search-box">
@@ -734,21 +725,24 @@
         {% if waiting_room_players %}
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="tab-waiting-room" data-bs-toggle="pill" data-bs-target="#pane-waiting-room" type="button" role="tab">
-                    <span class="waiting-room-badge">{{ waiting_room_players|length }}</span> Waiting Room
+                    <span>⏳ Waiting Room</span>
+                    <span class="tab-count">{{ waiting_room_players|length }}</span>
                 </button>
             </li>
         {% endif %}
         {% for group in group_list %}
             <li class="nav-item" role="presentation">
                 <button class="nav-link {% if loop.first and not waiting_room_players %}active{% endif %}" id="tab-{{ group }}" data-bs-toggle="pill" data-bs-target="#pane-{{ group }}" type="button" role="tab">
-                    {{ birth_year_labels[group] }}
+                    <span>{{ birth_year_labels[group] }}</span>
+                    <span class="tab-count">{{ birth_year_counts.get(group, 0) }}</span>
                 </button>
             </li>
         {% endfor %}
         {% if unassigned_players %}
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="tab-unassigned" data-bs-toggle="pill" data-bs-target="#pane-unassigned" type="button" role="tab">
-                    Unassigned
+                    <span>❓ Unassigned</span>
+                    <span class="tab-count">{{ unassigned_players|length }}</span>
                 </button>
             </li>
         {% endif %}
@@ -841,21 +835,24 @@
         {% if waiting_room_players %}
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="tab-waiting-room" data-bs-toggle="pill" data-bs-target="#pane-waiting-room" type="button" role="tab">
-                    <span class="waiting-room-badge">{{ waiting_room_players|length }}</span> Waiting Room
+                    <span>⏳ Waiting Room</span>
+                    <span class="tab-count">{{ waiting_room_players|length }}</span>
                 </button>
             </li>
         {% endif %}
         {% for group in group_list %}
             <li class="nav-item" role="presentation">
                 <button class="nav-link {% if loop.first and not waiting_room_players %}active{% endif %}" id="tab-{{ group|replace(' ', '_')|replace('/', '_')|lower }}" data-bs-toggle="pill" data-bs-target="#pane-{{ group|replace(' ', '_')|replace('/', '_')|lower }}" type="button" role="tab">
-                    {{ group }}
+                    <span>{{ group }}</span>
+                    <span class="tab-count">{{ players_by_group[group]|length }}</span>
                 </button>
             </li>
         {% endfor %}
         {% if unassigned_players %}
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="tab-unassigned" data-bs-toggle="pill" data-bs-target="#pane-unassigned" type="button" role="tab">
-                    Unassigned
+                    <span>❓ Unassigned</span>
+                    <span class="tab-count">{{ unassigned_players|length }}</span>
                 </button>
             </li>
         {% endif %}
