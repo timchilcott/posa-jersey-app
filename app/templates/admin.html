@@ -99,23 +99,31 @@
     </div>
 </div>
 
-<div class="row g-3 mb-4">
-    <div class="col-12 col-md-4">
-        <div class="bg-white border rounded shadow-sm p-3 text-center">
-            <div class="fs-4 fw-bold text-dark">{{ total_players }}</div>
-            <small class="text-muted">Total Athletes</small>
-        </div>
+<!-- Stats Section -->
+<div class="mb-4">
+    <!-- Total Athletes Card -->
+    <div class="bg-white border rounded shadow-sm p-3 text-center mb-3">
+        <div class="fs-3 fw-bold text-primary">{{ total_players }}</div>
+        <small class="text-muted">Total Athletes</small>
     </div>
-    <div class="col-12 col-md-4">
-        <div class="bg-white border rounded shadow-sm p-3 text-center">
-            <div class="fs-4 fw-bold text-dark">{{ missing_emails }}</div>
-            <small class="text-muted">Missing Emails</small>
-        </div>
-    </div>
-    <div class="col-12 col-md-4">
-        <div class="bg-white border rounded shadow-sm p-3 text-center">
-            <div class="fs-4 fw-bold text-dark">{{ missing_jerseys }}</div>
-            <small class="text-muted">Missing Jersey #</small>
+    
+    <!-- Birth Year Counts Grid -->
+    <div class="bg-white border rounded shadow-sm p-3">
+        <h6 class="mb-3 text-muted">Athletes by Birth Year</h6>
+        <div class="row g-2">
+            {% for year, count in birth_year_counts.items() %}
+            <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                <div class="border rounded p-2 text-center">
+                    <div class="fw-bold text-dark">{{ year }}</div>
+                    <small class="text-muted">{{ count }} athlete{{ 's' if count != 1 else '' }}</small>
+                </div>
+            </div>
+            {% endfor %}
+            {% if not birth_year_counts %}
+            <div class="col-12 text-center text-muted">
+                <small>No athletes with birth years assigned</small>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
