@@ -106,15 +106,16 @@
     /* Sport Tags */
     .sport-tag {
         display: inline-block;
-        padding: 3px 10px;
-        margin: 2px;
-        border-radius: 12px;
-        font-size: 0.75rem;
+        padding: 2px 8px;
+        margin: 1px;
+        border-radius: 10px;
+        font-size: 0.7rem;
         font-weight: 600;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         box-shadow: var(--shadow-sm);
         transition: transform 0.2s, box-shadow 0.2s;
+        line-height: 1.2;
     }
     .sport-tag:hover {
         transform: translateY(-1px);
@@ -419,12 +420,12 @@
         text-transform: uppercase;
         letter-spacing: 0.3px;
         color: var(--text-dark);
-        padding: 8px 8px;
+        padding: 6px 6px;
         border-bottom: 2px solid var(--border-color);
         white-space: nowrap;
     }
     .table tbody td {
-        padding: 6px 8px;
+        padding: 4px 6px;
         vertical-align: middle;
         border-bottom: 1px solid #f1f3f5;
         color: var(--text-dark);
@@ -433,6 +434,14 @@
     .table tbody td:last-child {
         white-space: nowrap;
         width: 1%;
+        padding: 4px 6px;
+        vertical-align: middle;
+    }
+    .table tbody td:last-child > div {
+        display: flex;
+        gap: 2px;
+        flex-wrap: nowrap;
+        align-items: center;
     }
     .table tbody tr {
         transition: background 0.2s ease;
@@ -446,12 +455,17 @@
     
     /* Modern Buttons */
     .btn {
-        border-radius: 8px;
+        border-radius: 6px;
         font-weight: 600;
-        font-size: 0.8rem;
-        padding: 6px 12px;
+        font-size: 0.75rem;
+        padding: 4px 8px;
         transition: all 0.3s ease;
         border: none;
+        line-height: 1;
+    }
+    .btn-sm {
+        padding: 3px 6px;
+        font-size: 0.7rem;
     }
     .btn-primary {
         background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
@@ -502,10 +516,11 @@
     /* Form Controls */
     .form-control, .form-select {
         border: 2px solid var(--border-color);
-        border-radius: 8px;
-        padding: 6px 10px;
-        font-size: 0.875rem;
+        border-radius: 6px;
+        padding: 4px 8px;
+        font-size: 0.8rem;
         transition: all 0.3s;
+        line-height: 1.2;
     }
     .form-control:focus, .form-select:focus {
         border-color: var(--primary-purple);
@@ -514,14 +529,19 @@
     }
     
     /* Lock Toggle */
+    .form-check {
+        padding: 0;
+        margin: 0;
+    }
     .form-check-input {
-        width: 40px;
-        height: 22px;
+        width: 36px;
+        height: 20px;
         cursor: pointer;
-        border-radius: 22px;
+        border-radius: 20px;
         border: 2px solid var(--border-color);
         background-color: #dee2e6;
         transition: all 0.3s ease;
+        margin: 0;
     }
     .form-check-input:checked {
         background-color: var(--success-green);
@@ -560,13 +580,13 @@
     
     /* Add Row Button */
     .add-row td {
-        padding: 12px !important;
+        padding: 8px !important;
         text-align: center;
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     }
     .add-row .btn-primary {
-        padding: 10px 24px;
-        font-size: 0.9rem;
+        padding: 8px 20px;
+        font-size: 0.85rem;
     }
     
     /* Mobile Responsive */
@@ -689,27 +709,27 @@
         
         .table thead th {
             font-size: 0.7rem;
-            padding: 8px 6px;
+            padding: 6px 4px;
         }
         
         .table tbody td {
             font-size: 0.8rem;
-            padding: 5px 6px;
+            padding: 4px 4px;
         }
         
         .btn {
-            font-size: 0.7rem;
-            padding: 5px 10px;
+            font-size: 0.65rem;
+            padding: 3px 6px;
         }
         
         .sport-tag {
-            font-size: 0.7rem;
-            padding: 3px 8px;
+            font-size: 0.65rem;
+            padding: 2px 6px;
         }
         
         .form-check-input {
-            width: 36px;
-            height: 20px;
+            width: 32px;
+            height: 18px;
         }
     }
     
@@ -890,13 +910,13 @@
             <td><span class="parent-email">{{ player.parent_email }}</span><input class="form-control d-none edit-parent-email" value="{{ player.parent_email }}"></td>
             <td class="email-status">
                 {% if player.confirmation_sent %}
-                    <span style="font-size: 1.2rem;">✅</span>
+                    <span style="font-size: 1rem;">✅</span>
                 {% else %}
-                    <span style="font-size: 1.2rem;">❌</span>
+                    <span style="font-size: 1rem;">❌</span>
                 {% endif %}
             </td>
             <td>
-                <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                <div style="display: flex; gap: 2px; flex-wrap: nowrap;">
                     <button class="btn btn-sm btn-primary btn-edit" title="Edit player">✏️</button>
                     <button class="btn btn-sm btn-success btn-save d-none" title="Save changes">💾</button>
                     <button class="btn btn-sm btn-secondary btn-cancel d-none" title="Cancel editing">✖</button>
@@ -947,7 +967,7 @@
         <td><input class="form-control new-parent-email" placeholder="Parent Email"></td>
         <td></td>
         <td>
-            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+            <div style="display: flex; gap: 2px; flex-wrap: nowrap;">
                 <button class="btn btn-sm btn-success btn-add-save">💾</button>
                 <button class="btn btn-sm btn-secondary btn-add-cancel">✖</button>
             </div>
@@ -1555,7 +1575,7 @@
         const regId = row.dataset.regId;
         const response = await fetch(`/registrations/${regId}/send_email`, { method: "POST" });
         if (response.ok) {
-            row.querySelector(".email-status").innerHTML = '<span style="font-size: 1.2rem;">✅</span>';
+            row.querySelector(".email-status").innerHTML = '<span style="font-size: 1rem;">✅</span>';
         } else {
             alert("Failed to send email.");
         }
