@@ -2,67 +2,509 @@
 {% block title %}POSA Admin{% endblock %}
 {% block content %}
 <style>
-    tr.locked td { color: #6c757d; }
-    tr.locked .btn { pointer-events: none; opacity: 0.5; }
-    tr.duplicate-jersey td { background-color: #fff3cd !important; }
-    tr.waiting-room td { background-color: #fff4e6 !important; }
+    /* Modern Color Palette */
+    :root {
+        --primary-purple: #667eea;
+        --primary-blue: #4dabf7;
+        --success-green: #51cf66;
+        --warning-orange: #ff9800;
+        --danger-red: #ff6b6b;
+        --bg-light: #f8f9fa;
+        --bg-card: #ffffff;
+        --text-dark: #2d3748;
+        --text-medium: #4a5568;
+        --text-light: #718096;
+        --border-color: #e2e8f0;
+        --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+        --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+        --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+    }
+
+    body {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: 100vh;
+    }
+
+    /* Table Styles */
+    tr.locked td { 
+        color: var(--text-light); 
+        opacity: 0.6;
+    }
+    tr.locked .btn { 
+        pointer-events: none; 
+        opacity: 0.4; 
+    }
+    tr.duplicate-jersey td { 
+        background-color: #fff4e6 !important; 
+        border-left: 3px solid var(--warning-orange);
+    }
+    tr.waiting-room td { 
+        background-color: #fff9e6 !important; 
+        border-left: 3px solid var(--warning-orange);
+    }
+    
+    /* Sport Tags */
     .sport-tag {
         display: inline-block;
-        padding: 2px 8px;
+        padding: 4px 12px;
         margin: 2px;
-        border-radius: 3px;
-        font-size: 0.85em;
-        font-weight: 500;
-        background-color: #e3f2fd;
-        color: #1976d2;
+        border-radius: 16px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.2s, box-shadow 0.2s;
     }
+    .sport-tag:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+    
+    /* Sport Checkbox Group */
     .sport-checkbox-group {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 12px;
+        padding: 8px 0;
     }
     .sport-checkbox-item {
         display: flex;
         align-items: center;
-        gap: 5px;
+        gap: 6px;
+        padding: 6px 12px;
+        background: var(--bg-light);
+        border-radius: 8px;
+        transition: background 0.2s;
+    }
+    .sport-checkbox-item:hover {
+        background: #e9ecef;
+    }
+    .sport-checkbox-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+    .sport-checkbox-item label {
+        margin: 0;
+        cursor: pointer;
+        font-size: 0.9rem;
+        color: var(--text-dark);
     }
     .edit-sports {
         display: none;
     }
+    
+    /* Modern Search Box */
     .search-box {
-        background: white;
-        padding: 20px;
-        border-radius: 5px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
+        background: var(--bg-card);
+        padding: 24px;
+        border-radius: 16px;
+        box-shadow: var(--shadow-md);
+        margin-bottom: 24px;
+        border: 1px solid var(--border-color);
     }
+    .search-box input {
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        padding: 12px 20px;
+        font-size: 1rem;
+        transition: all 0.3s;
+    }
+    .search-box input:focus {
+        border-color: var(--primary-purple);
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        outline: none;
+    }
+    .search-box .btn-primary {
+        padding: 12px 32px;
+        border-radius: 12px;
+        font-weight: 600;
+        background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
+        border: none;
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .search-box .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+    
+    /* Search Results */
     .search-results {
         display: none;
-        background: white;
-        padding: 20px;
-        border-radius: 5px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
+        background: var(--bg-card);
+        padding: 24px;
+        border-radius: 16px;
+        box-shadow: var(--shadow-md);
+        margin-bottom: 24px;
+        border: 1px solid var(--border-color);
     }
     .search-results.active {
         display: block;
     }
+    .search-results h4 {
+        color: var(--text-dark);
+        font-weight: 700;
+        margin-bottom: 20px;
+    }
     .highlight-match {
-        background-color: #fff3cd;
+        background: linear-gradient(90deg, #fff9e6 0%, #ffffff 100%) !important;
+        animation: highlightPulse 2s ease-in-out infinite;
+    }
+    @keyframes highlightPulse {
+        0%, 100% { background: linear-gradient(90deg, #fff9e6 0%, #ffffff 100%); }
+        50% { background: linear-gradient(90deg, #fffbf0 0%, #ffffff 100%); }
     }
     .clear-search {
         cursor: pointer;
-        color: #dc3545;
-        margin-left: 10px;
-    }
-    .waiting-room-badge {
-        background-color: #ff9800;
-        color: white;
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 0.75em;
+        color: var(--danger-red);
         font-weight: 600;
+        margin-left: 12px;
+        padding: 8px 16px;
+        border-radius: 8px;
+        transition: background 0.2s;
+    }
+    .clear-search:hover {
+        background: #fee;
+    }
+    
+    /* Waiting Room Badge */
+    .waiting-room-badge {
+        background: linear-gradient(135deg, var(--warning-orange) 0%, #ff6b00 100%);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-size: 0.75rem;
+        font-weight: 700;
         margin-left: 8px;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    /* Stats Summary */
+    .stats-summary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 16px;
+        padding: 32px;
+        box-shadow: var(--shadow-lg);
+        margin-bottom: 24px;
+        color: white;
+    }
+    .main-stat {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 16px;
+        margin-right: 32px;
+        margin-bottom: 16px;
+    }
+    .stat-number {
+        font-size: 3rem;
+        font-weight: 800;
+        color: white;
+        line-height: 1;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .stat-label {
+        color: rgba(255,255,255,0.9);
+        font-size: 0.95rem;
+        font-weight: 500;
+    }
+    .waiting-alert {
+        background: rgba(255,255,255,0.95);
+        border-left: 4px solid var(--warning-orange);
+        padding: 16px 20px;
+        border-radius: 12px;
+        color: #856404;
+        font-size: 0.95rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: var(--shadow-sm);
+    }
+    .waiting-count {
+        font-weight: 800;
+        color: var(--warning-orange);
+        font-size: 1.1rem;
+    }
+    
+    /* Year Badges Container */
+    .year-badges-container {
+        background: var(--bg-card);
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+    }
+    .year-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 20px;
+        margin: 6px;
+        border-radius: 28px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 2px solid var(--border-color);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        font-size: 0.95rem;
+    }
+    .year-badge:hover {
+        border-color: var(--primary-purple);
+        background: linear-gradient(135deg, #f0f2ff 0%, #e6e9ff 100%);
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.25);
+    }
+    .year-badge-count {
+        background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
+        color: white;
+        padding: 4px 14px;
+        border-radius: 16px;
+        font-weight: 800;
+        min-width: 36px;
+        text-align: center;
+        font-size: 1.05rem;
+        box-shadow: var(--shadow-sm);
+    }
+    .year-badge-label {
+        font-weight: 700;
+        color: var(--text-dark);
+    }
+    .section-title {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--text-medium);
+        font-weight: 700;
+        margin-bottom: 20px;
+    }
+    
+    /* View Toggle */
+    .view-toggle {
+        margin-bottom: 24px;
+    }
+    .view-toggle .btn-group {
+        background: var(--bg-card);
+        padding: 6px;
+        border-radius: 14px;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-color);
+    }
+    .view-toggle .btn {
+        padding: 10px 24px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .view-toggle .btn-outline-primary {
+        background: transparent;
+        color: var(--text-medium);
+    }
+    .view-toggle .btn-outline-primary:hover {
+        background: var(--bg-light);
+        color: var(--text-dark);
+    }
+    .view-toggle .btn-primary {
+        background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
+        color: white;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    /* Navigation Pills */
+    .nav-pills {
+        background: var(--bg-card);
+        padding: 8px;
+        border-radius: 16px;
+        box-shadow: var(--shadow-md);
+        margin-bottom: 24px;
+        border: 1px solid var(--border-color);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .nav-pills .nav-link {
+        padding: 12px 24px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: var(--text-medium);
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+        background: transparent;
+    }
+    .nav-pills .nav-link:hover {
+        background: var(--bg-light);
+        color: var(--text-dark);
+    }
+    .nav-pills .nav-link.active {
+        background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
+        color: white;
+        border-color: transparent;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    /* Modern Tables */
+    .table-container {
+        background: var(--bg-card);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+    }
+    .table {
+        margin: 0;
+    }
+    .table thead {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    .table thead th {
+        font-weight: 700;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-dark);
+        padding: 18px 16px;
+        border-bottom: 2px solid var(--border-color);
+    }
+    .table tbody td {
+        padding: 16px;
+        vertical-align: middle;
+        border-bottom: 1px solid #f1f3f5;
+        color: var(--text-dark);
+    }
+    .table tbody tr {
+        transition: background 0.2s ease;
+    }
+    .table tbody tr:hover:not(.add-row):not(.add-form-row) {
+        background: linear-gradient(90deg, #f8f9ff 0%, #ffffff 100%);
+    }
+    .table tbody tr:last-child td {
+        border-bottom: none;
+    }
+    
+    /* Modern Buttons */
+    .btn {
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        padding: 8px 16px;
+        transition: all 0.3s ease;
+        border: none;
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-blue) 100%);
+        color: white;
+        box-shadow: var(--shadow-sm);
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+    .btn-success {
+        background: linear-gradient(135deg, var(--success-green) 0%, #40c057 100%);
+        color: white;
+        box-shadow: var(--shadow-sm);
+    }
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+    .btn-info {
+        background: linear-gradient(135deg, var(--primary-blue) 0%, #339af0 100%);
+        color: white;
+        box-shadow: var(--shadow-sm);
+    }
+    .btn-info:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+    .btn-danger {
+        background: linear-gradient(135deg, var(--danger-red) 0%, #fa5252 100%);
+        color: white;
+        box-shadow: var(--shadow-sm);
+    }
+    .btn-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+    .btn-secondary {
+        background: linear-gradient(135deg, #868e96 0%, #6c757d 100%);
+        color: white;
+        box-shadow: var(--shadow-sm);
+    }
+    .btn-secondary:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+    
+    /* Form Controls */
+    .form-control, .form-select {
+        border: 2px solid var(--border-color);
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-size: 0.95rem;
+        transition: all 0.3s;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary-purple);
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        outline: none;
+    }
+    
+    /* Lock Toggle */
+    .form-check-input {
+        width: 44px;
+        height: 24px;
+        cursor: pointer;
+        border-radius: 24px;
+        border: 2px solid var(--border-color);
+        background-color: #dee2e6;
+        transition: all 0.3s ease;
+    }
+    .form-check-input:checked {
+        background-color: var(--success-green);
+        border-color: var(--success-green);
+    }
+    .form-check-input:focus {
+        box-shadow: 0 0 0 3px rgba(81, 207, 102, 0.2);
+    }
+    
+    /* Alert Styles */
+    .alert {
+        border-radius: 12px;
+        padding: 16px 20px;
+        border: none;
+        box-shadow: var(--shadow-sm);
+        font-weight: 500;
+    }
+    .alert-warning {
+        background: linear-gradient(135deg, #fff9e6 0%, #fff4d6 100%);
+        color: #856404;
+        border-left: 4px solid var(--warning-orange);
+    }
+    
+    /* Tab Content */
+    .tab-content {
+        margin-top: 24px;
+    }
+    .tab-pane {
+        animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Add Row Button */
+    .add-row td {
+        padding: 20px !important;
+        text-align: center;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    .add-row .btn-primary {
+        padding: 12px 32px;
+        font-size: 1rem;
     }
 </style>
 
@@ -70,135 +512,48 @@
 <div class="search-box">
     <div class="row">
         <div class="col-md-8">
-            <input type="text" id="athlete-search" class="form-control" placeholder="Search athletes by name, email, jersey number, or sport...">
+            <input type="text" id="athlete-search" class="form-control" placeholder="🔍 Search athletes by name, email, jersey number, or sport...">
         </div>
         <div class="col-md-4">
             <button id="search-btn" class="btn btn-primary">Search</button>
-            <span id="clear-search" class="clear-search d-none">Clear</span>
+            <span id="clear-search" class="clear-search d-none">✖ Clear</span>
         </div>
     </div>
 </div>
 
 <!-- Search Results -->
 <div id="search-results" class="search-results">
-    <h4>Search Results <span id="search-count"></span></h4>
-    <table class="table table-bordered align-middle">
-        <thead class="table-light">
-            <tr>
-                <th>Lock</th>
-                <th>Name</th>
-                <th>Birth Year</th>
-                <th>Sports</th>
-                <th>Division</th>
-                <th>Jersey #</th>
-                <th>Parent Email</th>
-                <th>Email Sent</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody id="search-results-body">
-        </tbody>
-    </table>
+    <h4>🔍 Search Results <span id="search-count"></span></h4>
+    <div class="table-container">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>🔒 Lock</th>
+                    <th>Name</th>
+                    <th>Birth Year</th>
+                    <th>Sports</th>
+                    <th>Division</th>
+                    <th>Jersey #</th>
+                    <th>Parent Email</th>
+                    <th>Email Sent</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="search-results-body">
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <!-- View Toggle -->
-<div class="mb-3" id="view-toggle">
+<div class="view-toggle" id="view-toggle">
     <div class="btn-group" role="group">
-        <a href="/admin?view=birthyear" class="btn btn-sm {% if view == 'birthyear' %}btn-primary{% else %}btn-outline-primary{% endif %}">Birth Year View</a>
-        <a href="/admin?view=division" class="btn btn-sm {% if view == 'division' %}btn-primary{% else %}btn-outline-primary{% endif %}">Division View</a>
+        <a href="/admin?view=birthyear" class="btn {% if view == 'birthyear' %}btn-primary{% else %}btn-outline-primary{% endif %}">🎂 Birth Year View</a>
+        <a href="/admin?view=division" class="btn {% if view == 'division' %}btn-primary{% else %}btn-outline-primary{% endif %}">📊 Division View</a>
     </div>
 </div>
 
 <!-- Stats Section -->
-<style>
-    .stats-summary {
-        background: white;
-        border-radius: 12px;
-        padding: 24px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        margin-bottom: 24px;
-    }
-    .main-stat {
-        display: inline-flex;
-        align-items: baseline;
-        gap: 12px;
-        margin-right: 24px;
-        margin-bottom: 12px;
-    }
-    .stat-number {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: #667eea;
-        line-height: 1;
-    }
-    .stat-label {
-        color: #6c757d;
-        font-size: 0.9rem;
-    }
-    .waiting-alert {
-        background: #fff3cd;
-        border-left: 4px solid #ff9800;
-        padding: 12px 16px;
-        border-radius: 6px;
-        color: #856404;
-        font-size: 0.9rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .waiting-count {
-        font-weight: 700;
-        color: #ff9800;
-    }
-    .year-badges-container {
-        background: white;
-        border-radius: 12px;
-        padding: 24px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-    .year-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 16px;
-        margin: 4px;
-        border-radius: 24px;
-        background: #f8f9fa;
-        border: 2px solid #dee2e6;
-        transition: all 0.2s;
-        cursor: pointer;
-        font-size: 0.9rem;
-    }
-    .year-badge:hover {
-        border-color: #667eea;
-        background: #f0f2ff;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
-    }
-    .year-badge-count {
-        background: #667eea;
-        color: white;
-        padding: 2px 10px;
-        border-radius: 12px;
-        font-weight: 700;
-        min-width: 32px;
-        text-align: center;
-        font-size: 1rem;
-    }
-    .year-badge-label {
-        font-weight: 600;
-        color: #495057;
-    }
-    .section-title {
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: #6c757d;
-        font-weight: 600;
-        margin-bottom: 16px;
-    }
-</style>
-
 <div class="mb-4">
     <!-- Stats Summary -->
     <div class="stats-summary">
@@ -267,27 +622,27 @@
                     <div class="sport-checkbox-group">
                         <div class="sport-checkbox-item">
                             <input type="checkbox" class="sport-checkbox" value="soccer" id="soccer-{{ player.id }}" {% if 'soccer' in player.sports %}checked{% endif %}>
-                            <label for="soccer-{{ player.id }}">Soccer</label>
+                            <label for="soccer-{{ player.id }}">⚽ Soccer</label>
                         </div>
                         <div class="sport-checkbox-item">
                             <input type="checkbox" class="sport-checkbox" value="basketball" id="basketball-{{ player.id }}" {% if 'basketball' in player.sports %}checked{% endif %}>
-                            <label for="basketball-{{ player.id }}">Basketball</label>
+                            <label for="basketball-{{ player.id }}">🏀 Basketball</label>
                         </div>
                         <div class="sport-checkbox-item">
                             <input type="checkbox" class="sport-checkbox" value="baseball" id="baseball-{{ player.id }}" {% if 'baseball' in player.sports %}checked{% endif %}>
-                            <label for="baseball-{{ player.id }}">Baseball</label>
+                            <label for="baseball-{{ player.id }}">⚾ Baseball</label>
                         </div>
                         <div class="sport-checkbox-item">
                             <input type="checkbox" class="sport-checkbox" value="softball" id="softball-{{ player.id }}" {% if 'softball' in player.sports %}checked{% endif %}>
-                            <label for="softball-{{ player.id }}">Softball</label>
+                            <label for="softball-{{ player.id }}">🥎 Softball</label>
                         </div>
                         <div class="sport-checkbox-item">
                             <input type="checkbox" class="sport-checkbox" value="volleyball" id="volleyball-{{ player.id }}" {% if 'volleyball' in player.sports %}checked{% endif %}>
-                            <label for="volleyball-{{ player.id }}">Volleyball</label>
+                            <label for="volleyball-{{ player.id }}">🏐 Volleyball</label>
                         </div>
                         <div class="sport-checkbox-item">
                             <input type="checkbox" class="sport-checkbox" value="flag" id="flag-{{ player.id }}" {% if 'flag' in player.sports %}checked{% endif %}>
-                            <label for="flag-{{ player.id }}">Flag Football</label>
+                            <label for="flag-{{ player.id }}">🏈 Flag Football</label>
                         </div>
                     </div>
                 </div>
@@ -309,23 +664,25 @@
             <td><span class="parent-email">{{ player.parent_email }}</span><input class="form-control d-none edit-parent-email" value="{{ player.parent_email }}"></td>
             <td class="email-status">
                 {% if player.confirmation_sent %}
-                    ✅
+                    <span style="font-size: 1.2rem;">✅</span>
                 {% else %}
-                    ❌
+                    <span style="font-size: 1.2rem;">❌</span>
                 {% endif %}
             </td>
             <td>
-                <button class="btn btn-sm btn-primary btn-edit">Edit</button>
-                <button class="btn btn-sm btn-success btn-save d-none">Save</button>
-                <button class="btn btn-sm btn-secondary btn-cancel d-none">Cancel</button>
-                <button class="btn btn-sm btn-info btn-send-email">Email</button>
-                <button class="btn btn-sm btn-danger btn-delete">Delete</button>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <button class="btn btn-sm btn-primary btn-edit">✏️ Edit</button>
+                    <button class="btn btn-sm btn-success btn-save d-none">💾 Save</button>
+                    <button class="btn btn-sm btn-secondary btn-cancel d-none">❌ Cancel</button>
+                    <button class="btn btn-sm btn-info btn-send-email">📧 Email</button>
+                    <button class="btn btn-sm btn-danger btn-delete">🗑️ Delete</button>
+                </div>
             </td>
         </tr>
     {% endfor %}
     <tr class="add-row">
         <td colspan="9">
-            <button class="btn btn-sm btn-primary btn-show-add-form">Add Player</button>
+            <button class="btn btn-primary btn-show-add-form">➕ Add New Player</button>
         </td>
     </tr>
     <tr class="add-form-row d-none">
@@ -377,7 +734,7 @@
         {% if waiting_room_players %}
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="tab-waiting-room" data-bs-toggle="pill" data-bs-target="#pane-waiting-room" type="button" role="tab">
-                    <span class="waiting-room-badge" style="background-color: #ff9800;">{{ waiting_room_players|length }}</span> Waiting Room
+                    <span class="waiting-room-badge">{{ waiting_room_players|length }}</span> Waiting Room
                 </button>
             </li>
         {% endif %}
@@ -403,71 +760,77 @@
                 <div class="alert alert-warning">
                     <strong>⚠️ Waiting Room:</strong> These players were imported from emails. Please assign their birth year and division to move them into the main roster.
                 </div>
-                <table class="table table-bordered align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Lock</th>
-                            <th>Name</th>
-                            <th>Birth Year</th>
-                            <th>Sports</th>
-                            <th>Division</th>
-                            <th>Jersey #</th>
-                            <th>Parent Email</th>
-                            <th>Email Sent</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody data-group="waiting-room">
-                        {{ player_table_rows(waiting_room_players, 'waiting-room') }}
-                    </tbody>
-                </table>
+                <div class="table-container">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>🔒 Lock</th>
+                                <th>Name</th>
+                                <th>Birth Year</th>
+                                <th>Sports</th>
+                                <th>Division</th>
+                                <th>Jersey #</th>
+                                <th>Parent Email</th>
+                                <th>Email Sent</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody data-group="waiting-room">
+                            {{ player_table_rows(waiting_room_players, 'waiting-room') }}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         {% endif %}
         
         {% for group in group_list %}
             {% set players = players_by_group[group] %}
             <div class="tab-pane fade {% if loop.first and not waiting_room_players %}show active{% endif %}" id="pane-{{ group }}" role="tabpanel">
-                <table class="table table-bordered align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Lock</th>
-                            <th>Name</th>
-                            <th>Birth Year</th>
-                            <th>Sports</th>
-                            <th>Division</th>
-                            <th>Jersey #</th>
-                            <th>Parent Email</th>
-                            <th>Email Sent</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody data-group="{{ group }}">
-                        {{ player_table_rows(players, group) }}
-                    </tbody>
-                </table>
+                <div class="table-container">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>🔒 Lock</th>
+                                <th>Name</th>
+                                <th>Birth Year</th>
+                                <th>Sports</th>
+                                <th>Division</th>
+                                <th>Jersey #</th>
+                                <th>Parent Email</th>
+                                <th>Email Sent</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody data-group="{{ group }}">
+                            {{ player_table_rows(players, group) }}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         {% endfor %}
         
         {% if unassigned_players %}
             <div class="tab-pane fade" id="pane-unassigned" role="tabpanel">
-                <table class="table table-bordered align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Lock</th>
-                            <th>Name</th>
-                            <th>Birth Year</th>
-                            <th>Sports</th>
-                            <th>Division</th>
-                            <th>Jersey #</th>
-                            <th>Parent Email</th>
-                            <th>Email Sent</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody data-group="">
-                        {{ player_table_rows(unassigned_players, '') }}
-                    </tbody>
-                </table>
+                <div class="table-container">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>🔒 Lock</th>
+                                <th>Name</th>
+                                <th>Birth Year</th>
+                                <th>Sports</th>
+                                <th>Division</th>
+                                <th>Jersey #</th>
+                                <th>Parent Email</th>
+                                <th>Email Sent</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody data-group="">
+                            {{ player_table_rows(unassigned_players, '') }}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         {% endif %}
     </div>
@@ -478,7 +841,7 @@
         {% if waiting_room_players %}
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="tab-waiting-room" data-bs-toggle="pill" data-bs-target="#pane-waiting-room" type="button" role="tab">
-                    <span class="waiting-room-badge" style="background-color: #ff9800;">{{ waiting_room_players|length }}</span> Waiting Room
+                    <span class="waiting-room-badge">{{ waiting_room_players|length }}</span> Waiting Room
                 </button>
             </li>
         {% endif %}
@@ -504,71 +867,77 @@
                 <div class="alert alert-warning">
                     <strong>⚠️ Waiting Room:</strong> These players were imported from emails. Please assign their birth year and division to move them into the main roster.
                 </div>
-                <table class="table table-bordered align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Lock</th>
-                            <th>Name</th>
-                            <th>Birth Year</th>
-                            <th>Sports</th>
-                            <th>Division</th>
-                            <th>Jersey #</th>
-                            <th>Parent Email</th>
-                            <th>Email Sent</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody data-group="waiting-room">
-                        {{ player_table_rows(waiting_room_players, 'waiting-room') }}
-                    </tbody>
-                </table>
+                <div class="table-container">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>🔒 Lock</th>
+                                <th>Name</th>
+                                <th>Birth Year</th>
+                                <th>Sports</th>
+                                <th>Division</th>
+                                <th>Jersey #</th>
+                                <th>Parent Email</th>
+                                <th>Email Sent</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody data-group="waiting-room">
+                            {{ player_table_rows(waiting_room_players, 'waiting-room') }}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         {% endif %}
         
         {% for group in group_list %}
             {% set players = players_by_group[group] %}
             <div class="tab-pane fade {% if loop.first and not waiting_room_players %}show active{% endif %}" id="pane-{{ group|replace(' ', '_')|replace('/', '_')|lower }}" role="tabpanel">
-                <table class="table table-bordered align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Lock</th>
-                            <th>Name</th>
-                            <th>Birth Year</th>
-                            <th>Sports</th>
-                            <th>Division</th>
-                            <th>Jersey #</th>
-                            <th>Parent Email</th>
-                            <th>Email Sent</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody data-group="{{ group }}">
-                        {{ player_table_rows(players, group) }}
-                    </tbody>
-                </table>
+                <div class="table-container">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>🔒 Lock</th>
+                                <th>Name</th>
+                                <th>Birth Year</th>
+                                <th>Sports</th>
+                                <th>Division</th>
+                                <th>Jersey #</th>
+                                <th>Parent Email</th>
+                                <th>Email Sent</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody data-group="{{ group }}">
+                            {{ player_table_rows(players, group) }}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         {% endfor %}
         
         {% if unassigned_players %}
             <div class="tab-pane fade" id="pane-unassigned" role="tabpanel">
-                <table class="table table-bordered align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Lock</th>
-                            <th>Name</th>
-                            <th>Birth Year</th>
-                            <th>Sports</th>
-                            <th>Division</th>
-                            <th>Jersey #</th>
-                            <th>Parent Email</th>
-                            <th>Email Sent</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody data-group="">
-                        {{ player_table_rows(unassigned_players, '') }}
-                    </tbody>
-                </table>
+                <div class="table-container">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>🔒 Lock</th>
+                                <th>Name</th>
+                                <th>Birth Year</th>
+                                <th>Sports</th>
+                                <th>Division</th>
+                                <th>Jersey #</th>
+                                <th>Parent Email</th>
+                                <th>Email Sent</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody data-group="">
+                            {{ player_table_rows(unassigned_players, '') }}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         {% endif %}
     </div>
@@ -576,7 +945,6 @@
 </div>
 
 <script>
-    // [JavaScript code remains the same as before - search functionality, edit handlers, etc.]
     // Search functionality
     const searchInput = document.getElementById('athlete-search');
     const searchBtn = document.getElementById('search-btn');
@@ -838,7 +1206,7 @@
         const regId = row.dataset.regId;
         const response = await fetch(`/registrations/${regId}/send_email`, { method: "POST" });
         if (response.ok) {
-            row.querySelector(".email-status").textContent = "✅";
+            row.querySelector(".email-status").innerHTML = '<span style="font-size: 1.2rem;">✅</span>';
         } else {
             alert("Failed to send email.");
         }
