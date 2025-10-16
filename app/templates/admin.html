@@ -1,1707 +1,1845 @@
-{% extends "base.html" %}
-{% block title %}POSA Admin{% endblock %}
-{% block content %}
-<style>
-    /* POSA & Pines Brand Color Palette */
-    :root {
-        --posa-navy: #0D1831;
-        --posa-red: #D63638;
-        --pines-green: #3C7939;
-        --pines-light-green: #519D47;
-        --bg-light: #f8f9fa;
-        --bg-card: #ffffff;
-        --text-dark: #0D1831;
-        --text-medium: #2d3748;
-        --text-light: #4a5568;
-        --border-color: #e2e8f0;
-        --shadow-sm: 0 1px 3px rgba(13, 24, 49, 0.08);
-        --shadow-md: 0 4px 12px rgba(13, 24, 49, 0.10);
-        --shadow-lg: 0 8px 24px rgba(13, 24, 49, 0.15);
-    }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POSA Athletes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    body {
-        background: linear-gradient(135deg, #f5f7fa 0%, #e8f5e9 100%);
-        min-height: 100vh;
-    }
-    
-    .container {
-        max-width: 1400px;
-    }
+        :root {
+            --posa-navy: #0D1831;
+            --pines-green: #3C7939;
+            --gray-900: #1f1f1f;
+            --gray-800: #2d2d2d;
+            --gray-700: #4a4a4a;
+            --gray-600: #6b6b6b;
+            --gray-500: #8d8d8d;
+            --gray-400: #b3b3b3;
+            --gray-300: #d1d1d1;
+            --gray-200: #e8e8e8;
+            --gray-100: #f5f5f5;
+            --gray-50: #fafafa;
+            --blue-500: #3b82f6;
+            --red-500: #ef4444;
+            --yellow-500: #f59e0b;
+            --green-500: var(--pines-green);
+        }
 
-    /* Pine tree watermark */
-    body::before {
-        content: "🌲";
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 40rem;
-        opacity: 0.02;
-        z-index: -1;
-        pointer-events: none;
-    }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-900);
+            line-height: 1.5;
+        }
 
-    /* Page Header */
-    .page-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 16px;
-        flex-wrap: wrap;
-        gap: 12px;
-    }
-    .page-title {
-        font-size: 1.5rem;
-        font-weight: 800;
-        color: var(--posa-navy);
-        margin: 0;
-    }
-    .page-title::before {
-        content: "🌲 ";
-        font-size: 1.3rem;
-    }
-    .header-badges {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        flex-wrap: wrap;
-    }
-    .athlete-count-badge {
-        background: linear-gradient(135deg, var(--pines-green) 0%, var(--pines-light-green) 100%);
-        color: white;
-        padding: 8px 16px;
-        border-radius: 16px;
-        font-weight: 700;
-        font-size: 0.95rem;
-        box-shadow: var(--shadow-sm);
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-    }
-    .athlete-count-number {
-        font-size: 1.2rem;
-        font-weight: 800;
-    }
-    .waiting-alert {
-        background: rgba(255, 255, 255, 0.95);
-        border: 2px solid var(--posa-red);
-        padding: 8px 16px;
-        border-radius: 16px;
-        color: #721c24;
-        font-size: 0.85rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        box-shadow: var(--shadow-sm);
-        font-weight: 600;
-    }
-    .waiting-count {
-        font-weight: 800;
-        color: var(--posa-red);
-        font-size: 0.95rem;
-    }
+        /* Layout */
+        .app-container {
+            display: flex;
+            height: 100vh;
+        }
 
-    /* Table Styles */
-    tr.locked td { 
-        color: var(--text-medium); 
-        opacity: 0.7;
-    }
-    tr.locked .btn { 
-        pointer-events: none; 
-        opacity: 0.4; 
-    }
-    tr.duplicate-jersey td { 
-        background-color: #fff4e6 !important; 
-        border-left: 3px solid var(--posa-red);
-    }
-    tr.duplicate-jersey:hover td {
-        background-color: #ffe8cc !important;
-    }
-    tr.waiting-room td { 
-        background-color: #fff9e6 !important; 
-        border-left: 3px solid var(--posa-red);
-    }
-    tr.waiting-room:hover td {
-        background-color: #fff3d6 !important;
-    }
-    
-    /* Sport Tags with Pines green */
-    .sport-tag {
-        display: inline-block;
-        padding: 2px 8px;
-        margin: 1px;
-        border-radius: 10px;
-        font-size: 0.7rem;
-        font-weight: 600;
-        background: linear-gradient(135deg, var(--pines-green) 0%, var(--pines-light-green) 100%);
-        color: white;
-        box-shadow: var(--shadow-sm);
-        transition: transform 0.2s, box-shadow 0.2s;
-        line-height: 1.2;
-    }
-    .sport-tag:hover {
-        transform: translateY(-1px);
-        box-shadow: var(--shadow-md);
-    }
-    
-    /* Sport Checkbox Group */
-    .sport-checkbox-group {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        padding: 6px 0;
-    }
-    .sport-checkbox-item {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        padding: 5px 10px;
-        background: var(--bg-light);
-        border-radius: 6px;
-        transition: background 0.2s;
-    }
-    .sport-checkbox-item:hover {
-        background: #e9ecef;
-    }
-    .sport-checkbox-item input[type="checkbox"] {
-        width: 16px;
-        height: 16px;
-        cursor: pointer;
-    }
-    .sport-checkbox-item label {
-        margin: 0;
-        cursor: pointer;
-        font-size: 0.8rem;
-        color: var(--text-dark);
-    }
-    .edit-sports {
-        display: none;
-    }
-    
-    /* Modern Search Box */
-    .search-box {
-        background: var(--bg-card);
-        padding: 16px;
-        border-radius: 12px;
-        box-shadow: var(--shadow-sm);
-        margin-bottom: 16px;
-        border: 1px solid var(--border-color);
-    }
-    .search-box input {
-        border: 2px solid var(--border-color);
-        border-radius: 8px;
-        padding: 8px 12px;
-        font-size: 0.9rem;
-        transition: all 0.3s;
-    }
-    .search-box input:focus {
-        border-color: var(--pines-green);
-        box-shadow: 0 0 0 3px rgba(60, 121, 57, 0.1);
-        outline: none;
-    }
-    .search-box .btn-primary {
-        padding: 8px 20px;
-        border-radius: 8px;
-        font-weight: 600;
-        background: linear-gradient(135deg, var(--pines-green) 0%, var(--pines-light-green) 100%);
-        border: none;
-        box-shadow: var(--shadow-sm);
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .search-box .btn-primary:hover {
-        transform: translateY(-1px);
-        box-shadow: var(--shadow-md);
-    }
-    
-    /* Search Results */
-    .search-results {
-        display: none;
-        background: var(--bg-card);
-        padding: 16px;
-        border-radius: 12px;
-        box-shadow: var(--shadow-sm);
-        margin-bottom: 16px;
-        border: 1px solid var(--border-color);
-    }
-    .search-results.active {
-        display: block;
-    }
-    .search-results h4 {
-        color: var(--text-dark);
-        font-weight: 700;
-        margin-bottom: 12px;
-        font-size: 1.1rem;
-    }
-    .highlight-match {
-        background: linear-gradient(90deg, rgba(60, 121, 57, 0.08) 0%, rgba(81, 157, 71, 0.05) 100%) !important;
-        animation: highlightPulse 2s ease-in-out infinite;
-    }
-    @keyframes highlightPulse {
-        0%, 100% { background: linear-gradient(90deg, rgba(60, 121, 57, 0.08) 0%, rgba(81, 157, 71, 0.05) 100%); }
-        50% { background: linear-gradient(90deg, rgba(60, 121, 57, 0.12) 0%, rgba(81, 157, 71, 0.08) 100%); }
-    }
-    .clear-search {
-        cursor: pointer;
-        color: var(--posa-red);
-        font-weight: 600;
-        margin-left: 10px;
-        padding: 6px 12px;
-        border-radius: 6px;
-        transition: background 0.2s;
-        font-size: 0.85rem;
-    }
-    .clear-search:hover {
-        background: #fee;
-    }
-    
-    /* View Toggle */
-    .view-toggle {
-        margin-bottom: 16px;
-    }
-    .view-toggle-row {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-        flex-wrap: wrap;
-    }
-    .view-toggle .btn-group {
-        background: var(--bg-card);
-        padding: 4px;
-        border-radius: 10px;
-        box-shadow: var(--shadow-sm);
-        border: 1px solid var(--border-color);
-    }
-    .view-toggle .btn {
-        padding: 8px 20px;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        border: none;
-        transition: all 0.3s ease;
-    }
-    .view-toggle .btn-outline-primary {
-        background: transparent;
-        color: var(--text-medium);
-    }
-    .view-toggle .btn-outline-primary:hover {
-        background: var(--bg-light);
-        color: var(--text-dark);
-    }
-    .view-toggle .btn-primary {
-        background: linear-gradient(135deg, var(--pines-green) 0%, var(--pines-light-green) 100%);
-        color: white;
-        box-shadow: var(--shadow-sm);
-    }
-    
-    /* Sport Filter */
-    .sport-filter {
-        background: var(--bg-card);
-        padding: 4px 8px;
-        border-radius: 10px;
-        box-shadow: var(--shadow-sm);
-        border: 1px solid var(--border-color);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex: 1;
-        min-width: 0;
-    }
-    .sport-filter-label {
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: var(--text-medium);
-        white-space: nowrap;
-    }
-    .sport-filter-pills {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px;
-    }
-    .sport-filter-pill {
-        padding: 6px 12px;
-        border-radius: 16px;
-        font-weight: 600;
-        font-size: 0.75rem;
-        border: 2px solid var(--border-color);
-        background: white;
-        color: var(--text-dark);
-        cursor: pointer;
-        transition: all 0.3s ease;
-        user-select: none;
-        white-space: nowrap;
-        position: relative;
-    }
-    .sport-filter-pill:hover {
-        border-color: var(--pines-green);
-        background: rgba(60, 121, 57, 0.05);
-        transform: translateY(-1px);
-    }
-    .sport-filter-pill.active {
-        background: linear-gradient(135deg, var(--pines-green) 0%, var(--pines-light-green) 100%);
-        color: white;
-        border-color: transparent;
-        box-shadow: var(--shadow-sm);
-    }
-    .sport-filter-pill.all {
-        background: linear-gradient(135deg, var(--posa-navy) 0%, #1a2845 100%);
-        color: white;
-        border-color: transparent;
-    }
-    .sport-filter-pill.all.active {
-        background: linear-gradient(135deg, var(--posa-navy) 0%, #1a2845 100%);
-    }
-    
-    /* Navigation Pills with Counts */
-    .nav-pills {
-        background: var(--bg-card);
-        padding: 6px;
-        border-radius: 12px;
-        box-shadow: var(--shadow-sm);
-        margin-bottom: 16px;
-        border: 1px solid var(--border-color);
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-    }
-    .nav-pills .nav-link {
-        padding: 8px 16px;
-        border-radius: 20px;
-        font-weight: 700;
-        font-size: 0.85rem;
-        color: var(--text-dark);
-        border: 2px solid var(--border-color);
-        transition: all 0.3s ease;
-        background: white;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .nav-pills .nav-link:hover {
-        border-color: var(--pines-green);
-        background: rgba(60, 121, 57, 0.05);
-        transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(60, 121, 57, 0.2);
-    }
-    .nav-pills .nav-link.active {
-        background: linear-gradient(135deg, var(--pines-green) 0%, var(--pines-light-green) 100%);
-        color: white;
-        border-color: transparent;
-        box-shadow: var(--shadow-sm);
-        transform: translateY(-1px);
-    }
-    .nav-pills .nav-link.active .tab-count {
-        background: rgba(255, 255, 255, 0.3);
-        color: white;
-    }
-    .tab-count {
-        background: linear-gradient(135deg, var(--pines-green) 0%, var(--pines-light-green) 100%);
-        color: white;
-        padding: 3px 10px;
-        border-radius: 12px;
-        font-weight: 800;
-        min-width: 28px;
-        text-align: center;
-        font-size: 0.8rem;
-        box-shadow: var(--shadow-sm);
-    }
-    
-    /* Modern Tables */
-    .table-container {
-        background: var(--bg-card);
-        border-radius: 12px;
-        overflow-x: auto;
-        box-shadow: var(--shadow-sm);
-        border: 1px solid var(--border-color);
-        position: relative;
-    }
-    .table-container::-webkit-scrollbar {
-        height: 8px;
-    }
-    .table-container::-webkit-scrollbar-track {
-        background: #f1f3f5;
-        border-radius: 4px;
-    }
-    .table-container::-webkit-scrollbar-thumb {
-        background: linear-gradient(135deg, var(--pines-green) 0%, var(--pines-light-green) 100%);
-        border-radius: 4px;
-    }
-    .table-container::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(135deg, #2e5e2d 0%, #3d803b 100%);
-    }
-    .table {
-        margin: 0;
-    }
-    .table thead {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    }
-    .table thead th {
-        font-weight: 700;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-        color: var(--text-dark);
-        padding: 6px 6px;
-        border-bottom: 2px solid var(--border-color);
-        white-space: nowrap;
-    }
-    .table tbody td {
-        padding: 4px 6px;
-        vertical-align: middle;
-        border-bottom: 1px solid #f1f3f5;
-        color: var(--text-dark);
-        font-size: 0.875rem;
-    }
-    .table tbody td:last-child {
-        white-space: nowrap;
-        width: 1%;
-        padding: 4px 6px;
-        vertical-align: middle;
-    }
-    .table tbody td:last-child > div {
-        display: flex;
-        gap: 2px;
-        flex-wrap: nowrap;
-        align-items: center;
-    }
-    .table tbody tr {
-        transition: background 0.2s ease;
-    }
-    .table tbody tr:nth-child(even):not(.add-row):not(.add-form-row) {
-        background-color: #f8f9fa;
-    }
-    .table tbody tr:hover:not(.add-row):not(.add-form-row) {
-        background: linear-gradient(90deg, rgba(60, 121, 57, 0.05) 0%, rgba(81, 157, 71, 0.03) 100%) !important;
-    }
-    .table tbody tr:last-child td {
-        border-bottom: none;
-    }
-    
-    /* Modern Buttons with POSA/Pines colors */
-    .btn {
-        border-radius: 6px;
-        font-weight: 600;
-        font-size: 0.75rem;
-        padding: 4px 8px;
-        transition: all 0.3s ease;
-        border: none;
-        line-height: 1;
-    }
-    .btn-sm {
-        padding: 3px 6px;
-        font-size: 0.7rem;
-    }
-    .btn-primary {
-        background: linear-gradient(135deg, var(--pines-green) 0%, var(--pines-light-green) 100%);
-        color: white;
-        box-shadow: var(--shadow-sm);
-    }
-    .btn-primary:hover {
-        background: linear-gradient(135deg, #2e5e2d 0%, #3d803b 100%);
-        transform: translateY(-1px);
-        box-shadow: var(--shadow-md);
-    }
-    .btn-success {
-        background: linear-gradient(135deg, var(--pines-green) 0%, var(--pines-light-green) 100%);
-        color: white;
-        box-shadow: var(--shadow-sm);
-    }
-    .btn-success:hover {
-        transform: translateY(-1px);
-        box-shadow: var(--shadow-md);
-    }
-    .btn-info {
-        background: linear-gradient(135deg, #4dabf7 0%, #339af0 100%);
-        color: white;
-        box-shadow: var(--shadow-sm);
-    }
-    .btn-info:hover {
-        transform: translateY(-1px);
-        box-shadow: var(--shadow-md);
-    }
-    .btn-danger {
-        background: linear-gradient(135deg, var(--posa-red) 0%, #c02c2e 100%);
-        color: white;
-        box-shadow: var(--shadow-sm);
-    }
-    .btn-danger:hover {
-        background: linear-gradient(135deg, #b82a2c 0%, #a32426 100%);
-        transform: translateY(-1px);
-        box-shadow: var(--shadow-md);
-    }
-    .btn-secondary {
-        background: linear-gradient(135deg, #868e96 0%, #6c757d 100%);
-        color: white;
-        box-shadow: var(--shadow-sm);
-    }
-    .btn-secondary:hover {
-        transform: translateY(-1px);
-        box-shadow: var(--shadow-md);
-    }
-    
-    /* Form Controls */
-    .form-control, .form-select {
-        border: 2px solid var(--border-color);
-        border-radius: 6px;
-        padding: 4px 8px;
-        font-size: 0.8rem;
-        transition: all 0.3s;
-        line-height: 1.2;
-    }
-    .form-control:focus, .form-select:focus {
-        border-color: var(--pines-green);
-        box-shadow: 0 0 0 3px rgba(60, 121, 57, 0.1);
-        outline: none;
-    }
-    
-    /* Custom Lock Toggle Switch */
-    .lock-toggle-wrapper {
-        display: inline-block;
-        position: relative;
-    }
-    .lock-toggle {
-        position: relative;
-        width: 40px;
-        height: 22px;
-        -webkit-appearance: none;
-        appearance: none;
-        background: #ccc;
-        outline: none;
-        border-radius: 22px;
-        cursor: pointer;
-        transition: all 0.3s;
-        border: 2px solid #ddd;
-    }
-    .lock-toggle:checked {
-        background: var(--pines-green);
-        border-color: var(--pines-green);
-    }
-    .lock-toggle::before {
-        content: '';
-        position: absolute;
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        top: 1px;
-        left: 1px;
-        background: white;
-        transition: all 0.3s;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-    .lock-toggle:checked::before {
-        transform: translateX(18px);
-    }
-    .lock-toggle:focus {
-        box-shadow: 0 0 0 3px rgba(60, 121, 57, 0.2);
-    }
-    
-    /* Alert Styles */
-    .alert {
-        border-radius: 10px;
-        padding: 12px 16px;
-        border: none;
-        box-shadow: var(--shadow-sm);
-        font-weight: 500;
-        font-size: 0.9rem;
-    }
-    .alert-warning {
-        background: linear-gradient(135deg, #fff9e6 0%, #fff4d6 100%);
-        color: #856404;
-        border-left: 4px solid var(--posa-red);
-    }
-    
-    /* Tab Content */
-    .tab-content {
-        margin-top: 16px;
-    }
-    .tab-pane {
-        animation: fadeIn 0.3s ease;
-    }
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    
-    /* Add Row Button */
-    .add-row td {
-        padding: 8px !important;
-        text-align: center;
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    }
-    .add-row .btn-primary {
-        padding: 8px 20px;
-        font-size: 0.85rem;
-    }
-    
-    /* Mobile Responsive */
-    @media (max-width: 768px) {
-        .page-header {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-        
-        .page-title {
-            font-size: 1.25rem;
-        }
-        
-        .header-badges {
-            width: 100%;
-            justify-content: flex-start;
-        }
-        
-        .athlete-count-badge,
-        .waiting-alert {
-            font-size: 0.8rem;
-            padding: 6px 12px;
-        }
-        
-        .athlete-count-number {
-            font-size: 1rem;
-        }
-        
-        .search-box {
-            padding: 12px;
-        }
-        
-        .search-box .row {
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: white;
+            border-right: 1px solid var(--gray-200);
+            display: flex;
             flex-direction: column;
         }
-        
-        .search-box .col-md-8,
-        .search-box .col-md-4 {
-            width: 100%;
-            margin-bottom: 8px;
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--gray-200);
         }
-        
-        .search-box .btn-primary {
-            width: 100%;
+
+        .logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--posa-navy);
         }
-        
-        .view-toggle .btn-group {
-            width: 100%;
+
+        .logo::before {
+            content: "🌲 ";
         }
-        
-        .view-toggle-row {
-            flex-direction: column;
-        }
-        
-        .view-toggle .btn {
+
+        .sidebar-nav {
             flex: 1;
-            font-size: 0.8rem;
-            padding: 6px 12px;
+            padding: 12px;
+            overflow-y: auto;
         }
-        
-        .sport-filter {
-            padding: 8px 10px;
-            width: 100%;
+
+        .nav-section {
+            margin-bottom: 24px;
         }
-        
-        .sport-filter-label {
-            font-size: 0.7rem;
+
+        .nav-section-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--gray-500);
+            padding: 8px 12px;
+            letter-spacing: 0.5px;
         }
-        
-        .sport-filter-pills {
-            gap: 4px;
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 6px;
+            color: var(--gray-700);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.15s ease;
+            cursor: pointer;
+            position: relative;
         }
-        
-        .sport-filter-pill {
-            font-size: 0.65rem;
-            padding: 5px 8px;
+
+        .nav-item:hover {
+            background: var(--gray-100);
+            color: var(--gray-900);
         }
-        
-        .nav-pills {
-            padding: 4px;
+
+        .nav-item.active {
+            background: var(--pines-green);
+            color: white;
         }
-        
-        .nav-pills .nav-link {
-            font-size: 0.75rem;
-            padding: 6px 12px;
+
+        .nav-item .icon {
+            margin-right: 10px;
+            font-size: 16px;
+        }
+
+        .nav-item .badge {
+            margin-left: auto;
+            background: var(--red-500);
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .user-menu:hover {
+            background: var(--gray-100);
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--pines-green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .user-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .page-header {
+            background: white;
+            border-bottom: 1px solid var(--gray-200);
+            padding: 16px 32px;
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
             gap: 6px;
         }
-        
-        .tab-count {
-            font-size: 0.7rem;
-            padding: 2px 8px;
-            min-width: 24px;
-        }
-        
-        .table-container {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-        
-        .table-container::after {
-            content: '👉 Scroll to see more';
-            position: sticky;
-            right: 0;
-            bottom: 10px;
-            display: block;
-            background: linear-gradient(90deg, transparent, var(--pines-green));
+
+        .btn-primary {
+            background: var(--pines-green);
             color: white;
-            padding: 8px 12px;
-            font-size: 0.7rem;
-            border-radius: 8px 0 0 8px;
+        }
+
+        .btn-primary:hover {
+            background: #2e5e2d;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--gray-700);
+            border: 1px solid var(--gray-300);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-400);
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 280px;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 8px 12px 8px 36px;
+            border: 1px solid var(--gray-300);
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.15s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--pines-green);
+            box-shadow: 0 0 0 3px rgba(60, 121, 57, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-400);
             pointer-events: none;
-            float: right;
-            margin-top: -40px;
-            opacity: 0.9;
         }
-        
-        .table {
-            min-width: 900px;
+
+        .filter-group {
+            display: flex;
+            gap: 8px;
         }
-        
-        .table thead th {
-            font-size: 0.7rem;
-            padding: 6px 4px;
+
+        .filter-btn {
+            padding: 8px 12px;
+            border: 1px solid var(--gray-300);
+            background: white;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--gray-700);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
-        
-        .table tbody td {
-            font-size: 0.8rem;
-            padding: 4px 4px;
+
+        .filter-btn:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-400);
         }
-        
-        .btn {
-            font-size: 0.65rem;
-            padding: 3px 6px;
+
+        .filter-btn.active {
+            background: var(--pines-green);
+            color: white;
+            border-color: var(--pines-green);
         }
-        
-        .sport-tag {
-            font-size: 0.65rem;
+
+        .filter-badge {
+            background: var(--gray-200);
+            color: var(--gray-700);
             padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
         }
-        
-        .lock-toggle {
-            width: 36px;
+
+        .filter-btn.active .filter-badge {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            gap: 16px;
+            padding: 16px 32px;
+            background: white;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .stat-card {
+            flex: 1;
+            padding: 16px;
+            background: var(--gray-50);
+            border-radius: 8px;
+            border: 1px solid var(--gray-200);
+        }
+
+        .stat-card.alert {
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .stat-card.alert .stat-value {
+            color: var(--red-500);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--gray-600);
+            margin-top: 4px;
+        }
+
+        /* Table Container */
+        .table-container {
+            flex: 1;
+            overflow: auto;
+            padding: 0 32px 32px;
+            background: var(--gray-50);
+        }
+
+        /* Table */
+        .data-table {
+            width: 100%;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid var(--gray-200);
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 16px;
+        }
+
+        .data-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .data-table th {
+            background: var(--gray-50);
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .data-table th:first-child {
+            border-radius: 8px 0 0 0;
+            padding-left: 24px;
+        }
+
+        .data-table th:last-child {
+            border-radius: 0 8px 0 0;
+        }
+
+        .data-table tbody tr {
+            border-bottom: 1px solid var(--gray-200);
+            transition: background 0.1s ease;
+        }
+
+        .data-table tbody tr:hover {
+            background: var(--gray-50);
+        }
+
+        .data-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .data-table td {
+            padding: 16px;
+            font-size: 14px;
+            color: var(--gray-900);
+        }
+
+        .data-table td:first-child {
+            padding-left: 24px;
+        }
+
+        /* Checkbox Column */
+        .checkbox-cell {
+            width: 40px;
+            padding-right: 0 !important;
+        }
+
+        .checkbox-wrapper {
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+
+        .data-table tbody tr:hover .checkbox-wrapper {
+            opacity: 1;
+        }
+
+        .checkbox-wrapper.checked {
+            opacity: 1;
+        }
+
+        .checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--gray-300);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            appearance: none;
+            position: relative;
+        }
+
+        .checkbox:checked {
+            background: var(--pines-green);
+            border-color: var(--pines-green);
+        }
+
+        .checkbox:checked::after {
+            content: "✓";
+            position: absolute;
+            color: white;
+            font-size: 12px;
+            top: -2px;
+            left: 2px;
+        }
+
+        /* Player Info */
+        .player-name {
+            font-weight: 600;
+            color: var(--gray-900);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .player-email {
+            font-size: 13px;
+            color: var(--gray-500);
+            margin-top: 2px;
+        }
+
+        /* Jersey Number */
+        .jersey-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            background: var(--gray-100);
+            border: 2px solid var(--gray-300);
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--gray-900);
+        }
+
+        .jersey-badge.duplicate {
+            background: #fef2f2;
+            border-color: var(--red-500);
+            color: var(--red-500);
+        }
+
+        /* Sport Tags */
+        .sport-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .sport-tag {
+            padding: 4px 8px;
+            background: var(--gray-100);
+            color: var(--gray-700);
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-badge.sent {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .status-badge.pending {
+            background: #fef3c7;
+            color: #a16207;
+        }
+
+        .status-badge.waiting {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        /* Actions */
+        .row-actions {
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            display: flex;
+            gap: 4px;
+        }
+
+        .data-table tbody tr:hover .row-actions {
+            opacity: 1;
+        }
+
+        .action-btn {
+            padding: 6px 10px;
+            background: white;
+            border: 1px solid var(--gray-300);
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            color: var(--gray-700);
+        }
+
+        .action-btn:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-400);
+        }
+
+        /* Bulk Action Bar */
+        .bulk-action-bar {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--gray-900);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            display: none;
+            align-items: center;
+            gap: 16px;
+            z-index: 100;
+        }
+
+        .bulk-action-bar.active {
+            display: flex;
+        }
+
+        .bulk-count {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .bulk-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .bulk-btn {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .bulk-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .bulk-btn-primary {
+            background: var(--pines-green);
+            border-color: var(--pines-green);
+        }
+
+        .bulk-btn-primary:hover {
+            background: #2e5e2d;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .empty-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+
+        .empty-description {
+            font-size: 14px;
+            color: var(--gray-500);
+            margin-bottom: 24px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+
+            .page-header {
+                padding: 12px 16px;
+            }
+
+            .stats-bar {
+                padding: 12px 16px;
+                flex-wrap: wrap;
+            }
+
+            .table-container {
+                padding: 0 16px 16px;
+            }
+
+            .toolbar {
+                flex-direction: column;
+            }
+
+            .search-box {
+                width: 100%;
+            }
+
+            .detail-sidebar {
+                position: fixed !important;
+                right: 0;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+        }
+
+        /* Detail Sidebar */
+        .detail-sidebar {
+            position: fixed;
+            top: 0;
+            right: -380px;
+            width: 380px;
+            height: 100vh;
+            background: white;
+            border-left: 1px solid var(--gray-200);
+            box-shadow: -4px 0 24px rgba(0, 0, 0, 0.1);
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .detail-sidebar.open {
+            right: 0;
+        }
+
+        .detail-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .detail-tabs {
+            display: flex;
+            gap: 2px;
+        }
+
+        .detail-tab {
+            padding: 6px 12px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-600);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .detail-tab:hover {
+            background: var(--gray-100);
+            color: var(--gray-900);
+        }
+
+        .detail-tab.active {
+            background: var(--gray-100);
+            color: var(--gray-900);
+        }
+
+        .close-detail {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 18px;
+            color: var(--gray-500);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            padding: 0;
+        }
+
+        .close-detail:hover {
+            background: var(--gray-100);
+            color: var(--gray-900);
+        }
+
+        .detail-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        .detail-section {
+            padding: 20px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .detail-section:last-child {
+            border-bottom: none;
+        }
+
+        .detail-section-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--gray-500);
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .player-info-compact {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .player-avatar-small {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--pines-green), var(--pines-green));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .player-info-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .player-name-compact {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 2px;
+        }
+
+        .player-email-compact {
+            font-size: 13px;
+            color: var(--gray-500);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            font-size: 13px;
+        }
+
+        .info-row:first-child {
+            padding-top: 0;
+        }
+
+        .info-row:last-child {
+            padding-bottom: 0;
+        }
+
+        .info-label {
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: var(--gray-900);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .action-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .action-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-decoration: none;
+            color: var(--gray-900);
+        }
+
+        .action-item:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-300);
+        }
+
+        .action-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            background: var(--gray-100);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 16px;
+        }
+
+        .action-text {
+            flex: 1;
+        }
+
+        .action-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 2px;
+        }
+
+        .action-description {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .source-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .source-item {
+            display: flex;
+            align-items: start;
+            padding: 10px;
+            background: var(--gray-50);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .source-item:hover {
+            background: var(--gray-100);
+        }
+
+        .source-icon {
+            width: 20px;
             height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-size: 14px;
+            flex-shrink: 0;
         }
-        .lock-toggle::before {
-            width: 14px;
-            height: 14px;
-        }
-        .lock-toggle:checked::before {
-            transform: translateX(16px);
-        }
-    }
-    
-    @media (max-width: 576px) {
-        .page-title {
-            font-size: 1.1rem;
-        }
-        
-        .athlete-count-badge {
-            font-size: 0.75rem;
-        }
-        
-        .athlete-count-number {
-            font-size: 0.9rem;
-        }
-        
-        .nav-pills .nav-link {
-            font-size: 0.7rem;
-            padding: 5px 10px;
-        }
-        
-        .table {
-            min-width: 800px;
-        }
-    }
-</style>
 
-<!-- Page Header -->
-<div class="page-header">
-    <h1 class="page-title">Athletes Dashboard</h1>
-    <div class="header-badges">
-        <div class="athlete-count-badge">
-            <span>Total Athletes:</span>
-            <span class="athlete-count-number">{{ total_players }}</span>
-        </div>
-        {% if waiting_room_players %}
-        <div class="waiting-alert">
-            <span class="waiting-count">⚠️ {{ waiting_room_players|length }}</span>
-            <span>in Waiting Room</span>
-        </div>
-        {% endif %}
-    </div>
-</div>
+        .source-content {
+            flex: 1;
+        }
 
-<!-- Search Box -->
-<div class="search-box">
-    <div class="row">
-        <div class="col-md-8">
-            <input type="text" id="athlete-search" class="form-control" placeholder="🔍 Search athletes by name, email, jersey number, or sport...">
-        </div>
-        <div class="col-md-4">
-            <button id="search-btn" class="btn btn-primary">Search</button>
-            <span id="clear-search" class="clear-search d-none">✖ Clear</span>
-        </div>
-    </div>
-</div>
+        .source-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 2px;
+        }
 
-<!-- Search Results -->
-<div id="search-results" class="search-results">
-    <h4>🔍 Search Results <span id="search-count"></span></h4>
-    <div class="table-container">
-        <table class="table align-middle">
-            <thead>
-                <tr>
-                    <th>🔒 Lock</th>
-                    <th>Name</th>
-                    <th>Birth Year</th>
-                    <th>Sports</th>
-                    <th>Division</th>
-                    <th>Jersey #</th>
-                    <th>Parent Email</th>
-                    <th>Email Sent</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="search-results-body">
-            </tbody>
-        </table>
-    </div>
-</div>
+        .source-description {
+            font-size: 12px;
+            color: var(--gray-600);
+            line-height: 1.4;
+        }
 
-<!-- View Toggle and Sport Filter -->
-<div class="view-toggle" id="view-toggle">
-    <div class="view-toggle-row">
-        <div class="btn-group" role="group">
-            <a href="/admin?view=birthyear" class="btn {% if view == 'birthyear' %}btn-primary{% else %}btn-outline-primary{% endif %}">🎂 Birth Year View</a>
-            <a href="/admin?view=division" class="btn {% if view == 'division' %}btn-primary{% else %}btn-outline-primary{% endif %}">📊 Division View</a>
-        </div>
-        
-        <div class="sport-filter" id="sport-filter">
-            <span class="sport-filter-label">Sport:</span>
-            <div class="sport-filter-pills">
-                <div class="sport-filter-pill all active" data-sport="all" title="All Sports">🌲 All</div>
-                <div class="sport-filter-pill" data-sport="soccer" title="Soccer">⚽</div>
-                <div class="sport-filter-pill" data-sport="basketball" title="Basketball">🏀</div>
-                <div class="sport-filter-pill" data-sport="baseball" title="Baseball">⚾</div>
-                <div class="sport-filter-pill" data-sport="softball" title="Softball">🥎</div>
-                <div class="sport-filter-pill" data-sport="volleyball" title="Volleyball">🏐</div>
-                <div class="sport-filter-pill" data-sport="flag" title="Flag Football">🏈</div>
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 12px;
+        }
+
+        .timeline-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--gray-100);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .timeline-icon.success {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .timeline-icon.info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .timeline-content {
+            flex: 1;
+            padding-top: 4px;
+        }
+
+        .timeline-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 2px;
+        }
+
+        .timeline-description {
+            font-size: 12px;
+            color: var(--gray-600);
+            margin-bottom: 4px;
+        }
+
+        .timeline-time {
+            font-size: 11px;
+            color: var(--gray-500);
+        }
+
+        .suggestion-card {
+            padding: 12px;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .suggestion-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .suggestion-icon {
+            font-size: 16px;
+        }
+
+        .suggestion-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #0c4a6e;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .suggestion-text {
+            font-size: 13px;
+            color: #0c4a6e;
+            line-height: 1.5;
+        }
+
+        .see-all-link {
+            display: inline-block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--pines-green);
+            margin-top: 8px;
+            cursor: pointer;
+        }
+
+        .see-all-link:hover {
+            color: #2e5e2d;
+        }
+
+        .related-athletes {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .related-athlete {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background: var(--gray-50);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .related-athlete:hover {
+            background: var(--gray-100);
+        }
+
+        .related-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--gray-300);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-700);
+        }
+
+        .related-info {
+            flex: 1;
+        }
+
+        .related-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .related-meta {
+            font-size: 11px;
+            color: var(--gray-500);
+        }
+
+        /* Overlay */
+        .detail-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 199;
+        }
+
+        .detail-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Clickable rows */
+        .data-table tbody tr {
+            cursor: pointer;
+        }
+
+        .data-table tbody tr.selected {
+            background: #f0f9ff !important;
+            border-left: 3px solid var(--pines-green);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">POSA Sports</div>
             </div>
-        </div>
-    </div>
-</div>
-
-{% macro player_table_rows(players, group) %}
-    {% for player in players %}
-        <tr data-player-id="{{ player.id }}" data-reg-id="{{ player.registration_id }}" 
-            data-search-name="{{ player.full_name|lower }}" 
-            data-search-email="{{ player.parent_email|lower }}" 
-            data-search-jersey="{{ player.jersey_number }}"
-            data-search-sports="{{ player.sports|join(',')|lower }}"
-            data-sports="{{ player.sports|join(',') }}"
-            class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %} {% if player.division == 'Waiting Room' %}waiting-room{% endif %}">
-            <td>
-                <input type="checkbox" class="lock-toggle" {% if player.locked %}checked{% endif %}>
-            </td>
-            <td><span class="full-name">{{ player.full_name }}</span><input class="form-control d-none edit-full-name" value="{{ player.full_name }}"></td>
-            <td>
-                <span class="birth-year">{{ player.birth_year or '-' }}</span>
-                <select class="form-select d-none edit-birth-year">
-                    <option value="">-</option>
-                    {% for year in range(2005, 2026) %}
-                        <option value="{{ year }}" {% if player.birth_year == year %}selected{% endif %}>{{ year }}</option>
-                    {% endfor %}
-                </select>
-            </td>
-            <td>
-                <div class="view-sports">
-                    {% for sport in player.sports %}
-                        <span class="sport-tag">{{ sport }}</span>
-                    {% endfor %}
+            
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main</div>
+                    <a href="#" class="nav-item active">
+                        <span class="icon">👥</span>
+                        <span>All Athletes</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <span class="icon">⏳</span>
+                        <span>Waiting Room</span>
+                        <span class="badge">3</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <span class="icon">📧</span>
+                        <span>Email Queue</span>
+                    </a>
                 </div>
-                <div class="edit-sports">
-                    <div class="sport-checkbox-group">
-                        <div class="sport-checkbox-item">
-                            <input type="checkbox" class="sport-checkbox" value="soccer" id="soccer-{{ player.id }}" {% if 'soccer' in player.sports %}checked{% endif %}>
-                            <label for="soccer-{{ player.id }}">⚽ Soccer</label>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">By Division</div>
+                    <a href="#" class="nav-item">
+                        <span class="icon">U4</span>
+                        <span>Under 4</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <span class="icon">U6</span>
+                        <span>Under 6</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <span class="icon">U8</span>
+                        <span>Under 8</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <span class="icon">U10</span>
+                        <span>Under 10</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <span class="icon">🌲</span>
+                        <span>Pines HS Club</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Settings</div>
+                    <a href="#" class="nav-item">
+                        <span class="icon">✉️</span>
+                        <span>Email Templates</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <span class="icon">👤</span>
+                        <span>User Management</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-menu">
+                    <div class="user-avatar">TC</div>
+                    <div class="user-info">
+                        <div class="user-name">Tim Chilcott</div>
+                        <div class="user-role">Admin</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="page-header">
+                <div class="header-top">
+                    <h1 class="page-title">Athletes</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary">
+                            <span>📤</span>
+                            <span>Export</span>
+                        </button>
+                        <button class="btn btn-primary" onclick="alert('Add player modal would open')">
+                            <span>➕</span>
+                            <span>Add Athlete</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Toolbar -->
+                <div class="toolbar">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" class="search-input" placeholder="Search athletes by name, email, or sport...">
+                    </div>
+                    
+                    <div class="filter-group">
+                        <button class="filter-btn active">
+                            <span>All Sports</span>
+                            <span class="filter-badge">47</span>
+                        </button>
+                        <button class="filter-btn">
+                            <span>⚽ Soccer</span>
+                            <span class="filter-badge">24</span>
+                        </button>
+                        <button class="filter-btn">
+                            <span>🏀 Basketball</span>
+                            <span class="filter-badge">15</span>
+                        </button>
+                        <button class="filter-btn">
+                            <span>🏐 Volleyball</span>
+                            <span class="filter-badge">8</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Stats -->
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-value">47</div>
+                    <div class="stat-label">Total Athletes</div>
+                </div>
+                <div class="stat-card alert">
+                    <div class="stat-value">3</div>
+                    <div class="stat-label">Waiting Room</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">5</div>
+                    <div class="stat-label">Emails Pending</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">2</div>
+                    <div class="stat-label">Duplicate Jerseys</div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th class="checkbox-cell">
+                                <input type="checkbox" class="checkbox" id="select-all">
+                            </th>
+                            <th>Athlete</th>
+                            <th>Jersey</th>
+                            <th>Birth Year</th>
+                            <th>Sports</th>
+                            <th>Division</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="checkbox-cell">
+                                <div class="checkbox-wrapper">
+                                    <input type="checkbox" class="checkbox row-checkbox">
+                                </div>
+                            </td>
+                            <td>
+                                <div class="player-name">
+                                    Jordan Smith
+                                </div>
+                                <div class="player-email">jordan.parent@example.com</div>
+                            </td>
+                            <td>
+                                <div class="jersey-badge">10</div>
+                            </td>
+                            <td>2012</td>
+                            <td>
+                                <div class="sport-tags">
+                                    <span class="sport-tag">⚽ Soccer</span>
+                                    <span class="sport-tag">🏀 Basketball</span>
+                                </div>
+                            </td>
+                            <td>U12</td>
+                            <td>
+                                <span class="status-badge sent">
+                                    <span>✓</span>
+                                    <span>Email Sent</span>
+                                </span>
+                            </td>
+                            <td>
+                                <div class="row-actions">
+                                    <button class="action-btn" onclick="alert('Edit modal')">Edit</button>
+                                    <button class="action-btn" onclick="alert('Send email')">📧</button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td class="checkbox-cell">
+                                <div class="checkbox-wrapper">
+                                    <input type="checkbox" class="checkbox row-checkbox">
+                                </div>
+                            </td>
+                            <td>
+                                <div class="player-name">
+                                    Taylor Brown
+                                </div>
+                                <div class="player-email">taylor@example.com</div>
+                            </td>
+                            <td>
+                                <div class="jersey-badge">7</div>
+                            </td>
+                            <td>2010</td>
+                            <td>
+                                <div class="sport-tags">
+                                    <span class="sport-tag">⚽ Soccer</span>
+                                </div>
+                            </td>
+                            <td>U14</td>
+                            <td>
+                                <span class="status-badge sent">
+                                    <span>✓</span>
+                                    <span>Email Sent</span>
+                                </span>
+                            </td>
+                            <td>
+                                <div class="row-actions">
+                                    <button class="action-btn">Edit</button>
+                                    <button class="action-btn">📧</button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td class="checkbox-cell">
+                                <div class="checkbox-wrapper">
+                                    <input type="checkbox" class="checkbox row-checkbox">
+                                </div>
+                            </td>
+                            <td>
+                                <div class="player-name">
+                                    Riley Lee
+                                </div>
+                                <div class="player-email">riley@example.com</div>
+                            </td>
+                            <td>
+                                <div class="jersey-badge duplicate">22</div>
+                            </td>
+                            <td>2014</td>
+                            <td>
+                                <div class="sport-tags">
+                                    <span class="sport-tag">⚾ Baseball</span>
+                                </div>
+                            </td>
+                            <td>U10</td>
+                            <td>
+                                <span class="status-badge pending">
+                                    <span>⏳</span>
+                                    <span>Pending</span>
+                                </span>
+                            </td>
+                            <td>
+                                <div class="row-actions">
+                                    <button class="action-btn">Edit</button>
+                                    <button class="action-btn">📧</button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td class="checkbox-cell">
+                                <div class="checkbox-wrapper">
+                                    <input type="checkbox" class="checkbox row-checkbox">
+                                </div>
+                            </td>
+                            <td>
+                                <div class="player-name">
+                                    Morgan Davis
+                                    <span class="status-badge waiting" style="font-size: 10px; padding: 2px 6px;">Waiting Room</span>
+                                </div>
+                                <div class="player-email">morgan@example.com</div>
+                            </td>
+                            <td>
+                                <div class="jersey-badge">—</div>
+                            </td>
+                            <td>—</td>
+                            <td>
+                                <div class="sport-tags">
+                                    <span class="sport-tag">🏐 Volleyball</span>
+                                </div>
+                            </td>
+                            <td>—</td>
+                            <td>
+                                <span class="status-badge waiting">
+                                    <span>⚠️</span>
+                                    <span>Needs Setup</span>
+                                </span>
+                            </td>
+                            <td>
+                                <div class="row-actions">
+                                    <button class="action-btn">Setup</button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td class="checkbox-cell">
+                                <div class="checkbox-wrapper">
+                                    <input type="checkbox" class="checkbox row-checkbox">
+                                </div>
+                            </td>
+                            <td>
+                                <div class="player-name">
+                                    Alex Johnson
+                                </div>
+                                <div class="player-email">alex@example.com</div>
+                            </td>
+                            <td>
+                                <div class="jersey-badge">15</div>
+                            </td>
+                            <td>2013</td>
+                            <td>
+                                <div class="sport-tags">
+                                    <span class="sport-tag">⚽ Soccer</span>
+                                    <span class="sport-tag">🏐 Volleyball</span>
+                                </div>
+                            </td>
+                            <td>U12</td>
+                            <td>
+                                <span class="status-badge sent">
+                                    <span>✓</span>
+                                    <span>Email Sent</span>
+                                </span>
+                            </td>
+                            <td>
+                                <div class="row-actions">
+                                    <button class="action-btn">Edit</button>
+                                    <button class="action-btn">📧</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Bulk Action Bar -->
+            <div class="bulk-action-bar" id="bulk-action-bar">
+                <div class="bulk-count">
+                    <span id="selected-count">0</span> selected
+                </div>
+                <div class="bulk-actions">
+                    <button class="bulk-btn bulk-btn-primary">📧 Send Emails</button>
+                    <button class="bulk-btn">🔒 Lock</button>
+                    <button class="bulk-btn">📤 Export</button>
+                    <button class="bulk-btn">🗑️ Delete</button>
+                </div>
+                <button class="bulk-btn" onclick="clearSelection()">✕ Clear</button>
+            </div>
+        </main>
+
+        <!-- Detail Sidebar -->
+        <aside class="detail-sidebar" id="detail-sidebar">
+            <div class="detail-header">
+                <div class="detail-tabs">
+                    <button class="detail-tab active">Details</button>
+                    <button class="detail-tab">Activity</button>
+                </div>
+                <button class="close-detail" onclick="closeDetail()">✕</button>
+            </div>
+
+            <div class="detail-content">
+                <!-- Player Info -->
+                <div class="detail-section">
+                    <div class="player-info-compact">
+                        <div class="player-avatar-small" id="detail-avatar">JS</div>
+                        <div class="player-info-text">
+                            <div class="player-name-compact" id="detail-name">Jordan Smith</div>
+                            <div class="player-email-compact" id="detail-email">jordan.parent@example.com</div>
                         </div>
-                        <div class="sport-checkbox-item">
-                            <input type="checkbox" class="sport-checkbox" value="basketball" id="basketball-{{ player.id }}" {% if 'basketball' in player.sports %}checked{% endif %}>
-                            <label for="basketball-{{ player.id }}">🏀 Basketball</label>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="info-label">Jersey</span>
+                        <span class="info-value">
+                            <span style="font-size: 16px;">#10</span>
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Birth Year</span>
+                        <span class="info-value">2012</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Division</span>
+                        <span class="info-value">U12</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Sports</span>
+                        <span class="info-value">
+                            <span class="sport-tag">⚽ Soccer</span>
+                            <span class="sport-tag">🏀 Basketball</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- AI Suggestion -->
+                <div class="detail-section">
+                    <div class="suggestion-card">
+                        <div class="suggestion-header">
+                            <span class="suggestion-icon">✨</span>
+                            <span class="suggestion-title">Suggestion</span>
                         </div>
-                        <div class="sport-checkbox-item">
-                            <input type="checkbox" class="sport-checkbox" value="baseball" id="baseball-{{ player.id }}" {% if 'baseball' in player.sports %}checked{% endif %}>
-                            <label for="baseball-{{ player.id }}">⚾ Baseball</label>
-                        </div>
-                        <div class="sport-checkbox-item">
-                            <input type="checkbox" class="sport-checkbox" value="softball" id="softball-{{ player.id }}" {% if 'softball' in player.sports %}checked{% endif %}>
-                            <label for="softball-{{ player.id }}">🥎 Softball</label>
-                        </div>
-                        <div class="sport-checkbox-item">
-                            <input type="checkbox" class="sport-checkbox" value="volleyball" id="volleyball-{{ player.id }}" {% if 'volleyball' in player.sports %}checked{% endif %}>
-                            <label for="volleyball-{{ player.id }}">🏐 Volleyball</label>
-                        </div>
-                        <div class="sport-checkbox-item">
-                            <input type="checkbox" class="sport-checkbox" value="flag" id="flag-{{ player.id }}" {% if 'flag' in player.sports %}checked{% endif %}>
-                            <label for="flag-{{ player.id }}">🏈 Flag Football</label>
+                        <div class="suggestion-text">
+                            This athlete plays multiple sports. Consider creating a multi-sport discount package for the family.
                         </div>
                     </div>
                 </div>
-            </td>
-            <td>
-                <span class="division">{{ player.division }}</span>
-                <select class="form-select d-none edit-division">
-                    <option value="Waiting Room" {% if player.division == 'Waiting Room' %}selected{% endif %}>Waiting Room</option>
-                    <option value="U4" {% if player.division == 'U4' %}selected{% endif %}>U4</option>
-                    <option value="U6" {% if player.division == 'U6' %}selected{% endif %}>U6</option>
-                    <option value="U8" {% if player.division == 'U8' %}selected{% endif %}>U8</option>
-                    <option value="U10" {% if player.division == 'U10' %}selected{% endif %}>U10</option>
-                    <option value="U12" {% if player.division == 'U12' %}selected{% endif %}>U12</option>
-                    <option value="U14" {% if player.division == 'U14' %}selected{% endif %}>U14</option>
-                    <option value="Pend Oreille Pines (High School Club Team)" {% if player.division == 'Pend Oreille Pines (High School Club Team)' %}selected{% endif %}>Pend Oreille Pines (High School Club Team)</option>
-                </select>
-            </td>
-            <td><span class="jersey-number">{{ player.jersey_number if player.jersey_number else '-' }}</span><input class="form-control d-none edit-jersey-number" type="number" value="{{ player.jersey_number if player.jersey_number else '' }}"></td>
-            <td><span class="parent-email">{{ player.parent_email }}</span><input class="form-control d-none edit-parent-email" value="{{ player.parent_email }}"></td>
-            <td class="email-status">
-                {% if player.confirmation_sent %}
-                    <span style="font-size: 1rem;">✅</span>
-                {% else %}
-                    <span style="font-size: 1rem;">❌</span>
-                {% endif %}
-            </td>
-            <td>
-                <div style="display: flex; gap: 2px; flex-wrap: nowrap;">
-                    <button class="btn btn-sm btn-primary btn-edit" title="Edit player">✏️</button>
-                    <button class="btn btn-sm btn-success btn-save d-none" title="Save changes">💾</button>
-                    <button class="btn btn-sm btn-secondary btn-cancel d-none" title="Cancel editing">✖</button>
-                    <button class="btn btn-sm btn-info btn-send-email" title="Send confirmation email">📧</button>
-                    <button class="btn btn-sm btn-danger btn-delete" title="Delete player">🗑️</button>
-                </div>
-            </td>
-        </tr>
-    {% endfor %}
-    <tr class="add-row">
-        <td colspan="9">
-            <button class="btn btn-primary btn-show-add-form">➕ Add New Player</button>
-        </td>
-    </tr>
-    <tr class="add-form-row d-none">
-        <td></td>
-        <td><input class="form-control new-full-name" placeholder="Full Name"></td>
-        <td>
-            <select class="form-select new-birth-year">
-                <option value="">-</option>
-                {% for year in range(2005, 2026) %}
-                    <option value="{{ year }}" {% if year == group and group is number %}selected{% endif %}>{{ year }}</option>
-                {% endfor %}
-            </select>
-        </td>
-        <td>
-            <select class="form-select new-sport">
-                <option value="soccer">Soccer</option>
-                <option value="basketball">Basketball</option>
-                <option value="baseball">Baseball</option>
-                <option value="softball">Softball</option>
-                <option value="volleyball">Volleyball</option>
-                <option value="flag">Flag Football</option>
-            </select>
-        </td>
-        <td>
-            <select class="form-select new-division">
-                <option value="U4">U4</option>
-                <option value="U6">U6</option>
-                <option value="U8">U8</option>
-                <option value="U10">U10</option>
-                <option value="U12">U12</option>
-                <option value="U14">U14</option>
-                <option value="Pend Oreille Pines (High School Club Team)">Pend Oreille Pines (High School Club Team)</option>
-            </select>
-        </td>
-        <td>-</td>
-        <td><input class="form-control new-parent-email" placeholder="Parent Email"></td>
-        <td></td>
-        <td>
-            <div style="display: flex; gap: 2px; flex-wrap: nowrap;">
-                <button class="btn btn-sm btn-success btn-add-save">💾</button>
-                <button class="btn btn-sm btn-secondary btn-add-cancel">✖</button>
-            </div>
-        </td>
-    </tr>
-{% endmacro %}
 
-<div id="main-content">
-{% if view == 'birthyear' %}
-    {# Birth Year View #}
-    <ul class="nav nav-pills mb-3" id="birthYearTabs" role="tablist">
-        {% if waiting_room_players %}
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="tab-waiting-room" data-bs-toggle="pill" data-bs-target="#pane-waiting-room" type="button" role="tab">
-                    <span>⏳ Waiting Room</span>
-                    <span class="tab-count">{{ waiting_room_players|length }}</span>
-                </button>
-            </li>
-        {% endif %}
-        {% for group in group_list %}
-            <li class="nav-item" role="presentation">
-                <button class="nav-link {% if loop.first and not waiting_room_players %}active{% endif %}" id="tab-{{ group }}" data-bs-toggle="pill" data-bs-target="#pane-{{ group }}" type="button" role="tab">
-                    <span>{{ birth_year_labels[group] }}</span>
-                    <span class="tab-count">{{ birth_year_counts.get(group, 0) }}</span>
-                </button>
-            </li>
-        {% endfor %}
-        {% if unassigned_players %}
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tab-unassigned" data-bs-toggle="pill" data-bs-target="#pane-unassigned" type="button" role="tab">
-                    <span>❓ Unassigned</span>
-                    <span class="tab-count">{{ unassigned_players|length }}</span>
-                </button>
-            </li>
-        {% endif %}
-    </ul>
-    
-    <div class="tab-content">
-        {% if waiting_room_players %}
-            <div class="tab-pane fade show active" id="pane-waiting-room" role="tabpanel">
-                <div class="alert alert-warning">
-                    <strong>⚠️ Waiting Room:</strong> These players were imported from emails. Please assign their birth year and division to move them into the main roster.
+                <!-- Quick Actions -->
+                <div class="detail-section">
+                    <div class="detail-section-title">Quick Actions</div>
+                    <div class="action-list">
+                        <div class="action-item" onclick="alert('Opening edit modal...')">
+                            <div class="action-icon">✏️</div>
+                            <div class="action-text">
+                                <div class="action-title">Edit Athlete</div>
+                                <div class="action-description">Update information</div>
+                            </div>
+                        </div>
+                        <div class="action-item" onclick="alert('Sending email...')">
+                            <div class="action-icon">📧</div>
+                            <div class="action-text">
+                                <div class="action-title">Resend Confirmation</div>
+                                <div class="action-description">Email jersey details</div>
+                            </div>
+                        </div>
+                        <div class="action-item" onclick="alert('Generating report...')">
+                            <div class="action-icon">📊</div>
+                            <div class="action-text">
+                                <div class="action-title">View Full Profile</div>
+                                <div class="action-description">Complete history & stats</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="table-container">
-                    <table class="table align-middle">
-                        <thead>
-                            <tr>
-                                <th>🔒 Lock</th>
-                                <th>Name</th>
-                                <th>Birth Year</th>
-                                <th>Sports</th>
-                                <th>Division</th>
-                                <th>Jersey #</th>
-                                <th>Parent Email</th>
-                                <th>Email Sent</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody data-group="waiting-room">
-                            {{ player_table_rows(waiting_room_players, 'waiting-room') }}
-                        </tbody>
-                    </table>
+
+                <!-- Related Resources -->
+                <div class="detail-section">
+                    <div class="detail-section-title">Related Athletes</div>
+                    <div class="related-athletes">
+                        <div class="related-athlete" onclick="alert('Loading Taylor Smith...')">
+                            <div class="related-avatar" style="background: #fbbf24;">TS</div>
+                            <div class="related-info">
+                                <div class="related-name">Taylor Smith</div>
+                                <div class="related-meta">Sibling • U10 Soccer</div>
+                            </div>
+                        </div>
+                        <div class="related-athlete" onclick="alert('Loading Alex Smith...')">
+                            <div class="related-avatar" style="background: #60a5fa;">AS</div>
+                            <div class="related-info">
+                                <div class="related-name">Alex Smith</div>
+                                <div class="related-meta">Sibling • U14 Volleyball</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Help Resources -->
+                <div class="detail-section">
+                    <div class="detail-section-title">3 Relevant Resources</div>
+                    <div class="source-list">
+                        <div class="source-item" onclick="alert('Opening resource...')">
+                            <div class="source-icon">📄</div>
+                            <div class="source-content">
+                                <div class="source-title">Multi-Sport Registration Guide</div>
+                                <div class="source-description">How to manage athletes in multiple sports and ensure proper jersey allocation</div>
+                            </div>
+                        </div>
+                        <div class="source-item" onclick="alert('Opening resource...')">
+                            <div class="source-icon">💰</div>
+                            <div class="source-content">
+                                <div class="source-title">Family Discount Policy</div>
+                                <div class="source-description">Promo codes and discounts for families with multiple registered athletes</div>
+                            </div>
+                        </div>
+                        <div class="source-item" onclick="alert('Opening resource...')">
+                            <div class="source-icon">📧</div>
+                            <div class="source-content">
+                                <div class="source-title">Email Confirmation Templates</div>
+                                <div class="source-description">Customize confirmation emails for different divisions and sports</div>
+                            </div>
+                        </div>
+                    </div>
+                    <a class="see-all-link">See all resources →</a>
+                </div>
+
+                <!-- Activity Timeline -->
+                <div class="detail-section">
+                    <div class="detail-section-title">Recent Activity</div>
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-icon success">✓</div>
+                            <div class="timeline-content">
+                                <div class="timeline-title">Email Sent</div>
+                                <div class="timeline-description">Confirmation email with jersey #10 details sent to parent</div>
+                                <div class="timeline-time">January 15, 2025 at 3:45 PM</div>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-icon info">🏀</div>
+                            <div class="timeline-content">
+                                <div class="timeline-title">Sport Added</div>
+                                <div class="timeline-description">Basketball added to registration</div>
+                                <div class="timeline-time">January 15, 2025 at 2:30 PM</div>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-icon info">➕</div>
+                            <div class="timeline-content">
+                                <div class="timeline-title">Athlete Created</div>
+                                <div class="timeline-description">Profile created and jersey #10 assigned</div>
+                                <div class="timeline-time">January 15, 2025 at 2:15 PM</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        {% endif %}
-        
-        {% for group in group_list %}
-            {% set players = players_by_group[group] %}
-            <div class="tab-pane fade {% if loop.first and not waiting_room_players %}show active{% endif %}" id="pane-{{ group }}" role="tabpanel">
-                <div class="table-container">
-                    <table class="table align-middle">
-                        <thead>
-                            <tr>
-                                <th>🔒 Lock</th>
-                                <th>Name</th>
-                                <th>Birth Year</th>
-                                <th>Sports</th>
-                                <th>Division</th>
-                                <th>Jersey #</th>
-                                <th>Parent Email</th>
-                                <th>Email Sent</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody data-group="{{ group }}">
-                            {{ player_table_rows(players, group) }}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        {% endfor %}
-        
-        {% if unassigned_players %}
-            <div class="tab-pane fade" id="pane-unassigned" role="tabpanel">
-                <div class="table-container">
-                    <table class="table align-middle">
-                        <thead>
-                            <tr>
-                                <th>🔒 Lock</th>
-                                <th>Name</th>
-                                <th>Birth Year</th>
-                                <th>Sports</th>
-                                <th>Division</th>
-                                <th>Jersey #</th>
-                                <th>Parent Email</th>
-                                <th>Email Sent</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody data-group="">
-                            {{ player_table_rows(unassigned_players, '') }}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        {% endif %}
+        </aside>
+
+        <!-- Overlay -->
+        <div class="detail-overlay" id="detail-overlay" onclick="closeDetail()"></div>
     </div>
-    
-{% else %}
-    {# Division View #}
-    <ul class="nav nav-pills mb-3" id="divisionTabs" role="tablist">
-        {% if waiting_room_players %}
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="tab-waiting-room" data-bs-toggle="pill" data-bs-target="#pane-waiting-room" type="button" role="tab">
-                    <span>⏳ Waiting Room</span>
-                    <span class="tab-count">{{ waiting_room_players|length }}</span>
-                </button>
-            </li>
-        {% endif %}
-        {% for group in group_list %}
-            <li class="nav-item" role="presentation">
-                <button class="nav-link {% if loop.first and not waiting_room_players %}active{% endif %}" id="tab-{{ group|replace(' ', '_')|replace('/', '_')|lower }}" data-bs-toggle="pill" data-bs-target="#pane-{{ group|replace(' ', '_')|replace('/', '_')|lower }}" type="button" role="tab">
-                    <span>{{ group }}</span>
-                    <span class="tab-count">{{ players_by_group[group]|length }}</span>
-                </button>
-            </li>
-        {% endfor %}
-        {% if unassigned_players %}
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tab-unassigned" data-bs-toggle="pill" data-bs-target="#pane-unassigned" type="button" role="tab">
-                    <span>❓ Unassigned</span>
-                    <span class="tab-count">{{ unassigned_players|length }}</span>
-                </button>
-            </li>
-        {% endif %}
-    </ul>
-    
-    <div class="tab-content">
-        {% if waiting_room_players %}
-            <div class="tab-pane fade show active" id="pane-waiting-room" role="tabpanel">
-                <div class="alert alert-warning">
-                    <strong>⚠️ Waiting Room:</strong> These players were imported from emails. Please assign their birth year and division to move them into the main roster.
-                </div>
-                <div class="table-container">
-                    <table class="table align-middle">
-                        <thead>
-                            <tr>
-                                <th>🔒 Lock</th>
-                                <th>Name</th>
-                                <th>Birth Year</th>
-                                <th>Sports</th>
-                                <th>Division</th>
-                                <th>Jersey #</th>
-                                <th>Parent Email</th>
-                                <th>Email Sent</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody data-group="waiting-room">
-                            {{ player_table_rows(waiting_room_players, 'waiting-room') }}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        {% endif %}
-        
-        {% for group in group_list %}
-            {% set players = players_by_group[group] %}
-            <div class="tab-pane fade {% if loop.first and not waiting_room_players %}show active{% endif %}" id="pane-{{ group|replace(' ', '_')|replace('/', '_')|lower }}" role="tabpanel">
-                <div class="table-container">
-                    <table class="table align-middle">
-                        <thead>
-                            <tr>
-                                <th>🔒 Lock</th>
-                                <th>Name</th>
-                                <th>Birth Year</th>
-                                <th>Sports</th>
-                                <th>Division</th>
-                                <th>Jersey #</th>
-                                <th>Parent Email</th>
-                                <th>Email Sent</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody data-group="{{ group }}">
-                            {{ player_table_rows(players, group) }}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        {% endfor %}
-        
-        {% if unassigned_players %}
-            <div class="tab-pane fade" id="pane-unassigned" role="tabpanel">
-                <div class="table-container">
-                    <table class="table align-middle">
-                        <thead>
-                            <tr>
-                                <th>🔒 Lock</th>
-                                <th>Name</th>
-                                <th>Birth Year</th>
-                                <th>Sports</th>
-                                <th>Division</th>
-                                <th>Jersey #</th>
-                                <th>Parent Email</th>
-                                <th>Email Sent</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody data-group="">
-                            {{ player_table_rows(unassigned_players, '') }}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        {% endif %}
-    </div>
-{% endif %}
-</div>
 
-<script>
-    // Search functionality
-    const searchInput = document.getElementById('athlete-search');
-    const searchBtn = document.getElementById('search-btn');
-    const clearSearch = document.getElementById('clear-search');
-    const searchResults = document.getElementById('search-results');
-    const searchResultsBody = document.getElementById('search-results-body');
-    const searchCount = document.getElementById('search-count');
-    const mainContent = document.getElementById('main-content');
-    const viewToggle = document.getElementById('view-toggle');
-    const sportFilter = document.getElementById('sport-filter');
+    <script>
+        // Checkbox functionality
+        const selectAll = document.getElementById('select-all');
+        const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+        const bulkActionBar = document.getElementById('bulk-action-bar');
+        const selectedCount = document.getElementById('selected-count');
 
-    function performSearch() {
-        const searchTerm = searchInput.value.toLowerCase().trim();
-        
-        if (!searchTerm) {
-            clearSearchResults();
-            return;
-        }
-
-        const allRows = document.querySelectorAll('tr[data-player-id]');
-        const matches = [];
-
-        allRows.forEach(row => {
-            const name = row.dataset.searchName || '';
-            const email = row.dataset.searchEmail || '';
-            const jersey = row.dataset.searchJersey || '';
-            const sports = row.dataset.searchSports || '';
-            
-            if (name.includes(searchTerm) || 
-                email.includes(searchTerm) || 
-                jersey.includes(searchTerm) ||
-                sports.includes(searchTerm)) {
-                matches.push(row.cloneNode(true));
-            }
-        });
-
-        if (matches.length > 0) {
-            searchResultsBody.innerHTML = '';
-            matches.forEach(row => {
-                row.classList.add('highlight-match');
-                searchResultsBody.appendChild(row);
-                attachRowHandlers(row);
+        selectAll.addEventListener('change', (e) => {
+            rowCheckboxes.forEach(checkbox => {
+                checkbox.checked = e.target.checked;
+                updateCheckboxWrapper(checkbox);
             });
+            updateBulkActionBar();
+        });
 
-            searchCount.textContent = `(${matches.length} found)`;
-            searchResults.classList.add('active');
-            mainContent.style.display = 'none';
-            viewToggle.style.display = 'none';
-            sportFilter.style.display = 'none';
-            clearSearch.classList.remove('d-none');
-            
-            totalAthletesElement.textContent = matches.length;
-        } else {
-            searchResultsBody.innerHTML = '<tr><td colspan="9" class="text-center">No athletes found</td></tr>';
-            searchCount.textContent = '(0 found)';
-            searchResults.classList.add('active');
-            mainContent.style.display = 'none';
-            viewToggle.style.display = 'none';
-            sportFilter.style.display = 'none';
-            clearSearch.classList.remove('d-none');
-            
-            totalAthletesElement.textContent = 0;
-        }
-    }
-
-    function clearSearchResults() {
-        searchResults.classList.remove('active');
-        mainContent.style.display = 'block';
-        viewToggle.style.display = 'block';
-        sportFilter.style.display = 'block';
-        searchInput.value = '';
-        clearSearch.classList.add('d-none');
-        
-        if (activeSportFilter !== 'all') {
-            updateAthleteCount();
-        } else {
-            totalAthletesElement.textContent = originalTotalAthletes;
-        }
-    }
-
-    searchBtn.addEventListener('click', performSearch);
-    searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            performSearch();
-        }
-    });
-    clearSearch.addEventListener('click', clearSearchResults);
-
-    // Sport Filter functionality
-    let activeSportFilter = 'all';
-    const totalAthletesElement = document.querySelector('.athlete-count-number');
-    const originalTotalAthletes = parseInt(totalAthletesElement.textContent);
-    
-    function updateAthleteCount() {
-        const visibleRows = document.querySelectorAll('tbody tr[data-player-id]');
-        const uniquePlayerIds = new Set();
-        
-        visibleRows.forEach(row => {
-            if (row.style.display !== 'none') {
-                const playerId = row.dataset.playerId;
-                uniquePlayerIds.add(playerId);
-            }
-        });
-        
-        totalAthletesElement.textContent = uniquePlayerIds.size;
-    }
-    
-    function filterBySport(sport) {
-        activeSportFilter = sport;
-        
-        document.querySelectorAll('.sport-filter-pill').forEach(pill => {
-            if (pill.dataset.sport === sport) {
-                pill.classList.add('active');
-            } else {
-                pill.classList.remove('active');
-            }
-        });
-        
-        document.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
-            const playerSports = (row.dataset.searchSports || '').toLowerCase();
-            
-            if (sport === 'all' || playerSports.includes(sport.toLowerCase())) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-        
-        updateTabCounts();
-        updateAthleteCount();
-    }
-    
-    function updateTabCounts() {
-        document.querySelectorAll('#birthYearTabs .nav-link').forEach(tab => {
-            const targetId = tab.dataset.bsTarget;
-            if (targetId) {
-                const pane = document.querySelector(targetId);
-                if (pane) {
-                    const visibleRows = pane.querySelectorAll('tbody tr[data-player-id]');
-                    const count = Array.from(visibleRows).filter(row => row.style.display !== 'none').length;
-                    const countBadge = tab.querySelector('.tab-count');
-                    if (countBadge) {
-                        countBadge.textContent = count;
-                    }
-                }
-            }
-        });
-        
-        document.querySelectorAll('#divisionTabs .nav-link').forEach(tab => {
-            const targetId = tab.dataset.bsTarget;
-            if (targetId) {
-                const pane = document.querySelector(targetId);
-                if (pane) {
-                    const visibleRows = pane.querySelectorAll('tbody tr[data-player-id]');
-                    const count = Array.from(visibleRows).filter(row => row.style.display !== 'none').length;
-                    const countBadge = tab.querySelector('.tab-count');
-                    if (countBadge) {
-                        countBadge.textContent = count;
-                    }
-                }
-            }
-        });
-    }
-    
-    document.querySelectorAll('.sport-filter-pill').forEach(pill => {
-        pill.addEventListener('click', () => {
-            const sport = pill.dataset.sport;
-            filterBySport(sport);
-        });
-    });
-
-    function updateSportTags(row, sports) {
-        const viewSports = row.querySelector('.view-sports');
-        viewSports.innerHTML = '';
-        sports.forEach(sport => {
-            const tag = document.createElement('span');
-            tag.className = 'sport-tag';
-            tag.textContent = sport;
-            viewSports.appendChild(tag);
-        });
-        
-        row.dataset.searchSports = sports.join(',').toLowerCase();
-        row.dataset.sports = sports.join(',');
-    }
-
-    function insertRowSorted(tbody, row) {
-        const newNumber = parseInt(row.querySelector('.jersey-number').textContent, 10);
-        const rows = Array.from(tbody.querySelectorAll('tr[data-player-id]')).filter(r => r !== row);
-        let inserted = false;
-        for (const existing of rows) {
-            const existingNumber = parseInt(existing.querySelector('.jersey-number').textContent, 10);
-            if (existingNumber > newNumber) {
-                existing.before(row);
-                inserted = true;
-                break;
-            }
-        }
-        if (!inserted) {
-            tbody.querySelector('.add-form-row').before(row);
-        }
-    }
-
-    function editHandler(event) {
-        const row = event.currentTarget.closest("tr");
-        row.querySelectorAll("span:not(.sport-tag)").forEach(el => el.classList.add("d-none"));
-        row.querySelectorAll("input:not(.sport-checkbox):not(.lock-toggle), select").forEach(el => el.classList.remove("d-none"));
-        row.querySelector(".view-sports").style.display = "none";
-        row.querySelector(".edit-sports").style.display = "block";
-        row.querySelector(".btn-edit").classList.add("d-none");
-        row.querySelector(".btn-save").classList.remove("d-none");
-        row.querySelector(".btn-cancel").classList.remove("d-none");
-    }
-
-    function cancelHandler(event) {
-        const row = event.currentTarget.closest("tr");
-        row.querySelectorAll("input:not(.sport-checkbox):not(.lock-toggle), select").forEach(el => {
-            if (el.classList.contains("edit-full-name")) {
-                el.value = row.querySelector("span.full-name").textContent;
-            } else if (el.classList.contains("edit-birth-year")) {
-                const birthYearSpan = row.querySelector("span.birth-year").textContent.trim();
-                el.value = birthYearSpan === "-" ? "" : birthYearSpan;
-            } else if (el.classList.contains("edit-division")) {
-                el.value = row.querySelector("span.division").textContent;
-            } else if (el.classList.contains("edit-jersey-number")) {
-                const jerseyText = row.querySelector("span.jersey-number").textContent.trim();
-                el.value = jerseyText === "-" ? "" : jerseyText;
-            } else if (el.classList.contains("edit-parent-email")) {
-                el.value = row.querySelector("span.parent-email").textContent;
-            }
-            el.classList.add("d-none");
-        });
-        
-        const originalSports = (row.dataset.sports || '').split(',').filter(s => s);
-        row.querySelectorAll('.sport-checkbox').forEach(checkbox => {
-            checkbox.checked = originalSports.includes(checkbox.value);
-        });
-        
-        row.querySelectorAll("span:not(.sport-tag)").forEach(el => el.classList.remove("d-none"));
-        row.querySelector(".view-sports").style.display = "block";
-        row.querySelector(".edit-sports").style.display = "none";
-        row.querySelector(".btn-save").classList.add("d-none");
-        row.querySelector(".btn-cancel").classList.add("d-none");
-        row.querySelector(".btn-edit").classList.remove("d-none");
-    }
-
-    async function saveHandler(event) {
-        const row = event.currentTarget.closest("tr");
-        const id = row.dataset.playerId;
-        const birthYearValue = row.querySelector(".edit-birth-year").value;
-        const divisionValue = row.querySelector(".edit-division").value;
-        const jerseyValue = row.querySelector(".edit-jersey-number").value;
-        
-        const selectedSports = Array.from(row.querySelectorAll('.sport-checkbox:checked'))
-            .map(cb => cb.value);
-        
-        if (selectedSports.length === 0) {
-            alert("Player must have at least one sport selected.");
-            return;
-        }
-        
-        const playerPayload = {
-            full_name: row.querySelector(".edit-full-name").value,
-            birth_year: birthYearValue === "" ? null : parseInt(birthYearValue),
-            jersey_number: jerseyValue === "" ? 0 : parseInt(jerseyValue),
-            parent_email: row.querySelector(".edit-parent-email").value
-        };
-        const playerResponse = await fetch(`/players/${id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(playerPayload)
-        });
-        
-        const sportsPayload = { sports: selectedSports };
-        const sportsResponse = await fetch(`/players/${id}/sports`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(sportsPayload)
-        });
-        
-        if (!playerResponse.ok || !sportsResponse.ok) {
-            alert("Failed to update player.");
-            return;
-        }
-        
-        const sportsData = await sportsResponse.json();
-        
-        let divisionResponse = { ok: true };
-        if (sportsData.registration_id) {
-            const divisionPayload = { division: divisionValue };
-            divisionResponse = await fetch(`/registrations/${sportsData.registration_id}/division`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(divisionPayload)
+        rowCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                e.stopPropagation(); // Prevent row click
+                updateCheckboxWrapper(checkbox);
+                updateSelectAll();
+                updateBulkActionBar();
             });
-            
-            row.dataset.regId = sportsData.registration_id;
-            
-            if (divisionResponse.ok) {
-                const divisionData = await divisionResponse.json();
-                if (divisionData.jersey_number) {
-                    playerPayload.jersey_number = divisionData.jersey_number;
-                }
-            }
-        }
-        
-        if (divisionResponse.ok) {
-            row.querySelector(".full-name").textContent = playerPayload.full_name;
-            row.querySelector(".birth-year").textContent = playerPayload.birth_year || "-";
-            row.querySelector(".division").textContent = divisionValue;
-            row.querySelector(".jersey-number").textContent = playerPayload.jersey_number || "-";
-            row.querySelector(".parent-email").textContent = playerPayload.parent_email;
-            
-            updateSportTags(row, sportsData.sports);
-            
-            row.dataset.searchName = playerPayload.full_name.toLowerCase();
-            row.dataset.searchEmail = playerPayload.parent_email.toLowerCase();
-            row.dataset.searchJersey = playerPayload.jersey_number;
-            
-            if (divisionValue !== 'Waiting Room') {
-                row.classList.remove('waiting-room');
-            }
-            
-            insertRowSorted(row.closest('tbody'), row);
-            row.querySelectorAll("input:not(.sport-checkbox):not(.lock-toggle), select").forEach(el => el.classList.add("d-none"));
-            row.querySelectorAll("span:not(.sport-tag)").forEach(el => el.classList.remove("d-none"));
-            row.querySelector(".view-sports").style.display = "block";
-            row.querySelector(".edit-sports").style.display = "none";
-            row.querySelector(".btn-save").classList.add("d-none");
-            row.querySelector(".btn-cancel").classList.add("d-none");
-            row.querySelector(".btn-edit").classList.remove("d-none");
-            
-            if (activeSportFilter !== 'all') {
-                filterBySport(activeSportFilter);
-            }
-        } else {
-            alert("Failed to update division.");
-        }
-    }
+        });
 
-    async function deleteHandler(event) {
-        const row = event.currentTarget.closest("tr");
-        const id = row.dataset.playerId;
-        if (confirm("Are you sure you want to delete this player?")) {
-            const response = await fetch(`/players/${id}`, { method: "DELETE" });
-            if (response.ok) {
-                row.remove();
-                updateTabCounts();
-                updateAthleteCount();
+        function updateCheckboxWrapper(checkbox) {
+            const wrapper = checkbox.closest('.checkbox-wrapper');
+            if (checkbox.checked) {
+                wrapper.classList.add('checked');
             } else {
-                alert("Failed to delete player.");
+                wrapper.classList.remove('checked');
             }
         }
-    }
 
-    async function emailHandler(event) {
-        const row = event.currentTarget.closest("tr");
-        const regId = row.dataset.regId;
-        const response = await fetch(`/registrations/${regId}/send_email`, { method: "POST" });
-        if (response.ok) {
-            row.querySelector(".email-status").innerHTML = '<span style="font-size: 1rem;">✅</span>';
-        } else {
-            alert("Failed to send email.");
+        function updateSelectAll() {
+            const checkedCount = Array.from(rowCheckboxes).filter(cb => cb.checked).length;
+            selectAll.checked = checkedCount === rowCheckboxes.length;
+            selectAll.indeterminate = checkedCount > 0 && checkedCount < rowCheckboxes.length;
         }
-    }
 
-    function updateLockState(row, locked) {
-        if (locked) {
-            row.classList.add("locked");
-            row.querySelectorAll("button").forEach(btn => btn.disabled = true);
-        } else {
-            row.classList.remove("locked");
-            row.querySelectorAll("button").forEach(btn => btn.disabled = false);
+        function updateBulkActionBar() {
+            const checkedCount = Array.from(rowCheckboxes).filter(cb => cb.checked).length;
+            selectedCount.textContent = checkedCount;
+            
+            if (checkedCount > 0) {
+                bulkActionBar.classList.add('active');
+            } else {
+                bulkActionBar.classList.remove('active');
+            }
         }
-    }
 
-    async function lockHandler(event) {
-        const row = event.currentTarget.closest("tr");
-        const id = row.dataset.playerId;
-        const locked = event.currentTarget.checked;
-        const response = await fetch(`/players/${id}/lock`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ locked })
-        });
-        if (response.ok) {
-            updateLockState(row, locked);
-        } else {
-            alert("Failed to update lock state.");
-            event.currentTarget.checked = !locked;
-        }
-    }
-
-    function attachRowHandlers(row) {
-        row.querySelector(".btn-edit")?.addEventListener("click", editHandler);
-        row.querySelector(".btn-cancel")?.addEventListener("click", cancelHandler);
-        row.querySelector(".btn-save")?.addEventListener("click", saveHandler);
-        row.querySelector(".btn-delete")?.addEventListener("click", deleteHandler);
-        row.querySelector(".btn-send-email")?.addEventListener("click", emailHandler);
-        const toggle = row.querySelector(".lock-toggle");
-        if (toggle) {
-            toggle.addEventListener("change", lockHandler);
-            updateLockState(row, toggle.checked);
-        }
-    }
-
-    document.querySelectorAll("tbody tr[data-player-id]").forEach(attachRowHandlers);
-
-    document.querySelectorAll(".btn-show-add-form").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const tbody = btn.closest("tbody");
-            tbody.querySelector(".add-row").classList.add("d-none");
-            tbody.querySelector(".add-form-row").classList.remove("d-none");
-        });
-    });
-
-    document.querySelectorAll(".btn-add-cancel").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const tbody = btn.closest("tbody");
-            tbody.querySelector(".add-form-row").classList.add("d-none");
-            tbody.querySelector(".add-row").classList.remove("d-none");
-            tbody.querySelector(".new-full-name").value = "";
-            tbody.querySelector(".new-birth-year").value = "";
-            tbody.querySelector(".new-sport").value = "soccer";
-            tbody.querySelector(".new-division").value = "";
-            tbody.querySelector(".new-parent-email").value = "";
-        });
-    });
-
-    document.querySelectorAll(".btn-add-save").forEach(btn => {
-        btn.addEventListener("click", async () => {
-            const tbody = btn.closest("tbody");
-            const birthYearValue = tbody.querySelector(".new-birth-year").value;
-            const divisionValue = tbody.querySelector(".new-division").value;
-            const sportValue = tbody.querySelector(".new-sport").value;
-            const payload = {
-                full_name: tbody.querySelector(".new-full-name").value,
-                birth_year: birthYearValue === "" ? null : parseInt(birthYearValue),
-                parent_email: tbody.querySelector(".new-parent-email").value,
-                sport: sportValue,
-                division: divisionValue,
-                season: new Date().getFullYear().toString()
-            };
-            const response = await fetch("/players/inline", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
+        function clearSelection() {
+            rowCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+                updateCheckboxWrapper(checkbox);
             });
-            if (response.ok) {
-                location.reload();
-            } else {
-                alert("Failed to add player.");
+            selectAll.checked = false;
+            updateBulkActionBar();
+        }
+
+        // Filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        // Detail sidebar functionality
+        const detailSidebar = document.getElementById('detail-sidebar');
+        const detailOverlay = document.getElementById('detail-overlay');
+        let currentSelectedRow = null;
+
+        function openDetail(rowElement) {
+            // Remove previous selection
+            if (currentSelectedRow) {
+                currentSelectedRow.classList.remove('selected');
+            }
+            
+            // Mark new selection
+            currentSelectedRow = rowElement;
+            rowElement.classList.add('selected');
+            
+            // Open sidebar
+            detailSidebar.classList.add('open');
+            detailOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            
+            // Load data from row (in real app, fetch from API)
+            const name = rowElement.querySelector('.player-name').textContent.trim();
+            const email = rowElement.querySelector('.player-email').textContent.trim();
+            const initials = name.split(' ').map(n => n[0]).join('');
+            
+            document.getElementById('detail-name').textContent = name;
+            document.getElementById('detail-email').textContent = email;
+            document.getElementById('detail-avatar').textContent = initials;
+            document.getElementById('edit-name').value = name;
+            document.getElementById('edit-email').value = email;
+        }
+
+        function closeDetail() {
+            detailSidebar.classList.remove('open');
+            detailOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+            
+            if (currentSelectedRow) {
+                currentSelectedRow.classList.remove('selected');
+                currentSelectedRow = null;
+            }
+        }
+
+        function saveDetail() {
+            alert('Saving changes...\n\nIn the real app, this would:\n1. Validate the form\n2. Send API request\n3. Update the table row\n4. Show success notification');
+        }
+
+        // Make table rows clickable (except action buttons)
+        document.querySelectorAll('.data-table tbody tr').forEach(row => {
+            row.addEventListener('click', (e) => {
+                // Don't open detail if clicking on checkbox, action buttons, or if in bulk selection mode
+                if (e.target.closest('.checkbox-cell') || 
+                    e.target.closest('.row-actions') ||
+                    e.target.closest('.action-btn')) {
+                    return;
+                }
+                
+                openDetail(row);
+            });
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && detailSidebar.classList.contains('open')) {
+                closeDetail();
             }
         });
-    });
-</script>
-{% endblock %}
+
+        // Sport pill toggle
+        document.querySelectorAll('.sport-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                pill.classList.toggle('selected');
+            });
+        });
+
+        // Prevent action buttons from triggering row click
+        document.querySelectorAll('.action-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        });
+
+        // Checkbox cell click should only toggle checkbox, not open detail
+        document.querySelectorAll('.checkbox-cell').forEach(cell => {
+            cell.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const checkbox = cell.querySelector('.checkbox');
+                if (e.target !== checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.dispatchEvent(new Event('change'));
+                }
+            });
+        });
+    </script>
+</body>
+</html>
