@@ -375,6 +375,12 @@
         background: var(--gray-50);
         border-radius: 8px;
         border: 1px solid var(--gray-200);
+        transition: all 0.15s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
     .stat-card.alert {
@@ -887,13 +893,13 @@
                     <span class="icon">👥</span>
                     <span>All Athletes</span>
                 </a>
-                {% if waiting_room_players %}
                 <a href="#waiting-room" class="nav-item nav-scroll-link">
                     <span class="icon">⏳</span>
                     <span>Waiting Room</span>
+                    {% if waiting_room_players %}
                     <span class="badge">{{ waiting_room_players|length }}</span>
+                    {% endif %}
                 </a>
-                {% endif %}
             </div>
 
             <div class="nav-section">
@@ -990,12 +996,10 @@
         <div class="stat-value">{{ total_players }}</div>
         <div class="stat-label">Total Athletes</div>
     </div>
-    {% if waiting_room_players %}
-    <div class="stat-card alert">
-        <div class="stat-value">{{ waiting_room_players|length }}</div>
+    <div class="stat-card {% if waiting_room_players %}alert{% endif %}" style="cursor: pointer;" onclick="scrollToWaitingRoom()">
+        <div class="stat-value">{{ waiting_room_players|length if waiting_room_players else 0 }}</div>
         <div class="stat-label">Waiting Room</div>
     </div>
-    {% endif %}
     <div class="stat-card">
         <div class="stat-value">{{ birth_year_counts|length }}</div>
         <div class="stat-label">Birth Years</div>
@@ -1145,9 +1149,17 @@
     </table>
     {% endmacro %}
 
+    <h3 id="waiting-room" style="margin: 20px 0 12px 0; color: var(--red-500); font-size: 16px; font-weight: 700; scroll-margin-top: 20px;">
+        ⏳ Waiting Room {% if waiting_room_players %}({{ waiting_room_players|length }}){% else %}(0){% endif %}
+    </h3>
     {% if waiting_room_players %}
-    <h3 id="waiting-room" style="margin: 20px 0 12px 0; color: var(--red-500); font-size: 16px; font-weight: 700;">⏳ Waiting Room ({{ waiting_room_players|length }})</h3>
     {{ player_table(waiting_room_players) }}
+    {% else %}
+    <div style="background: white; border: 1px solid var(--gray-200); border-radius: 8px; padding: 40px; text-align: center;">
+        <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
+        <div style="font-size: 18px; font-weight: 600; color: var(--gray-900); margin-bottom: 8px;">No Players Waiting</div>
+        <div style="font-size: 14px; color: var(--gray-600);">All athletes have been assigned to their divisions!</div>
+    </div>
     {% endif %}
 
     {% if view == 'birthyear' %}
@@ -1235,6 +1247,21 @@
     let currentSelectedRow = null;
     const detailSidebar = document.getElementById('detail-sidebar');
     const detailOverlay = document.getElementById('detail-overlay');
+
+    // Scroll to Waiting Room
+    function scrollToWaitingRoom() {
+        const targetElement = document.getElementById('waiting-room');
+        if (targetElement) {
+            const scrollContainer = document.querySelector('.main-content-scroll');
+            const elementPosition = targetElement.offsetTop;
+            const offsetPosition = elementPosition - 20;
+            
+            scrollContainer.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+            });
+        }
+    }
 
     // Sport Filter
     document.querySelectorAll('.filter-pill').forEach(pill => {
