@@ -101,6 +101,14 @@
         margin-bottom: 2px;
     }
 
+    .nav-item > span:nth-child(2) {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
     .nav-item:hover {
         background: var(--gray-100);
         color: var(--gray-900);
@@ -875,12 +883,12 @@
         <nav class="sidebar-nav">
             <div class="nav-section">
                 <div class="nav-section-title">Main</div>
-                <a href="/admin" class="nav-item active">
+                <a href="/admin" class="nav-item {% if not view or view == 'birthyear' %}active{% endif %}">
                     <span class="icon">👥</span>
                     <span>All Athletes</span>
                 </a>
                 {% if waiting_room_players %}
-                <a href="/admin?view=division" class="nav-item">
+                <a href="#waiting-room" class="nav-item nav-scroll-link">
                     <span class="icon">⏳</span>
                     <span>Waiting Room</span>
                     <span class="badge">{{ waiting_room_players|length }}</span>
@@ -899,6 +907,30 @@
                     <span>By Division</span>
                 </a>
             </div>
+
+            {% if view == 'birthyear' %}
+            <div class="nav-section">
+                <div class="nav-section-title">Birth Years</div>
+                {% for year in group_list %}
+                <a href="#year-{{ year }}" class="nav-item nav-scroll-link">
+                    <span class="icon">📅</span>
+                    <span>{{ birth_year_labels[year] if birth_year_labels else year }}</span>
+                    <span class="badge" style="background: var(--gray-400);">{{ birth_year_counts.get(year, 0) }}</span>
+                </a>
+                {% endfor %}
+            </div>
+            {% elif view == 'division' %}
+            <div class="nav-section">
+                <div class="nav-section-title">Divisions</div>
+                {% for division in group_list %}
+                <a href="#division-{{ loop.index }}" class="nav-item nav-scroll-link" title="{{ division }}">
+                    <span class="icon">{% if division == 'Pend Oreille Pines (High School Club Team)' %}🌲{% else %}⚽{% endif %}</span>
+                    <span>{% if division == 'Pend Oreille Pines (High School Club Team)' %}Pines HS Club{% else %}{{ division }}{% endif %}</span>
+                    <span class="badge" style="background: var(--gray-400);">{{ players_by_group[division]|length }}</span>
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
 
             <div class="nav-section">
                 <div class="nav-section-title">Settings</div>
@@ -1114,20 +1146,20 @@
     {% endmacro %}
 
     {% if waiting_room_players %}
-    <h3 style="margin: 20px 0 12px 0; color: var(--red-500); font-size: 16px; font-weight: 700;">⏳ Waiting Room ({{ waiting_room_players|length }})</h3>
+    <h3 id="waiting-room" style="margin: 20px 0 12px 0; color: var(--red-500); font-size: 16px; font-weight: 700;">⏳ Waiting Room ({{ waiting_room_players|length }})</h3>
     {{ player_table(waiting_room_players) }}
     {% endif %}
 
     {% if view == 'birthyear' %}
         {% for group in group_list %}
-        <h3 style="margin: 20px 0 12px 0; color: var(--gray-900); font-size: 16px; font-weight: 700;">
+        <h3 id="year-{{ group }}" style="margin: 20px 0 12px 0; color: var(--gray-900); font-size: 16px; font-weight: 700; scroll-margin-top: 20px;">
             {{ birth_year_labels[group] if birth_year_labels else group }}
         </h3>
         {{ player_table(players_by_group[group]) }}
         {% endfor %}
     {% else %}
         {% for group in group_list %}
-        <h3 style="margin: 20px 0 12px 0; color: var(--gray-900); font-size: 16px; font-weight: 700;">
+        <h3 id="division-{{ loop.index }}" style="margin: 20px 0 12px 0; color: var(--gray-900); font-size: 16px; font-weight: 700; scroll-margin-top: 20px;">
             {{ group }}
         </h3>
         {{ player_table(players_by_group[group]) }}
@@ -1305,6 +1337,26 @@
         if (e.key === 'Escape' && detailSidebar.classList.contains('open')) {
             closeDetail();
         }
+    });
+
+    // Smooth scroll for sidebar navigation
+    document.querySelectorAll('.nav-scroll-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = link.getAttribute('href').substring(1);
+            const targetElement = document.getElementById(targetId);
+            
+            if (targetElement) {
+                const scrollContainer = document.querySelector('.main-content-scroll');
+                const elementPosition = targetElement.offsetTop;
+                const offsetPosition = elementPosition - 20; // 20px padding from top
+                
+                scrollContainer.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                });
+            }
+        });
     });
 
     // Edit/Save/Cancel functionality
