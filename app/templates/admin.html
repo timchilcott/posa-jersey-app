@@ -845,6 +845,121 @@
         border-top: 1px solid var(--gray-200);
     }
 
+    /* Activity Tab Styles */
+    .activity-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .activity-item {
+        padding: 12px;
+        border-left: 3px solid var(--gray-300);
+        margin-bottom: 12px;
+        background: var(--gray-50);
+        border-radius: 0 6px 6px 0;
+        transition: all 0.15s ease;
+        position: relative;
+    }
+    
+    .activity-item:hover {
+        background: white;
+        border-left-color: var(--pines-green);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    
+    .activity-item.activity-edit {
+        border-left-color: var(--blue-500);
+    }
+    
+    .activity-item.activity-email {
+        border-left-color: var(--green-500);
+    }
+    
+    .activity-item.activity-delete {
+        border-left-color: var(--red-500);
+    }
+    
+    .activity-item.activity-create {
+        border-left-color: var(--yellow-500);
+    }
+    
+    .activity-icon {
+        position: absolute;
+        left: -12px;
+        top: 12px;
+        width: 24px;
+        height: 24px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        border: 2px solid var(--gray-300);
+    }
+    
+    .activity-item.activity-edit .activity-icon {
+        border-color: var(--blue-500);
+    }
+    
+    .activity-item.activity-email .activity-icon {
+        border-color: var(--green-500);
+    }
+    
+    .activity-item.activity-delete .activity-icon {
+        border-color: var(--red-500);
+    }
+    
+    .activity-item.activity-create .activity-icon {
+        border-color: var(--yellow-500);
+    }
+    
+    .activity-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin-bottom: 4px;
+    }
+    
+    .activity-details {
+        font-size: 12px;
+        color: var(--gray-600);
+        margin-bottom: 4px;
+        line-height: 1.4;
+    }
+    
+    .activity-details .change-item {
+        display: block;
+        padding: 2px 0;
+    }
+    
+    .activity-details .old-value {
+        color: var(--red-500);
+        text-decoration: line-through;
+    }
+    
+    .activity-details .new-value {
+        color: var(--green-500);
+        font-weight: 500;
+    }
+    
+    .activity-timestamp {
+        font-size: 11px;
+        color: var(--gray-500);
+        margin-top: 6px;
+    }
+    
+    .activity-empty {
+        color: var(--gray-500);
+        text-align: center;
+        padding: 40px 20px;
+    }
+    
+    .detail-tab.active {
+        background: var(--gray-100);
+        color: var(--gray-900);
+    }
+    
     .d-none {
         display: none !important;
     }
@@ -1289,95 +1404,115 @@
 <aside class="detail-sidebar" id="detail-sidebar">
     <div class="detail-header">
         <div class="detail-tabs">
-            <button class="detail-tab active">Details</button>
-            <button class="detail-tab">Activity</button>
+            <button class="detail-tab active" onclick="switchDetailTab('details')">Details</button>
+            <button class="detail-tab" onclick="switchDetailTab('activity')">Activity</button>
         </div>
         <button class="close-detail" onclick="closeDetail()">✕</button>
     </div>
 
     <div class="detail-content">
-        <div class="detail-section">
-            <div class="player-info-compact">
-                <div class="player-avatar-small" id="detail-avatar">-</div>
-                <div class="player-info-text">
-                    <div class="player-name-compact view-mode" id="detail-name">Select an athlete</div>
-                    <input type="text" class="form-control edit-mode d-none" id="edit-name" style="font-size: 15px; font-weight: 600;">
-                    <div class="player-email-compact view-mode" id="detail-email">-</div>
-                    <input type="email" class="form-control edit-mode d-none" id="edit-email" style="font-size: 13px;">
+        <!-- Details Tab Content -->
+        <div id="details-tab-content">
+            <div class="detail-section">
+                <div class="player-info-compact">
+                    <div class="player-avatar-small" id="detail-avatar">-</div>
+                    <div class="player-info-text">
+                        <div class="player-name-compact view-mode" id="detail-name">Select an athlete</div>
+                        <input type="text" class="form-control edit-mode d-none" id="edit-name" style="font-size: 15px; font-weight: 600;">
+                        <div class="player-email-compact view-mode" id="detail-email">-</div>
+                        <input type="email" class="form-control edit-mode d-none" id="edit-email" style="font-size: 13px;">
+                    </div>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">Jersey</span>
+                    <span class="info-value view-mode" id="detail-jersey">#-</span>
+                    <input type="number" class="form-control edit-mode d-none" id="edit-jersey" style="width: 100px; margin-left: auto;">
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Birth Year</span>
+                    <span class="info-value view-mode" id="detail-birth-year">-</span>
+                    <select class="form-control edit-mode d-none" id="edit-birth-year" style="width: 120px; margin-left: auto;">
+                        <option value="">-</option>
+                        {% for year in range(2005, 2026) %}
+                        <option value="{{ year }}">{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Division</span>
+                    <span class="info-value view-mode" id="detail-division">-</span>
+                    <select class="form-control edit-mode d-none" id="edit-division" style="width: 150px; margin-left: auto;">
+                        <option value="Waiting Room">Waiting Room</option>
+                        <option value="U4">U4</option>
+                        <option value="U6">U6</option>
+                        <option value="U8">U8</option>
+                        <option value="U10">U10</option>
+                        <option value="U12">U12</option>
+                        <option value="U14">U14</option>
+                        <option value="Pend Oreille Pines (High School Club Team)">Pines HS</option>
+                    </select>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Sports</span>
+                    <span class="info-value view-mode" id="detail-sports">-</span>
+                    <div class="edit-mode d-none" id="edit-sports-container">
+                        <label style="display: block; margin: 2px;"><input type="checkbox" value="soccer"> Soccer</label>
+                        <label style="display: block; margin: 2px;"><input type="checkbox" value="basketball"> Basketball</label>
+                        <label style="display: block; margin: 2px;"><input type="checkbox" value="baseball"> Baseball</label>
+                        <label style="display: block; margin: 2px;"><input type="checkbox" value="softball"> Softball</label>
+                        <label style="display: block; margin: 2px;"><input type="checkbox" value="volleyball"> Volleyball</label>
+                        <label style="display: block; margin: 2px;"><input type="checkbox" value="flag"> Flag Football</label>
+                    </div>
+                </div>
+                
+                <!-- Edit action buttons -->
+                <div class="edit-mode d-none btn-group-edit">
+                    <button class="btn btn-success" onclick="saveDetailEdits()">💾 Save</button>
+                    <button class="btn btn-secondary" onclick="cancelDetailEdit()">✖ Cancel</button>
                 </div>
             </div>
 
-            <div class="info-row">
-                <span class="info-label">Jersey</span>
-                <span class="info-value view-mode" id="detail-jersey">#-</span>
-                <input type="number" class="form-control edit-mode d-none" id="edit-jersey" style="width: 100px; margin-left: auto;">
-            </div>
-            <div class="info-row">
-                <span class="info-label">Birth Year</span>
-                <span class="info-value view-mode" id="detail-birth-year">-</span>
-                <select class="form-control edit-mode d-none" id="edit-birth-year" style="width: 120px; margin-left: auto;">
-                    <option value="">-</option>
-                    {% for year in range(2005, 2026) %}
-                    <option value="{{ year }}">{{ year }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Division</span>
-                <span class="info-value view-mode" id="detail-division">-</span>
-                <select class="form-control edit-mode d-none" id="edit-division" style="width: 150px; margin-left: auto;">
-                    <option value="Waiting Room">Waiting Room</option>
-                    <option value="U4">U4</option>
-                    <option value="U6">U6</option>
-                    <option value="U8">U8</option>
-                    <option value="U10">U10</option>
-                    <option value="U12">U12</option>
-                    <option value="U14">U14</option>
-                    <option value="Pend Oreille Pines (High School Club Team)">Pines HS</option>
-                </select>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Sports</span>
-                <span class="info-value view-mode" id="detail-sports">-</span>
-                <div class="edit-mode d-none" id="edit-sports-container">
-                    <label style="display: block; margin: 2px;"><input type="checkbox" value="soccer"> Soccer</label>
-                    <label style="display: block; margin: 2px;"><input type="checkbox" value="basketball"> Basketball</label>
-                    <label style="display: block; margin: 2px;"><input type="checkbox" value="baseball"> Baseball</label>
-                    <label style="display: block; margin: 2px;"><input type="checkbox" value="softball"> Softball</label>
-                    <label style="display: block; margin: 2px;"><input type="checkbox" value="volleyball"> Volleyball</label>
-                    <label style="display: block; margin: 2px;"><input type="checkbox" value="flag"> Flag Football</label>
+            <div class="detail-section view-mode">
+                <div class="detail-section-title">Quick Actions</div>
+                <div class="action-list">
+                    <div class="action-item" id="detail-edit-btn" onclick="enableDetailEdit()">
+                        <div class="action-icon">✏️</div>
+                        <div>
+                            <div class="action-title">Edit Athlete</div>
+                            <div class="action-description">Update information</div>
+                        </div>
+                    </div>
+                    <div class="action-item" id="detail-email-btn">
+                        <div class="action-icon">📧</div>
+                        <div>
+                            <div class="action-title">Send Email</div>
+                            <div class="action-description">Jersey confirmation</div>
+                        </div>
+                    </div>
+                    <div class="action-item" id="detail-delete-btn" style="border-color: var(--red-500);">
+                        <div class="action-icon" style="background: #fef2f2; color: var(--red-500);">🗑️</div>
+                        <div>
+                            <div class="action-title" style="color: var(--red-500);">Delete Athlete</div>
+                            <div class="action-description">Remove from system</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            
-            <!-- Edit action buttons -->
-            <div class="edit-mode d-none btn-group-edit">
-                <button class="btn btn-success" onclick="saveDetailEdits()">💾 Save</button>
-                <button class="btn btn-secondary" onclick="cancelDetailEdit()">✖ Cancel</button>
             </div>
         </div>
-
-        <div class="detail-section view-mode">
-            <div class="detail-section-title">Quick Actions</div>
-            <div class="action-list">
-                <div class="action-item" id="detail-edit-btn" onclick="enableDetailEdit()">
-                    <div class="action-icon">✏️</div>
-                    <div>
-                        <div class="action-title">Edit Athlete</div>
-                        <div class="action-description">Update information</div>
-                    </div>
+        
+        <!-- Activity Tab Content -->
+        <div id="activity-tab-content" class="d-none">
+            <div class="detail-section">
+                <div class="activity-header">
+                    <h4 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: var(--gray-900);">Activity History</h4>
                 </div>
-                <div class="action-item" id="detail-email-btn">
-                    <div class="action-icon">📧</div>
-                    <div>
-                        <div class="action-title">Send Email</div>
-                        <div class="action-description">Jersey confirmation</div>
-                    </div>
-                </div>
-                <div class="action-item" id="detail-delete-btn" style="border-color: var(--red-500);">
-                    <div class="action-icon" style="background: #fef2f2; color: var(--red-500);">🗑️</div>
-                    <div>
-                        <div class="action-title" style="color: var(--red-500);">Delete Athlete</div>
-                        <div class="action-description">Remove from system</div>
+                <div class="activity-list" id="activity-list">
+                    <div class="activity-empty">
+                        <div style="text-align: center; padding: 40px 20px;">
+                            <div style="font-size: 36px; margin-bottom: 12px;">📋</div>
+                            <div style="color: var(--gray-600); font-size: 14px;">No activity recorded for this session</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1571,6 +1706,152 @@
         updateStatistics();
     });
 
+    // Activity tracking system
+    const activityLog = {};
+    
+    function logActivity(playerId, type, details, changes = null) {
+        if (!activityLog[playerId]) {
+            activityLog[playerId] = [];
+        }
+        
+        const activity = {
+            id: Date.now(),
+            type: type,
+            details: details,
+            changes: changes,
+            timestamp: new Date()
+        };
+        
+        // Add to beginning of array (newest first)
+        activityLog[playerId].unshift(activity);
+        
+        // Keep only last 50 activities per player
+        if (activityLog[playerId].length > 50) {
+            activityLog[playerId] = activityLog[playerId].slice(0, 50);
+        }
+        
+        // Update the activity tab if it's open for this player
+        if (currentDetailPlayer && currentDetailPlayer.id === playerId) {
+            updateActivityTab();
+        }
+    }
+    
+    function formatActivityTime(date) {
+        const now = new Date();
+        const diff = now - date;
+        const seconds = Math.floor(diff / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+        
+        if (seconds < 60) {
+            return 'Just now';
+        } else if (minutes < 60) {
+            return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+        } else if (hours < 24) {
+            return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+        } else if (days < 7) {
+            return `${days} day${days === 1 ? '' : 's'} ago`;
+        } else {
+            return date.toLocaleDateString() + ' at ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+    }
+    
+    function renderActivityItem(activity) {
+        let icon = '📝';
+        let className = 'activity-edit';
+        
+        switch(activity.type) {
+            case 'edit':
+                icon = '✏️';
+                className = 'activity-edit';
+                break;
+            case 'email':
+                icon = '📧';
+                className = 'activity-email';
+                break;
+            case 'delete':
+                icon = '🗑️';
+                className = 'activity-delete';
+                break;
+            case 'create':
+                icon = '➕';
+                className = 'activity-create';
+                break;
+            case 'lock':
+                icon = '🔒';
+                className = 'activity-edit';
+                break;
+            case 'unlock':
+                icon = '🔓';
+                className = 'activity-edit';
+                break;
+        }
+        
+        let changesHtml = '';
+        if (activity.changes && activity.changes.length > 0) {
+            changesHtml = '<div class="activity-details">';
+            activity.changes.forEach(change => {
+                if (change.old !== undefined && change.new !== undefined && change.old !== change.new) {
+                    changesHtml += `<span class="change-item">
+                        ${change.field}: <span class="old-value">${change.old || '(empty)'}</span> → <span class="new-value">${change.new || '(empty)'}</span>
+                    </span>`;
+                } else if (change.action) {
+                    changesHtml += `<span class="change-item">${change.action}</span>`;
+                }
+            });
+            changesHtml += '</div>';
+        }
+        
+        return `
+            <div class="activity-item ${className}">
+                <div class="activity-icon">${icon}</div>
+                <div class="activity-title">${activity.details}</div>
+                ${changesHtml}
+                <div class="activity-timestamp">${formatActivityTime(activity.timestamp)}</div>
+            </div>
+        `;
+    }
+    
+    function updateActivityTab() {
+        if (!currentDetailPlayer) return;
+        
+        const activities = activityLog[currentDetailPlayer.id] || [];
+        const activityList = document.getElementById('activity-list');
+        
+        if (activities.length === 0) {
+            activityList.innerHTML = `
+                <div class="activity-empty">
+                    <div style="text-align: center; padding: 40px 20px;">
+                        <div style="font-size: 36px; margin-bottom: 12px;">📋</div>
+                        <div style="color: var(--gray-600); font-size: 14px;">No activity recorded for this session</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            activityList.innerHTML = activities.map(activity => renderActivityItem(activity)).join('');
+        }
+    }
+    
+    function switchDetailTab(tab) {
+        // Update tab buttons
+        document.querySelectorAll('.detail-tab').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // Update content visibility
+        if (tab === 'activity') {
+            document.querySelector('.detail-tab:nth-child(2)').classList.add('active');
+            document.getElementById('details-tab-content').classList.add('d-none');
+            document.getElementById('activity-tab-content').classList.remove('d-none');
+            updateActivityTab();
+        } else {
+            document.querySelector('.detail-tab:nth-child(1)').classList.add('active');
+            document.getElementById('details-tab-content').classList.remove('d-none');
+            document.getElementById('activity-tab-content').classList.add('d-none');
+        }
+    }
+    
     // Detail Sidebar
     let currentDetailPlayer = null;
     let currentDetailRow = null;
@@ -1631,6 +1912,9 @@
         document.getElementById('detail-email-btn').onclick = async () => {
             const response = await fetch(`/registrations/${regId}/send_email`, { method: 'POST' });
             if (response.ok) {
+                logActivity(playerId, 'email', 'Confirmation email sent', [
+                    { action: `Email sent to ${email}` }
+                ]);
                 alert('Email sent!');
                 location.reload();
             }
@@ -1640,6 +1924,9 @@
         document.getElementById('detail-delete-btn').onclick = async () => {
             if (!confirm(`Delete ${name}?`)) return;
             await fetch(`/players/${playerId}`, { method: 'DELETE' });
+            logActivity(playerId, 'delete', 'Athlete deleted', [
+                { action: `${name} removed from system` }
+            ]);
             closeDetail();
             row.remove();
             updateStatistics();
@@ -1662,6 +1949,8 @@
         currentDetailPlayer = null;
         currentDetailRow = null;
         cancelDetailEdit();
+        // Reset to Details tab
+        switchDetailTab('details');
     }
     
     function enableDetailEdit() {
@@ -1701,6 +1990,32 @@
             selectedSports.push(cb.value);
         });
         
+        // Track changes for activity log
+        const changes = [];
+        
+        if (currentDetailPlayer.name !== newName) {
+            changes.push({ field: 'Name', old: currentDetailPlayer.name, new: newName });
+        }
+        if (currentDetailPlayer.email !== newEmail) {
+            changes.push({ field: 'Email', old: currentDetailPlayer.email, new: newEmail });
+        }
+        if ((currentDetailPlayer.jersey || '') !== newJersey) {
+            changes.push({ field: 'Jersey', old: currentDetailPlayer.jersey || '-', new: newJersey || '-' });
+        }
+        if ((currentDetailPlayer.birthYear || '') !== newBirthYear) {
+            changes.push({ field: 'Birth Year', old: currentDetailPlayer.birthYear || '-', new: newBirthYear || '-' });
+        }
+        if (currentDetailPlayer.division !== newDivision) {
+            changes.push({ field: 'Division', old: currentDetailPlayer.division, new: newDivision });
+        }
+        
+        // Check sports changes
+        const oldSports = currentDetailPlayer.sports.sort().join(', ');
+        const newSports = selectedSports.sort().join(', ');
+        if (oldSports !== newSports) {
+            changes.push({ field: 'Sports', old: oldSports || '(none)', new: newSports || '(none)' });
+        }
+        
         try {
             // Update player basic info
             await fetch(`/players/${currentDetailPlayer.id}`, {
@@ -1728,6 +2043,11 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ division: newDivision })
                 });
+            }
+            
+            // Log the activity
+            if (changes.length > 0) {
+                logActivity(currentDetailPlayer.id, 'edit', 'Athlete information updated', changes);
             }
             
             // Update the display
@@ -1916,8 +2236,15 @@
         row.querySelector('.btn-send-email')?.addEventListener('click', async (e) => {
             e.stopPropagation();
             const regId = row.dataset.regId;
+            const playerId = row.dataset.playerId;
+            const playerName = row.querySelector('.player-name').textContent.trim();
+            const playerEmail = row.querySelector('.player-email').textContent.trim();
+            
             const response = await fetch(`/registrations/${regId}/send_email`, { method: 'POST' });
             if (response.ok) {
+                logActivity(playerId, 'email', 'Confirmation email sent', [
+                    { action: `Email sent to ${playerEmail}` }
+                ]);
                 alert('Email sent!');
                 location.reload();
             }
@@ -1927,15 +2254,24 @@
             e.stopPropagation();
             const id = row.dataset.playerId;
             const locked = e.target.checked;
+            const playerName = row.querySelector('.player-name').textContent.trim();
+            
             await fetch(`/players/${id}/lock`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ locked })
             });
+            
             if (locked) {
                 row.classList.add('locked');
+                logActivity(id, 'lock', 'Athlete locked', [
+                    { action: `${playerName} is now locked from automatic updates` }
+                ]);
             } else {
                 row.classList.remove('locked');
+                logActivity(id, 'unlock', 'Athlete unlocked', [
+                    { action: `${playerName} can now receive automatic updates` }
+                ]);
             }
         });
     }
@@ -1963,12 +2299,18 @@
     document.querySelectorAll('.btn-add-save').forEach(btn => {
         btn.addEventListener('click', async () => {
             const tbody = btn.closest('tbody');
+            const fullName = tbody.querySelector('.new-full-name').value;
+            const birthYear = tbody.querySelector('.new-birth-year').value;
+            const parentEmail = tbody.querySelector('.new-parent-email').value;
+            const sport = tbody.querySelector('.new-sport').value;
+            const division = tbody.querySelector('.new-division').value;
+            
             const payload = {
-                full_name: tbody.querySelector('.new-full-name').value,
-                birth_year: tbody.querySelector('.new-birth-year').value ? parseInt(tbody.querySelector('.new-birth-year').value) : null,
-                parent_email: tbody.querySelector('.new-parent-email').value,
-                sport: tbody.querySelector('.new-sport').value,
-                division: tbody.querySelector('.new-division').value,
+                full_name: fullName,
+                birth_year: birthYear ? parseInt(birthYear) : null,
+                parent_email: parentEmail,
+                sport: sport,
+                division: division,
                 season: new Date().getFullYear().toString()
             };
             
@@ -1979,6 +2321,12 @@
             });
             
             if (response.ok) {
+                const data = await response.json();
+                // Log the creation activity
+                logActivity(data.id.toString(), 'create', 'Athlete created', [
+                    { action: `${fullName} added to the system` },
+                    { action: `Division: ${division}, Sport: ${sport}` }
+                ]);
                 location.reload();
             } else {
                 alert('Failed to add player');
