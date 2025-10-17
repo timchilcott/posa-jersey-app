@@ -959,10 +959,6 @@
         background: var(--gray-100);
         color: var(--gray-900);
     }
-    
-    .d-none {
-        display: none !important;
-    }
 
     .info-label {
         color: var(--gray-600);
@@ -1241,6 +1237,7 @@
             <tr data-player-id="{{ player.id }}" 
                 data-reg-id="{{ player.registration_id }}"
                 data-sports="{{ player.sports|join(',') }}"
+                data-confirmation-sent="{{ player.confirmation_sent|lower }}"
                 class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %} {% if player.division == 'Waiting Room' %}waiting-room{% endif %}">
                 <td>
                     <input type="checkbox" class="lock-toggle" {% if player.locked %}checked{% endif %}>
@@ -1706,131 +1703,79 @@
         updateStatistics();
     });
 
-    // Activity tracking system
-    const activityLog = {};
-    
-    function logActivity(playerId, type, details, changes = null) {
-        if (!activityLog[playerId]) {
-            activityLog[playerId] = [];
-        }
-        
-        const activity = {
-            id: Date.now(),
-            type: type,
-            details: details,
-            changes: changes,
-            timestamp: new Date()
-        };
-        
-        // Add to beginning of array (newest first)
-        activityLog[playerId].unshift(activity);
-        
-        // Keep only last 50 activities per player
-        if (activityLog[playerId].length > 50) {
-            activityLog[playerId] = activityLog[playerId].slice(0, 50);
-        }
-        
-        // Update the activity tab if it's open for this player
-        if (currentDetailPlayer && currentDetailPlayer.id === playerId) {
-            updateActivityTab();
-        }
-    }
-    
-    function formatActivityTime(date) {
-        const now = new Date();
-        const diff = now - date;
-        const seconds = Math.floor(diff / 1000);
-        const minutes = Math.floor(seconds / 60);
-        const hours = Math.floor(minutes / 60);
-        const days = Math.floor(hours / 24);
-        
-        if (seconds < 60) {
-            return 'Just now';
-        } else if (minutes < 60) {
-            return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
-        } else if (hours < 24) {
-            return `${hours} hour${hours === 1 ? '' : 's'} ago`;
-        } else if (days < 7) {
-            return `${days} day${days === 1 ? '' : 's'} ago`;
-        } else {
-            return date.toLocaleDateString() + ' at ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        }
-    }
-    
-    function renderActivityItem(activity) {
-        let icon = '📝';
-        let className = 'activity-edit';
-        
-        switch(activity.type) {
-            case 'edit':
-                icon = '✏️';
-                className = 'activity-edit';
-                break;
-            case 'email':
-                icon = '📧';
-                className = 'activity-email';
-                break;
-            case 'delete':
-                icon = '🗑️';
-                className = 'activity-delete';
-                break;
-            case 'create':
-                icon = '➕';
-                className = 'activity-create';
-                break;
-            case 'lock':
-                icon = '🔒';
-                className = 'activity-edit';
-                break;
-            case 'unlock':
-                icon = '🔓';
-                className = 'activity-edit';
-                break;
-        }
-        
-        let changesHtml = '';
-        if (activity.changes && activity.changes.length > 0) {
-            changesHtml = '<div class="activity-details">';
-            activity.changes.forEach(change => {
-                if (change.old !== undefined && change.new !== undefined && change.old !== change.new) {
-                    changesHtml += `<span class="change-item">
-                        ${change.field}: <span class="old-value">${change.old || '(empty)'}</span> → <span class="new-value">${change.new || '(empty)'}</span>
-                    </span>`;
-                } else if (change.action) {
-                    changesHtml += `<span class="change-item">${change.action}</span>`;
-                }
-            });
-            changesHtml += '</div>';
-        }
-        
-        return `
-            <div class="activity-item ${className}">
-                <div class="activity-icon">${icon}</div>
-                <div class="activity-title">${activity.details}</div>
-                ${changesHtml}
-                <div class="activity-timestamp">${formatActivityTime(activity.timestamp)}</div>
-            </div>
-        `;
-    }
-    
+    // Activity tracking - Display real database info
     function updateActivityTab() {
-        if (!currentDetailPlayer) return;
+        if (!currentDetailPlayer || !currentDetailRow) return;
         
-        const activities = activityLog[currentDetailPlayer.id] || [];
         const activityList = document.getElementById('activity-list');
+        let activityHTML = '';
+        
+        // Get data from the row (this would come from your database)
+        const confirmationSent = currentDetailRow.dataset.confirmationSent === 'true';
+        const sports = currentDetailRow.dataset.sports;
+        const division = currentDetailRow.querySelector('.division').textContent;
+        
+        // Build activity items based on available data
+        const activities = [];
+        
+        // Registration created (we don't have the exact date in the frontend, but in a real app you'd fetch this)
+        activities.push({
+            type: 'create',
+            icon: '➕',
+            title: 'Athlete Registered',
+            details: `Added to system${division ? ' in ' + division : ''}`,
+            className: 'activity-create'
+        });
+        
+        // Email status
+        if (confirmationSent) {
+            activities.push({
+                type: 'email',
+                icon: '📧',
+                title: 'Confirmation Email Sent',
+                details: `Jersey information sent to ${currentDetailPlayer.email}`,
+                className: 'activity-email'
+            });
+        }
+        
+        // Sports assigned
+        if (sports) {
+            activities.push({
+                type: 'sports',
+                icon: '⚽',
+                title: 'Sports Assigned',
+                details: `Registered for: ${sports.split(',').join(', ')}`,
+                className: 'activity-edit'
+            });
+        }
         
         if (activities.length === 0) {
             activityList.innerHTML = `
                 <div class="activity-empty">
                     <div style="text-align: center; padding: 40px 20px;">
                         <div style="font-size: 36px; margin-bottom: 12px;">📋</div>
-                        <div style="color: var(--gray-600); font-size: 14px;">No activity recorded for this session</div>
+                        <div style="color: var(--gray-600); font-size: 14px;">No activity data available</div>
                     </div>
                 </div>
             `;
         } else {
-            activityList.innerHTML = activities.map(activity => renderActivityItem(activity)).join('');
+            activityHTML = activities.map(activity => `
+                <div class="activity-item ${activity.className}">
+                    <div class="activity-icon">${activity.icon}</div>
+                    <div class="activity-title">${activity.title}</div>
+                    <div class="activity-details">${activity.details}</div>
+                </div>
+            `).join('');
+            
+            activityList.innerHTML = activityHTML;
         }
+        
+        // Add note about limited data
+        activityList.innerHTML += `
+            <div style="margin-top: 20px; padding: 12px; background: var(--gray-100); border-radius: 6px; font-size: 12px; color: var(--gray-600);">
+                <strong>Note:</strong> Currently showing available database fields. For full activity history, consider adding timestamp fields to track when players are edited.
+            </div>
+        `;
     }
     
     function switchDetailTab(tab) {
@@ -1912,11 +1857,14 @@
         document.getElementById('detail-email-btn').onclick = async () => {
             const response = await fetch(`/registrations/${regId}/send_email`, { method: 'POST' });
             if (response.ok) {
-                logActivity(playerId, 'email', 'Confirmation email sent', [
-                    { action: `Email sent to ${email}` }
-                ]);
                 alert('Email sent!');
-                location.reload();
+                // Update the UI to show email was sent
+                const statusBadge = row.querySelector('.status-badge');
+                if (statusBadge) {
+                    statusBadge.className = 'status-badge sent';
+                    statusBadge.textContent = '✓ Sent';
+                }
+                updateActivityTab();
             }
         };
         
@@ -1924,9 +1872,6 @@
         document.getElementById('detail-delete-btn').onclick = async () => {
             if (!confirm(`Delete ${name}?`)) return;
             await fetch(`/players/${playerId}`, { method: 'DELETE' });
-            logActivity(playerId, 'delete', 'Athlete deleted', [
-                { action: `${name} removed from system` }
-            ]);
             closeDetail();
             row.remove();
             updateStatistics();
@@ -1951,6 +1896,11 @@
         cancelDetailEdit();
         // Reset to Details tab
         switchDetailTab('details');
+        // Clear refresh interval
+        if (activityRefreshInterval) {
+            clearInterval(activityRefreshInterval);
+            activityRefreshInterval = null;
+        }
     }
     
     function enableDetailEdit() {
@@ -2227,10 +2177,17 @@
 
         row.querySelector('.btn-delete')?.addEventListener('click', async (e) => {
             e.stopPropagation();
-            if (!confirm('Delete this athlete?')) return;
             const id = row.dataset.playerId;
+            const playerName = row.querySelector('.player-name').textContent.trim();
+            
+            if (!confirm(`Delete ${playerName}?`)) return;
+            
             await fetch(`/players/${id}`, { method: 'DELETE' });
+            logActivity(id, 'delete', 'Athlete deleted', [
+                { action: `${playerName} removed from system` }
+            ]);
             row.remove();
+            updateStatistics();
         });
 
         row.querySelector('.btn-send-email')?.addEventListener('click', async (e) => {
