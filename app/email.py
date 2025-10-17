@@ -273,16 +273,23 @@ def process_inbound_email(email_body: str, db):
         
         text_content = soup.get_text()
         
-        # Try to find player and program pattern
-        # Pattern: "Number + Name + Year + Program"
-        # Example: "1Elise Pena2025 Pines Volleyball - 5th/6th Grade"
-        pattern1 = re.search(r'\d+([A-Z][a-z]+ [A-Z][a-z]+)\s*(\d{4})\s+Pines\s+(\w+)\s*-?\s*(.+?)(?=\$|Division|$)', text_content)
+        # UPDATED PATTERN: Handles hyphens, apostrophes, and multiple names
+        # Examples: "John Smith", "Mary-Jane O'Connor", "José García-López"
+        # Pattern breakdown:
+        # \d+ = digit(s) before name (order quantity)
+        # (?:[A-Z][a-z]+(?:[-\'\s])?)+ = one or more capitalized words, optionally separated by hyphen/apostrophe/space
+        # \s*(\d{4}) = year (2025, etc.)
+        # \s+Pines\s+(\w+) = "Pines" followed by sport name
+        # \s*-?\s*(.+?) = optional dash and rest of division info
+        pattern1 = re.search(
+            r'\d+((?:[A-Z][a-z]+(?:[-\'\s])?)+)\s*(\d{4})\s+Pines\s+(\w+)\s*-?\s*(.+?)(?=\$|Division|$)', 
+            text_content
+        )
         
         if pattern1:
             player_name = pattern1.group(1).strip()
             year = pattern1.group(2)
             sport = pattern1.group(3).strip().lower()
-            # We capture the division info but don't use it - admin will assign manually
             division_info = pattern1.group(4).strip() if pattern1.group(4) else ""
             
             logger.info(f"Found player: {player_name}, sport: {sport}, captured division info: {division_info}")
@@ -305,7 +312,7 @@ def process_inbound_email(email_body: str, db):
                     new_reg = Registration(
                         player_id=existing_player.id,
                         program=f"{year} Pines {sport.title()}",
-                        division="Waiting Room",  # Admin will assign division
+                        division="Waiting Room",
                         sport=sport,
                         season=year,
                         order_number=order_number,
@@ -319,8 +326,8 @@ def process_inbound_email(email_body: str, db):
                 new_player = Player(
                     full_name=player_name,
                     parent_email=parent_email or "unknown@example.com",
-                    jersey_number=None,  # Admin will assign after setting birth year
-                    birth_year=None  # Admin will assign
+                    jersey_number=None,
+                    birth_year=None
                 )
                 db.add(new_player)
                 db.flush()
@@ -329,7 +336,7 @@ def process_inbound_email(email_body: str, db):
                 new_reg = Registration(
                     player_id=new_player.id,
                     program=f"{year} Pines {sport.title()}",
-                    division="Waiting Room",  # Admin will assign division
+                    division="Waiting Room",
                     sport=sport,
                     season=year,
                     order_number=order_number,
@@ -343,6 +350,7 @@ def process_inbound_email(email_body: str, db):
             logger.info("Email processed successfully - player in Waiting Room")
         else:
             logger.warning("Could not parse player information from email")
+            logger.debug(f"Email text content preview: {text_content[:500]}")
             
     except Exception as e:
         logger.error(f"Error processing inbound email: {e}", exc_info=True)
