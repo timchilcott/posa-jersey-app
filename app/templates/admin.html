@@ -1001,16 +1001,20 @@
 <!-- Stats -->
 <div class="stats-bar">
     <div class="stat-card">
-        <div class="stat-value">{{ total_players }}</div>
-        <div class="stat-label">Total Athletes</div>
+        <div class="stat-value" id="stat-total">{{ total_players }}</div>
+        <div class="stat-label" id="stat-total-label">Total Athletes</div>
     </div>
     <div class="stat-card {% if waiting_room_players %}alert{% endif %}" style="cursor: pointer;" onclick="filterByYear('waiting')">
-        <div class="stat-value">{{ waiting_room_players|length if waiting_room_players else 0 }}</div>
-        <div class="stat-label">Waiting Room</div>
+        <div class="stat-value" id="stat-waiting">{{ waiting_room_players|length if waiting_room_players else 0 }}</div>
+        <div class="stat-label" id="stat-waiting-label">Waiting Room</div>
     </div>
     <div class="stat-card">
-        <div class="stat-value">{{ birth_year_counts|length }}</div>
-        <div class="stat-label">Birth Years</div>
+        <div class="stat-value" id="stat-years">{{ birth_year_counts|length }}</div>
+        <div class="stat-label" id="stat-years-label">Birth Years</div>
+    </div>
+    <div class="stat-card" id="clear-filters-card" style="display: none; cursor: pointer; background: var(--pines-green); color: white;" onclick="clearAllFilters()">
+        <div class="stat-value" style="font-size: 18px;">✖</div>
+        <div class="stat-label" style="color: white;">Clear Filters</div>
     </div>
 </div>
 
@@ -1303,10 +1307,101 @@
         // Scroll to top of main content
         document.querySelector('.main-content-scroll').scrollTop = 0;
         
+        // Update statistics
+        updateStatistics();
+        
         // Apply sport filter to the new view
         if (activeSportFilter !== 'all') {
             applySportFilter();
         }
+    }
+    
+    // Clear all filters
+    function clearAllFilters() {
+        // Reset year filter
+        filterByYear('all');
+        
+        // Reset sport filter
+        document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+        document.querySelector('.filter-pill[data-sport="all"]').classList.add('active');
+        activeSportFilter = 'all';
+        
+        // Clear search
+        document.getElementById('athlete-search').value = '';
+        
+        // Re-apply filters (this will show everything)
+        applySportFilter();
+    }
+    
+    // Update statistics based on current filter
+    function updateStatistics() {
+        const currentSection = document.querySelector('.year-section.active');
+        if (!currentSection) return;
+        
+        // Count visible players
+        const visiblePlayers = currentSection.querySelectorAll('tbody tr[data-player-id]');
+        let totalCount = 0;
+        let waitingRoomCount = 0;
+        const birthYears = new Set();
+        
+        visiblePlayers.forEach(row => {
+            // Skip if hidden by sport filter or search
+            if (row.style.display !== 'none') {
+                totalCount++;
+                
+                // Check if waiting room
+                if (row.classList.contains('waiting-room')) {
+                    waitingRoomCount++;
+                }
+                
+                // Get birth year
+                const birthYear = row.querySelector('.birth-year')?.textContent?.trim();
+                if (birthYear && birthYear !== '-') {
+                    birthYears.add(birthYear);
+                }
+            }
+        });
+        
+        // Update the stat cards
+        document.getElementById('stat-total').textContent = totalCount;
+        document.getElementById('stat-waiting').textContent = waitingRoomCount;
+        document.getElementById('stat-years').textContent = birthYears.size;
+        
+        // Update stat label to show it's filtered
+        const totalLabel = document.getElementById('stat-total-label');
+        const totalCard = document.querySelector('.stat-card');
+        const clearFilterCard = document.getElementById('clear-filters-card');
+        const searchValue = document.getElementById('athlete-search').value;
+        
+        let isFiltered = false;
+        
+        if (currentYear === 'all') {
+            totalLabel.textContent = 'Total Athletes';
+            totalCard.style.background = '';
+        } else if (currentYear === 'waiting') {
+            totalLabel.textContent = 'Waiting Room Athletes';
+            totalCard.style.background = '#fff3cd';
+            isFiltered = true;
+        } else {
+            totalLabel.textContent = `Year ${currentYear} Athletes`;
+            totalCard.style.background = '#e0f2fe';
+            isFiltered = true;
+        }
+        
+        // Show sport filter in label if applied
+        if (activeSportFilter !== 'all') {
+            const currentLabel = totalLabel.textContent;
+            totalLabel.textContent = currentLabel + ` (${activeSportFilter})`;
+            isFiltered = true;
+        }
+        
+        // Check if search is active
+        if (searchValue.length > 0) {
+            isFiltered = true;
+        }
+        
+        // Show/hide clear filters button
+        clearFilterCard.style.display = isFiltered ? 'block' : 'none';
     }
 
     // Sport Filter
@@ -1322,6 +1417,9 @@
                 row.style.display = 'none';
             }
         });
+        
+        // Update statistics after filtering
+        updateStatistics();
     }
 
     document.querySelectorAll('.filter-pill').forEach(pill => {
@@ -1352,6 +1450,9 @@
                 row.style.display = 'none';
             }
         });
+        
+        // Update statistics after search
+        updateStatistics();
     });
 
     // Detail Sidebar
@@ -1434,6 +1535,9 @@
             }
         });
     });
+    
+    // Initialize statistics on page load
+    updateStatistics();
     {% endif %}
 
     // Make rows clickable
