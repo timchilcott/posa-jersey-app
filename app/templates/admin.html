@@ -720,6 +720,7 @@
     .detail-content {
         flex: 1;
         overflow-y: auto;
+        padding-bottom: 20px;
     }
 
     .detail-section {
@@ -771,6 +772,81 @@
         justify-content: space-between;
         padding: 10px 0;
         font-size: 13px;
+    }
+
+    /* Detail Sidebar Form Controls */
+    .detail-sidebar .form-control {
+        padding: 6px 10px;
+        border: 1px solid var(--gray-300);
+        border-radius: 6px;
+        font-size: 14px;
+        font-family: inherit;
+        transition: all 0.15s ease;
+        background: white;
+        color: var(--gray-900);
+    }
+
+    .detail-sidebar .form-control:focus {
+        outline: none;
+        border-color: var(--pines-green);
+        box-shadow: 0 0 0 3px rgba(60, 121, 57, 0.1);
+    }
+
+    .detail-sidebar .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        font-size: 13px;
+        min-height: 36px;
+    }
+
+    .detail-sidebar .info-row .edit-mode {
+        margin-left: auto;
+    }
+
+    #edit-sports-container {
+        margin-left: auto;
+        font-size: 13px;
+        max-width: 150px;
+    }
+
+    #edit-sports-container label {
+        cursor: pointer;
+        padding: 3px 0;
+        display: flex;
+        align-items: center;
+        font-weight: normal;
+        color: var(--gray-700);
+    }
+
+    #edit-sports-container label:hover {
+        color: var(--gray-900);
+    }
+
+    #edit-sports-container input[type="checkbox"] {
+        margin-right: 8px;
+        cursor: pointer;
+        width: 16px;
+        height: 16px;
+        accent-color: var(--pines-green);
+    }
+
+    .detail-sidebar .view-mode,
+    .detail-sidebar .edit-mode {
+        transition: opacity 0.15s ease;
+    }
+    
+    .detail-sidebar .btn-group-edit {
+        display: flex;
+        gap: 8px;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid var(--gray-200);
+    }
+
+    .d-none {
+        display: none !important;
     }
 
     .info-label {
@@ -1224,33 +1300,66 @@
             <div class="player-info-compact">
                 <div class="player-avatar-small" id="detail-avatar">-</div>
                 <div class="player-info-text">
-                    <div class="player-name-compact" id="detail-name">Select an athlete</div>
-                    <div class="player-email-compact" id="detail-email">-</div>
+                    <div class="player-name-compact view-mode" id="detail-name">Select an athlete</div>
+                    <input type="text" class="form-control edit-mode d-none" id="edit-name" style="font-size: 15px; font-weight: 600;">
+                    <div class="player-email-compact view-mode" id="detail-email">-</div>
+                    <input type="email" class="form-control edit-mode d-none" id="edit-email" style="font-size: 13px;">
                 </div>
             </div>
 
             <div class="info-row">
                 <span class="info-label">Jersey</span>
-                <span class="info-value" id="detail-jersey">#-</span>
+                <span class="info-value view-mode" id="detail-jersey">#-</span>
+                <input type="number" class="form-control edit-mode d-none" id="edit-jersey" style="width: 100px; margin-left: auto;">
             </div>
             <div class="info-row">
                 <span class="info-label">Birth Year</span>
-                <span class="info-value" id="detail-birth-year">-</span>
+                <span class="info-value view-mode" id="detail-birth-year">-</span>
+                <select class="form-control edit-mode d-none" id="edit-birth-year" style="width: 120px; margin-left: auto;">
+                    <option value="">-</option>
+                    {% for year in range(2005, 2026) %}
+                    <option value="{{ year }}">{{ year }}</option>
+                    {% endfor %}
+                </select>
             </div>
             <div class="info-row">
                 <span class="info-label">Division</span>
-                <span class="info-value" id="detail-division">-</span>
+                <span class="info-value view-mode" id="detail-division">-</span>
+                <select class="form-control edit-mode d-none" id="edit-division" style="width: 150px; margin-left: auto;">
+                    <option value="Waiting Room">Waiting Room</option>
+                    <option value="U4">U4</option>
+                    <option value="U6">U6</option>
+                    <option value="U8">U8</option>
+                    <option value="U10">U10</option>
+                    <option value="U12">U12</option>
+                    <option value="U14">U14</option>
+                    <option value="Pend Oreille Pines (High School Club Team)">Pines HS</option>
+                </select>
             </div>
             <div class="info-row">
                 <span class="info-label">Sports</span>
-                <span class="info-value" id="detail-sports">-</span>
+                <span class="info-value view-mode" id="detail-sports">-</span>
+                <div class="edit-mode d-none" id="edit-sports-container">
+                    <label style="display: block; margin: 2px;"><input type="checkbox" value="soccer"> Soccer</label>
+                    <label style="display: block; margin: 2px;"><input type="checkbox" value="basketball"> Basketball</label>
+                    <label style="display: block; margin: 2px;"><input type="checkbox" value="baseball"> Baseball</label>
+                    <label style="display: block; margin: 2px;"><input type="checkbox" value="softball"> Softball</label>
+                    <label style="display: block; margin: 2px;"><input type="checkbox" value="volleyball"> Volleyball</label>
+                    <label style="display: block; margin: 2px;"><input type="checkbox" value="flag"> Flag Football</label>
+                </div>
+            </div>
+            
+            <!-- Edit action buttons -->
+            <div class="edit-mode d-none btn-group-edit">
+                <button class="btn btn-success" onclick="saveDetailEdits()">💾 Save</button>
+                <button class="btn btn-secondary" onclick="cancelDetailEdit()">✖ Cancel</button>
             </div>
         </div>
 
-        <div class="detail-section">
+        <div class="detail-section view-mode">
             <div class="detail-section-title">Quick Actions</div>
             <div class="action-list">
-                <div class="action-item" id="detail-edit-btn">
+                <div class="action-item" id="detail-edit-btn" onclick="enableDetailEdit()">
                     <div class="action-icon">✏️</div>
                     <div>
                         <div class="action-title">Edit Athlete</div>
@@ -1262,6 +1371,13 @@
                     <div>
                         <div class="action-title">Send Email</div>
                         <div class="action-description">Jersey confirmation</div>
+                    </div>
+                </div>
+                <div class="action-item" id="detail-delete-btn" style="border-color: var(--red-500);">
+                    <div class="action-icon" style="background: #fef2f2; color: var(--red-500);">🗑️</div>
+                    <div>
+                        <div class="action-title" style="color: var(--red-500);">Delete Athlete</div>
+                        <div class="action-description">Remove from system</div>
                     </div>
                 </div>
             </div>
@@ -1456,40 +1572,81 @@
     });
 
     // Detail Sidebar
+    let currentDetailPlayer = null;
+    let currentDetailRow = null;
+    
     function openDetail(row) {
         if (currentSelectedRow) {
             currentSelectedRow.classList.remove('selected');
         }
         
         currentSelectedRow = row;
+        currentDetailRow = row;
         row.classList.add('selected');
         
+        const playerId = row.dataset.playerId;
+        const regId = row.dataset.regId;
         const name = row.querySelector('.player-name').textContent.trim();
         const email = row.querySelector('.player-email').textContent.trim();
         const jersey = row.querySelector('.jersey-badge').textContent.trim();
         const birthYear = row.querySelector('.birth-year').textContent.trim();
         const division = row.querySelector('.division').textContent.trim();
-        const sports = Array.from(row.querySelectorAll('.sport-tag')).map(t => t.textContent).join(', ');
+        const sports = Array.from(row.querySelectorAll('.sport-tag')).map(t => t.textContent.trim());
         const initials = name.split(' ').map(n => n[0]).join('');
         
+        // Store current player data
+        currentDetailPlayer = {
+            id: playerId,
+            regId: regId,
+            name: name,
+            email: email,
+            jersey: jersey === '-' ? '' : jersey,
+            birthYear: birthYear === '-' ? '' : birthYear,
+            division: division,
+            sports: sports
+        };
+        
+        // Update view mode displays
         document.getElementById('detail-name').textContent = name;
         document.getElementById('detail-email').textContent = email;
         document.getElementById('detail-avatar').textContent = initials;
         document.getElementById('detail-jersey').textContent = '#' + jersey;
         document.getElementById('detail-birth-year').textContent = birthYear;
         document.getElementById('detail-division').textContent = division;
-        document.getElementById('detail-sports').textContent = sports;
+        document.getElementById('detail-sports').textContent = sports.join(', ') || '-';
         
-        // Wire up quick actions
-        document.getElementById('detail-edit-btn').onclick = () => {
-            closeDetail();
-            row.querySelector('.btn-edit').click();
+        // Setup edit form values
+        document.getElementById('edit-name').value = name;
+        document.getElementById('edit-email').value = email;
+        document.getElementById('edit-jersey').value = jersey === '-' ? '' : jersey;
+        document.getElementById('edit-birth-year').value = birthYear === '-' ? '' : birthYear;
+        document.getElementById('edit-division').value = division;
+        
+        // Setup sports checkboxes
+        document.querySelectorAll('#edit-sports-container input[type="checkbox"]').forEach(cb => {
+            cb.checked = sports.includes(cb.value);
+        });
+        
+        // Wire up email action
+        document.getElementById('detail-email-btn').onclick = async () => {
+            const response = await fetch(`/registrations/${regId}/send_email`, { method: 'POST' });
+            if (response.ok) {
+                alert('Email sent!');
+                location.reload();
+            }
         };
         
-        document.getElementById('detail-email-btn').onclick = () => {
+        // Wire up delete action
+        document.getElementById('detail-delete-btn').onclick = async () => {
+            if (!confirm(`Delete ${name}?`)) return;
+            await fetch(`/players/${playerId}`, { method: 'DELETE' });
             closeDetail();
-            row.querySelector('.btn-send-email').click();
+            row.remove();
+            updateStatistics();
         };
+        
+        // Make sure we're in view mode
+        cancelDetailEdit();
         
         detailSidebar.classList.add('open');
         detailOverlay.classList.add('active');
@@ -1501,6 +1658,126 @@
         if (currentSelectedRow) {
             currentSelectedRow.classList.remove('selected');
             currentSelectedRow = null;
+        }
+        currentDetailPlayer = null;
+        currentDetailRow = null;
+        cancelDetailEdit();
+    }
+    
+    function enableDetailEdit() {
+        // Show edit mode elements
+        document.querySelectorAll('.detail-content .edit-mode').forEach(el => {
+            el.classList.remove('d-none');
+        });
+        // Hide view mode elements
+        document.querySelectorAll('.detail-content .view-mode').forEach(el => {
+            el.classList.add('d-none');
+        });
+    }
+    
+    function cancelDetailEdit() {
+        // Hide edit mode elements
+        document.querySelectorAll('.detail-content .edit-mode').forEach(el => {
+            el.classList.add('d-none');
+        });
+        // Show view mode elements
+        document.querySelectorAll('.detail-content .view-mode').forEach(el => {
+            el.classList.remove('d-none');
+        });
+    }
+    
+    async function saveDetailEdits() {
+        if (!currentDetailPlayer) return;
+        
+        const newName = document.getElementById('edit-name').value;
+        const newEmail = document.getElementById('edit-email').value;
+        const newJersey = document.getElementById('edit-jersey').value;
+        const newBirthYear = document.getElementById('edit-birth-year').value;
+        const newDivision = document.getElementById('edit-division').value;
+        
+        // Get selected sports
+        const selectedSports = [];
+        document.querySelectorAll('#edit-sports-container input[type="checkbox"]:checked').forEach(cb => {
+            selectedSports.push(cb.value);
+        });
+        
+        try {
+            // Update player basic info
+            await fetch(`/players/${currentDetailPlayer.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    full_name: newName,
+                    birth_year: newBirthYear ? parseInt(newBirthYear) : null,
+                    jersey_number: newJersey ? parseInt(newJersey) : 0,
+                    parent_email: newEmail
+                })
+            });
+            
+            // Update sports
+            await fetch(`/players/${currentDetailPlayer.id}/sports`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sports: selectedSports })
+            });
+            
+            // Update division if registration exists
+            if (currentDetailPlayer.regId) {
+                await fetch(`/registrations/${currentDetailPlayer.regId}/division`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ division: newDivision })
+                });
+            }
+            
+            // Update the display
+            document.getElementById('detail-name').textContent = newName;
+            document.getElementById('detail-email').textContent = newEmail;
+            document.getElementById('detail-jersey').textContent = '#' + (newJersey || '-');
+            document.getElementById('detail-birth-year').textContent = newBirthYear || '-';
+            document.getElementById('detail-division').textContent = newDivision;
+            document.getElementById('detail-sports').textContent = selectedSports.join(', ') || '-';
+            document.getElementById('detail-avatar').textContent = newName.split(' ').map(n => n[0]).join('');
+            
+            // Update the table row
+            if (currentDetailRow) {
+                currentDetailRow.querySelector('.player-name').textContent = newName;
+                currentDetailRow.querySelector('.player-email').textContent = newEmail;
+                currentDetailRow.querySelector('.jersey-badge').textContent = newJersey || '-';
+                currentDetailRow.querySelector('.birth-year').textContent = newBirthYear || '-';
+                currentDetailRow.querySelector('.division').textContent = newDivision;
+                
+                // Update sport tags
+                const sportTagsContainer = currentDetailRow.querySelector('.sport-tags');
+                sportTagsContainer.innerHTML = '';
+                selectedSports.forEach(sport => {
+                    const tag = document.createElement('span');
+                    tag.className = 'sport-tag';
+                    tag.textContent = sport;
+                    sportTagsContainer.appendChild(tag);
+                });
+                
+                // Update data attribute for filtering
+                currentDetailRow.dataset.sports = selectedSports.join(',');
+            }
+            
+            // Update stored data
+            currentDetailPlayer.name = newName;
+            currentDetailPlayer.email = newEmail;
+            currentDetailPlayer.jersey = newJersey;
+            currentDetailPlayer.birthYear = newBirthYear;
+            currentDetailPlayer.division = newDivision;
+            currentDetailPlayer.sports = selectedSports;
+            
+            // Switch back to view mode
+            cancelDetailEdit();
+            
+            // Update statistics
+            updateStatistics();
+            
+        } catch (error) {
+            console.error('Error saving edits:', error);
+            alert('Failed to save changes. Please try again.');
         }
     }
 
