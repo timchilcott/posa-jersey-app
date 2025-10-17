@@ -443,6 +443,14 @@
         padding: 16px 32px 32px;
     }
 
+    .year-section {
+        display: none;
+    }
+
+    .year-section.active {
+        display: block;
+    }
+
     .data-table {
         width: 100%;
         background: white;
@@ -889,11 +897,11 @@
         <nav class="sidebar-nav">
             <div class="nav-section">
                 <div class="nav-section-title">Main</div>
-                <a href="/admin" class="nav-item {% if not view or view == 'birthyear' %}active{% endif %}">
+                <a href="#all" class="nav-item nav-year-link active" data-year="all">
                     <span class="icon">👥</span>
                     <span>All Athletes</span>
                 </a>
-                <a href="#waiting-room" class="nav-item nav-scroll-link">
+                <a href="#waiting-room" class="nav-item nav-year-link" data-year="waiting">
                     <span class="icon">⏳</span>
                     <span>Waiting Room</span>
                     {% if waiting_room_players %}
@@ -918,7 +926,7 @@
             <div class="nav-section">
                 <div class="nav-section-title">Birth Years</div>
                 {% for year in group_list %}
-                <a href="#year-{{ year }}" class="nav-item nav-scroll-link">
+                <a href="#year-{{ year }}" class="nav-item nav-year-link" data-year="{{ year }}">
                     <span class="icon">📅</span>
                     <span>{{ birth_year_labels[year] if birth_year_labels else year }}</span>
                     <span class="badge" style="background: var(--gray-400);">{{ birth_year_counts.get(year, 0) }}</span>
@@ -996,7 +1004,7 @@
         <div class="stat-value">{{ total_players }}</div>
         <div class="stat-label">Total Athletes</div>
     </div>
-    <div class="stat-card {% if waiting_room_players %}alert{% endif %}" style="cursor: pointer;" onclick="scrollToWaitingRoom()">
+    <div class="stat-card {% if waiting_room_players %}alert{% endif %}" style="cursor: pointer;" onclick="filterByYear('waiting')">
         <div class="stat-value">{{ waiting_room_players|length if waiting_room_players else 0 }}</div>
         <div class="stat-label">Waiting Room</div>
     </div>
@@ -1149,32 +1157,49 @@
     </table>
     {% endmacro %}
 
-    <h3 id="waiting-room" style="margin: 20px 0 12px 0; color: var(--red-500); font-size: 16px; font-weight: 700; scroll-margin-top: 20px;">
-        ⏳ Waiting Room {% if waiting_room_players %}({{ waiting_room_players|length }}){% else %}(0){% endif %}
-    </h3>
-    {% if waiting_room_players %}
-    {{ player_table(waiting_room_players) }}
-    {% else %}
-    <div style="background: white; border: 1px solid var(--gray-200); border-radius: 8px; padding: 40px; text-align: center;">
-        <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
-        <div style="font-size: 18px; font-weight: 600; color: var(--gray-900); margin-bottom: 8px;">No Players Waiting</div>
-        <div style="font-size: 14px; color: var(--gray-600);">All athletes have been assigned to their divisions!</div>
+    <!-- All Athletes Section -->
+    <div class="year-section active" id="section-all">
+        {% if view == 'birthyear' %}
+            {% for group in group_list %}
+            <h3 style="margin: 20px 0 12px 0; color: var(--gray-900); font-size: 16px; font-weight: 700;">
+                {{ birth_year_labels[group] if birth_year_labels else group }}
+            </h3>
+            {{ player_table(players_by_group[group]) }}
+            {% endfor %}
+        {% else %}
+            {% for group in group_list %}
+            <h3 style="margin: 20px 0 12px 0; color: var(--gray-900); font-size: 16px; font-weight: 700;">
+                {{ group }}
+            </h3>
+            {{ player_table(players_by_group[group]) }}
+            {% endfor %}
+        {% endif %}
     </div>
-    {% endif %}
+
+    <!-- Waiting Room Section -->
+    <div class="year-section" id="section-waiting">
+        <h3 style="margin: 20px 0 12px 0; color: var(--red-500); font-size: 16px; font-weight: 700;">
+            ⏳ Waiting Room {% if waiting_room_players %}({{ waiting_room_players|length }}){% else %}(0){% endif %}
+        </h3>
+        {% if waiting_room_players %}
+        {{ player_table(waiting_room_players) }}
+        {% else %}
+        <div style="background: white; border: 1px solid var(--gray-200); border-radius: 8px; padding: 40px; text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
+            <div style="font-size: 18px; font-weight: 600; color: var(--gray-900); margin-bottom: 8px;">No Players Waiting</div>
+            <div style="font-size: 14px; color: var(--gray-600);">All athletes have been assigned to their divisions!</div>
+        </div>
+        {% endif %}
+    </div>
 
     {% if view == 'birthyear' %}
         {% for group in group_list %}
-        <h3 id="year-{{ group }}" style="margin: 20px 0 12px 0; color: var(--gray-900); font-size: 16px; font-weight: 700; scroll-margin-top: 20px;">
-            {{ birth_year_labels[group] if birth_year_labels else group }}
-        </h3>
-        {{ player_table(players_by_group[group]) }}
-        {% endfor %}
-    {% else %}
-        {% for group in group_list %}
-        <h3 id="division-{{ loop.index }}" style="margin: 20px 0 12px 0; color: var(--gray-900); font-size: 16px; font-weight: 700; scroll-margin-top: 20px;">
-            {{ group }}
-        </h3>
-        {{ player_table(players_by_group[group]) }}
+        <div class="year-section" id="section-{{ group }}">
+            <h3 style="margin: 20px 0 12px 0; color: var(--gray-900); font-size: 16px; font-weight: 700;">
+                {{ birth_year_labels[group] if birth_year_labels else group }}
+            </h3>
+            {{ player_table(players_by_group[group]) }}
+        </div>
         {% endfor %}
     {% endif %}
 </div>
@@ -1245,25 +1270,60 @@
 <script>
     let activeSportFilter = 'all';
     let currentSelectedRow = null;
+    let currentYear = 'all';
     const detailSidebar = document.getElementById('detail-sidebar');
     const detailOverlay = document.getElementById('detail-overlay');
 
-    // Scroll to Waiting Room
-    function scrollToWaitingRoom() {
-        const targetElement = document.getElementById('waiting-room');
-        if (targetElement) {
-            const scrollContainer = document.querySelector('.main-content-scroll');
-            const elementPosition = targetElement.offsetTop;
-            const offsetPosition = elementPosition - 20;
-            
-            scrollContainer.scrollTo({
-                top: offsetPosition,
-                behavior: 'smooth'
-            });
+    // Filter by year function
+    function filterByYear(year) {
+        currentYear = year;
+        
+        // Hide all year sections
+        document.querySelectorAll('.year-section').forEach(section => {
+            section.classList.remove('active');
+        });
+        
+        // Show the selected year section
+        const targetSection = document.getElementById(`section-${year}`);
+        if (targetSection) {
+            targetSection.classList.add('active');
+        }
+        
+        // Update active state in sidebar
+        document.querySelectorAll('.nav-year-link').forEach(link => {
+            link.classList.remove('active');
+        });
+        
+        // Find and activate the clicked link
+        const activeLink = document.querySelector(`.nav-year-link[data-year="${year}"]`);
+        if (activeLink) {
+            activeLink.classList.add('active');
+        }
+        
+        // Scroll to top of main content
+        document.querySelector('.main-content-scroll').scrollTop = 0;
+        
+        // Apply sport filter to the new view
+        if (activeSportFilter !== 'all') {
+            applySportFilter();
         }
     }
 
     // Sport Filter
+    function applySportFilter() {
+        const currentSection = document.querySelector('.year-section.active');
+        if (!currentSection) return;
+        
+        currentSection.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
+            const playerSports = (row.dataset.sports || '').toLowerCase();
+            if (activeSportFilter === 'all' || playerSports.includes(activeSportFilter.toLowerCase())) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
     document.querySelectorAll('.filter-pill').forEach(pill => {
         pill.addEventListener('click', () => {
             document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
@@ -1271,23 +1331,17 @@
             
             const sport = pill.dataset.sport;
             activeSportFilter = sport;
-            
-            document.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
-                const playerSports = (row.dataset.sports || '').toLowerCase();
-                if (sport === 'all' || playerSports.includes(sport.toLowerCase())) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
+            applySportFilter();
         });
     });
 
     // Search
     document.getElementById('athlete-search').addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase();
+        const currentSection = document.querySelector('.year-section.active');
+        if (!currentSection) return;
         
-        document.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
+        currentSection.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
             const name = row.querySelector('.player-name').textContent.toLowerCase();
             const email = row.querySelector('.player-email').textContent.toLowerCase();
             const jersey = row.querySelector('.jersey-badge').textContent;
@@ -1349,24 +1403,19 @@
         }
     }
 
-    // Make rows clickable
-    document.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
-        row.addEventListener('click', (e) => {
-            if (e.target.closest('.row-actions') || e.target.closest('.lock-toggle')) {
-                return;
-            }
-            openDetail(row);
+    // Year navigation links
+    {% if view == 'birthyear' %}
+    document.querySelectorAll('.nav-year-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const year = link.dataset.year;
+            filterByYear(year);
         });
     });
+    {% endif %}
 
-    // ESC to close
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && detailSidebar.classList.contains('open')) {
-            closeDetail();
-        }
-    });
-
-    // Smooth scroll for sidebar navigation
+    // Division scroll links (keep existing functionality for division view)
+    {% if view == 'division' %}
     document.querySelectorAll('.nav-scroll-link').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
@@ -1384,6 +1433,33 @@
                 });
             }
         });
+    });
+    {% endif %}
+
+    // Make rows clickable
+    function attachRowEventHandlers() {
+        document.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
+            // Remove existing listeners to avoid duplicates
+            const newRow = row.cloneNode(true);
+            row.parentNode.replaceChild(newRow, row);
+            
+            newRow.addEventListener('click', (e) => {
+                if (e.target.closest('.row-actions') || e.target.closest('.lock-toggle')) {
+                    return;
+                }
+                openDetail(newRow);
+            });
+            
+            // Re-attach row handlers
+            attachRowHandlers(newRow);
+        });
+    }
+
+    // ESC to close
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && detailSidebar.classList.contains('open')) {
+            closeDetail();
+        }
     });
 
     // Edit/Save/Cancel functionality
@@ -1483,7 +1559,8 @@
         });
     }
 
-    document.querySelectorAll('tbody tr[data-player-id]').forEach(attachRowHandlers);
+    // Attach handlers to all rows initially
+    attachRowEventHandlers();
 
     // Add player functionality
     document.querySelectorAll('.btn-show-add-form').forEach(btn => {
