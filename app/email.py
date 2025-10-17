@@ -228,14 +228,23 @@ def process_inbound_email(email_body: str, db):
         # Parse the email
         msg = email.message_from_string(email_body)
         
-        # Get parent email from To: field
+        # Get parent email - try forwarded message first, then To: header
         parent_email = None
-        to_header = msg.get('To', '')
-        if to_header:
-            # Extract email from "Name <email@example.com>" format
-            email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', to_header)
-            if email_match:
-                parent_email = email_match.group(0)
+        
+        # Look for forwarded "To:" field in the body (for forwarded emails)
+        forwarded_to_match = re.search(r'>\s*To:\s*([\w\.-]+@[\w\.-]+\.\w+)', email_body)
+        if forwarded_to_match:
+            parent_email = forwarded_to_match.group(1)
+            logger.info(f"Found parent email from forwarded message: {parent_email}")
+        else:
+            # Fallback to To: header
+            to_header = msg.get('To', '')
+            if to_header:
+                # Extract email from "Name <email@example.com>" format
+                email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', to_header)
+                if email_match:
+                    parent_email = email_match.group(0)
+                    logger.info(f"Found parent email from To header: {parent_email}")
         
         # Get HTML content
         html_content = None
@@ -273,16 +282,17 @@ def process_inbound_email(email_body: str, db):
         
         text_content = soup.get_text()
         
-        # UPDATED PATTERN: Handles hyphens, apostrophes, and multiple names
+        # UPDATED PATTERN: Added \s+ after \d+ to allow whitespace between quantity and name
+        # Handles hyphens, apostrophes, and multiple names
         # Examples: "John Smith", "Mary-Jane O'Connor", "José García-López"
         # Pattern breakdown:
-        # \d+ = digit(s) before name (order quantity)
+        # \d+\s+ = digit(s) followed by whitespace (allows for newlines)
         # (?:[A-Z][a-z]+(?:[-\'\s])?)+ = one or more capitalized words, optionally separated by hyphen/apostrophe/space
         # \s*(\d{4}) = year (2025, etc.)
         # \s+Pines\s+(\w+) = "Pines" followed by sport name
         # \s*-?\s*(.+?) = optional dash and rest of division info
         pattern1 = re.search(
-            r'\d+((?:[A-Z][a-z]+(?:[-\'\s])?)+)\s*(\d{4})\s+Pines\s+(\w+)\s*-?\s*(.+?)(?=\$|Division|$)', 
+            r'\d+\s+((?:[A-Z][a-z]+(?:[-\'\s])?)+)\s*(\d{4})\s+Pines\s+(\w+)\s*-?\s*(.+?)(?=\$|Division|$)', 
             text_content
         )
         
