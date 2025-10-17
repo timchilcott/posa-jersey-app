@@ -240,7 +240,6 @@ def process_inbound_email(email_body: str, db):
             # Fallback to To: header
             to_header = msg.get('To', '')
             if to_header:
-                # Extract email from "Name <email@example.com>" format
                 email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', to_header)
                 if email_match:
                     parent_email = email_match.group(0)
@@ -282,27 +281,20 @@ def process_inbound_email(email_body: str, db):
         
         text_content = soup.get_text()
         
-        # UPDATED PATTERN: Added \s+ after \d+ to allow whitespace between quantity and name
-        # Handles hyphens, apostrophes, and multiple names
-        # Examples: "John Smith", "Mary-Jane O'Connor", "José García-López"
-        # Pattern breakdown:
-        # \d+\s+ = digit(s) followed by whitespace (allows for newlines)
-        # (?:[A-Z][a-z]+(?:[-\'\s])?)+ = one or more capitalized words, optionally separated by hyphen/apostrophe/space
-        # \s*(\d{4}) = year (2025, etc.)
-        # \s+Pines\s+(\w+) = "Pines" followed by sport name
-        # \s*-?\s*(.+?) = optional dash and rest of division info
+        # More flexible pattern - matches name on separate line from number
+        # Looks for: digits, then name (with hyphens/apostrophes), then year, then "Pines", then sport
         pattern1 = re.search(
-            r'\d+\s+((?:[A-Z][a-z]+(?:[-\'\s])?)+)\s*(\d{4})\s+Pines\s+(\w+)\s*-?\s*(.+?)(?=\$|Division|$)', 
-            text_content
+            r'(\d+)\s+([A-Z][a-z]+(?:[-\s][A-Z][a-z]+)*(?:-[A-Z][a-z]+)*)\s+(\d{4})\s+Pines\s+(\w+)', 
+            text_content, 
+            re.MULTILINE | re.DOTALL
         )
         
         if pattern1:
-            player_name = pattern1.group(1).strip()
-            year = pattern1.group(2)
-            sport = pattern1.group(3).strip().lower()
-            division_info = pattern1.group(4).strip() if pattern1.group(4) else ""
+            player_name = pattern1.group(2).strip()
+            year = pattern1.group(3)
+            sport = pattern1.group(4).strip().lower()
             
-            logger.info(f"Found player: {player_name}, sport: {sport}, captured division info: {division_info}")
+            logger.info(f"Found player: {player_name}, sport: {sport}, year: {year}")
             
             # Check if player already exists
             existing_player = db.query(Player).filter(Player.full_name == player_name).first()
@@ -360,7 +352,6 @@ def process_inbound_email(email_body: str, db):
             logger.info("Email processed successfully - player in Waiting Room")
         else:
             logger.warning("Could not parse player information from email")
-            logger.debug(f"Email text content preview: {text_content[:500]}")
             
     except Exception as e:
         logger.error(f"Error processing inbound email: {e}", exc_info=True)
