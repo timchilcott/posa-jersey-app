@@ -1,7 +1,11 @@
-{% extends "base.html" %}
-{% block title %}POSA Admin{% endblock %}
-{% block content %}
-<style>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POSA Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
     * {
         margin: 0;
         padding: 0;
@@ -32,6 +36,163 @@
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     }
 
+    .app-container {
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    /* Left Sidebar */
+    .sidebar {
+        width: 240px;
+        background: white;
+        border-right: 1px solid var(--gray-200);
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+    }
+
+    .sidebar-header {
+        padding: 20px;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .logo {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--posa-navy);
+    }
+
+    .logo::before {
+        content: "🌲 ";
+        font-size: 1.3rem;
+    }
+
+    .sidebar-nav {
+        flex: 1;
+        padding: 12px;
+        overflow-y: auto;
+    }
+
+    .nav-section {
+        margin-bottom: 24px;
+    }
+
+    .nav-section-title {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--gray-500);
+        padding: 8px 12px;
+        letter-spacing: 0.5px;
+    }
+
+    .nav-item {
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        border-radius: 6px;
+        color: var(--gray-700);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.15s ease;
+        cursor: pointer;
+        margin-bottom: 2px;
+    }
+
+    .nav-item:hover {
+        background: var(--gray-100);
+        color: var(--gray-900);
+        text-decoration: none;
+    }
+
+    .nav-item.active {
+        background: var(--pines-green);
+        color: white;
+    }
+
+    .nav-item .icon {
+        margin-right: 10px;
+        font-size: 16px;
+    }
+
+    .nav-item .badge {
+        margin-left: auto;
+        background: var(--red-500);
+        color: white;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: 10px;
+        min-width: 18px;
+        text-align: center;
+    }
+
+    .sidebar-footer {
+        padding: 16px;
+        border-top: 1px solid var(--gray-200);
+    }
+
+    .user-menu {
+        display: flex;
+        align-items: center;
+        padding: 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.15s ease;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .user-menu:hover {
+        background: var(--gray-100);
+        text-decoration: none;
+    }
+
+    .user-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--pines-green);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 14px;
+        margin-right: 10px;
+    }
+
+    .user-info {
+        flex: 1;
+    }
+
+    .user-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+
+    .user-role {
+        font-size: 12px;
+        color: var(--gray-500);
+    }
+
+    /* Main Content Area */
+    .main-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: var(--gray-50);
+    }
+
+    .main-content-scroll {
+        flex: 1;
+        overflow-y: auto;
+    }
+
     .container {
         max-width: 100% !important;
         padding: 0 !important;
@@ -42,7 +203,6 @@
         background: white;
         border-bottom: 1px solid var(--gray-200);
         padding: 16px 32px;
-        margin: 0 0 0 0;
     }
 
     .header-top {
@@ -267,7 +427,6 @@
     /* Table Container */
     .table-container {
         padding: 16px 32px 32px;
-        background: var(--gray-50);
     }
 
     .data-table {
@@ -696,8 +855,77 @@
         border-radius: 4px;
         font-size: 13px;
     }
-</style>
 
+    @media (max-width: 768px) {
+        .sidebar {
+            display: none;
+        }
+    }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+    <!-- Left Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">POSA Sports</div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-section-title">Main</div>
+                <a href="/admin" class="nav-item active">
+                    <span class="icon">👥</span>
+                    <span>All Athletes</span>
+                </a>
+                {% if waiting_room_players %}
+                <a href="/admin?view=division" class="nav-item">
+                    <span class="icon">⏳</span>
+                    <span>Waiting Room</span>
+                    <span class="badge">{{ waiting_room_players|length }}</span>
+                </a>
+                {% endif %}
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Views</div>
+                <a href="/admin?view=birthyear" class="nav-item {% if view == 'birthyear' %}active{% endif %}">
+                    <span class="icon">🎂</span>
+                    <span>By Birth Year</span>
+                </a>
+                <a href="/admin?view=division" class="nav-item {% if view == 'division' %}active{% endif %}">
+                    <span class="icon">📊</span>
+                    <span>By Division</span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Settings</div>
+                <a href="/email-templates" class="nav-item">
+                    <span class="icon">✉️</span>
+                    <span>Email Templates</span>
+                </a>
+                <a href="/invite" class="nav-item">
+                    <span class="icon">👤</span>
+                    <span>Invite User</span>
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="/logout" class="user-menu">
+                <div class="user-avatar">AD</div>
+                <div class="user-info">
+                    <div class="user-name">Admin</div>
+                    <div class="user-role">Logout</div>
+                </div>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
 <!-- Page Header -->
 <div class="page-header">
     <div class="header-top">
@@ -723,6 +951,7 @@
     </div>
 </div>
 
+<div class="main-content-scroll">
 <!-- Stats -->
 <div class="stats-bar">
     <div class="stat-card">
@@ -904,6 +1133,7 @@
         {{ player_table(players_by_group[group]) }}
         {% endfor %}
     {% endif %}
+</div>
 </div>
 
 <!-- Detail Sidebar -->
@@ -1220,4 +1450,9 @@
     });
 </script>
 
-{% endblock %}
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
