@@ -48,9 +48,6 @@ class PlayerSportsUpdate(BaseModel):
 class DivisionUpdate(BaseModel):
     division: str
 
-class PlayerLock(BaseModel):
-    locked: bool
-
 class PlayerInlineCreate(BaseModel):
     full_name: str
     birth_year: int | None
@@ -63,6 +60,12 @@ class EmailTemplateUpdate(BaseModel):
     name: str
     subject: str
     body_html: str
+
+class BulkPlayerIds(BaseModel):
+    player_ids: List[int]
+
+class BulkRegistrationIds(BaseModel):
+    registration_ids: List[int]
 
 # ---------------------------------------------------------------------
 # Utility
@@ -233,7 +236,6 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
                     "division": "Waiting Room",
                     "divisions": divisions,
                     "confirmation_sent": confirmation_sent,
-                    "locked": p.locked,
                     "is_duplicate": p.id in duplicate_ids,
                 }
                 waiting_room_players.append(player_data)
@@ -253,7 +255,6 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
                 "division": primary_division,
                 "divisions": divisions,
                 "confirmation_sent": confirmation_sent,
-                "locked": p.locked,
                 "is_duplicate": p.id in duplicate_ids,
             }
 
@@ -301,7 +302,6 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
                 "sports": sports,
                 "division": "Waiting Room",
                 "confirmation_sent": confirmation_sent,
-                "locked": p.locked,
                 "is_duplicate": p.id in duplicate_ids,
             }
             waiting_room_players.append(player_data)
@@ -317,7 +317,6 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
             "sports": sports,
             "division": (p.registrations[0].division if p.registrations else ""),
             "confirmation_sent": confirmation_sent,
-            "locked": p.locked,
             "is_duplicate": p.id in duplicate_ids,
         }
 
@@ -493,20 +492,68 @@ def update_player_sports(player_id: int, payload: PlayerSportsUpdate, request: R
         "registration_id": updated_regs[0].id if updated_regs else None
     }
 
-@app.put("/players/{player_id}/lock")
-def lock_player(player_id: int, payload: PlayerLock, request: Request, db: Session = Depends(get_db)):
+# ---------------------------------------------------------------------
+# Bulk Operations
+# ---------------------------------------------------------------------
+@app.post("/bulk/delete")
+def bulk_delete_players(payload: BulkPlayerIds, request: Request, db: Session = Depends(get_db)):
     try:
         require_login(request)
     except HTTPException as exc:
         raise exc
     
-    player = db.query(Player).get(player_id)
-    if not player:
-        raise HTTPException(status_code=404, detail="Player not found")
+    deleted_count = 0
+    failed_count = 0
     
-    player.locked = payload.locked
+    for player_id in payload.player_ids:
+        try:
+            player = db.query(Player).get(player_id)
+            if player:
+                db.delete(player)
+                deleted_count += 1
+            else:
+                failed_count += 1
+        except:
+            failed_count += 1
+    
     db.commit()
-    return {"locked": player.locked}
+    return {"deleted": deleted_count, "failed": failed_count}
+
+@app.post("/bulk/send-emails")
+def bulk_send_emails(payload: BulkRegistrationIds, request: Request, db: Session = Depends(get_db)):
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        raise exc
+    
+    sent_count = 0
+    failed_count = 0
+    
+    for reg_id in payload.registration_ids:
+        try:
+            reg = db.query(Registration).get(reg_id)
+            if reg and not reg.confirmation_sent:
+                # Reuse the existing send_registration_email logic
+                parent_email = reg.player.parent_email
+                player_info = {
+                    "name": reg.player.full_name,
+                    "jersey_number": reg.player.jersey_number,
+                    "sport": reg.sport
+                }
+                
+                if reg.division == "Pend Oreille Pines (High School Club Team)":
+                    send_pines_confirmation_email(parent_email, [player_info], [reg], db)
+                else:
+                    from .email import PROMO_CODES
+                    send_confirmation_email(parent_email, [player_info], PROMO_CODES.get(1), [reg], db)
+                
+                sent_count += 1
+            else:
+                failed_count += 1
+        except:
+            failed_count += 1
+    
+    return {"sent": sent_count, "failed": failed_count}
 
 # ---------------------------------------------------------------------
 # Registration Management
