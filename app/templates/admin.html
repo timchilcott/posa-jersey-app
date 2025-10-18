@@ -1,2345 +1,700 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POSA Admin</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-
-    :root {
-        --posa-navy: #0D1831;
-        --pines-green: #3C7939;
-        --gray-900: #1f1f1f;
-        --gray-800: #2d2d2d;
-        --gray-700: #4a4a4a;
-        --gray-600: #6b6b6b;
-        --gray-500: #8d8d8d;
-        --gray-400: #b3b3b3;
-        --gray-300: #d1d1d1;
-        --gray-200: #e8e8e8;
-        --gray-100: #f5f5f5;
-        --gray-50: #fafafa;
-        --blue-500: #3b82f6;
-        --red-500: #ef4444;
-        --yellow-500: #f59e0b;
-        --green-500: var(--pines-green);
-    }
-
-    body {
-        background: var(--gray-50);
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-    }
-
-    .app-container {
-        display: flex;
-        height: 100vh;
-        overflow: hidden;
-    }
-
-    /* Left Sidebar */
-    .sidebar {
-        width: 240px;
-        background: white;
-        border-right: 1px solid var(--gray-200);
-        display: flex;
-        flex-direction: column;
-        flex-shrink: 0;
-    }
-
-    .sidebar-header {
-        padding: 20px;
-        border-bottom: 1px solid var(--gray-200);
-    }
-
-    .logo {
-        font-size: 18px;
-        font-weight: 700;
-        color: var(--posa-navy);
-    }
-
-    .logo::before {
-        content: "🌲 ";
-        font-size: 1.3rem;
-    }
-
-    .sidebar-nav {
-        flex: 1;
-        padding: 12px;
-        overflow-y: auto;
-    }
-
-    .nav-section {
-        margin-bottom: 24px;
-    }
-
-    .nav-section-title {
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        color: var(--gray-500);
-        padding: 8px 12px;
-        letter-spacing: 0.5px;
-    }
-
-    .nav-item {
-        display: flex;
-        align-items: center;
-        padding: 8px 12px;
-        border-radius: 6px;
-        color: var(--gray-700);
-        text-decoration: none;
-        font-size: 14px;
-        font-weight: 500;
-        transition: all 0.15s ease;
-        cursor: pointer;
-        margin-bottom: 2px;
-    }
-
-    .nav-item > span:nth-child(2) {
-        flex: 1;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .nav-item:hover {
-        background: var(--gray-100);
-        color: var(--gray-900);
-        text-decoration: none;
-    }
-
-    .nav-item.active {
-        background: var(--pines-green);
-        color: white;
-    }
-
-    .nav-item .icon {
-        margin-right: 10px;
-        font-size: 16px;
-    }
-
-    .nav-item .badge {
-        margin-left: auto;
-        background: var(--red-500);
-        color: white;
-        font-size: 11px;
-        font-weight: 600;
-        padding: 2px 6px;
-        border-radius: 10px;
-        min-width: 18px;
-        text-align: center;
-    }
-
-    .sidebar-footer {
-        padding: 16px;
-        border-top: 1px solid var(--gray-200);
-    }
-
-    .user-menu {
-        display: flex;
-        align-items: center;
-        padding: 8px;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: background 0.15s ease;
-        text-decoration: none;
-        color: inherit;
-    }
-
-    .user-menu:hover {
-        background: var(--gray-100);
-        text-decoration: none;
-    }
-
-    .user-avatar {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background: var(--pines-green);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: 600;
-        font-size: 14px;
-        margin-right: 10px;
-    }
-
-    .user-info {
-        flex: 1;
-    }
-
-    .user-name {
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--gray-900);
-    }
-
-    .user-role {
-        font-size: 12px;
-        color: var(--gray-500);
-    }
-
-    /* Main Content Area */
-    .main-content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        background: var(--gray-50);
-    }
-
-    .main-content-scroll {
-        flex: 1;
-        overflow-y: auto;
-    }
-
-    .container {
-        max-width: 100% !important;
-        padding: 0 !important;
-    }
-
-    /* Page Header */
-    .page-header {
-        background: white;
-        border-bottom: 1px solid var(--gray-200);
-        padding: 16px 32px;
-    }
-
-    .header-top {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 16px;
-        flex-wrap: wrap;
-        gap: 12px;
-    }
-
-    .page-title {
-        font-size: 24px;
-        font-weight: 700;
-        color: var(--gray-900);
-        margin: 0;
-    }
-
-    .header-actions {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-    }
-
-    .btn {
-        padding: 8px 16px;
-        border-radius: 6px;
-        font-size: 14px;
-        font-weight: 500;
-        border: none;
-        cursor: pointer;
-        transition: all 0.15s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    .btn-sm {
-        padding: 6px 10px;
-        font-size: 13px;
-    }
-
-    .btn-primary {
-        background: var(--pines-green);
-        color: white;
-    }
-
-    .btn-primary:hover {
-        background: #2e5e2d;
-    }
-
-    .btn-secondary {
-        background: white;
-        color: var(--gray-700);
-        border: 1px solid var(--gray-300);
-    }
-
-    .btn-secondary:hover {
-        background: var(--gray-50);
-    }
-
-    .btn-danger {
-        background: var(--red-500);
-        color: white;
-    }
-
-    .btn-danger:hover {
-        background: #dc2626;
-    }
-
-    .btn-success {
-        background: var(--pines-green);
-        color: white;
-    }
-
-    .btn-info {
-        background: var(--blue-500);
-        color: white;
-    }
-
-    /* Toolbar */
-    .toolbar {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex-wrap: wrap;
-    }
-
-    .search-box {
-        flex: 1;
-        min-width: 280px;
-        position: relative;
-    }
-
-    .search-input {
-        width: 100%;
-        padding: 8px 12px 8px 36px;
-        border: 1px solid var(--gray-300);
-        border-radius: 6px;
-        font-size: 14px;
-        transition: all 0.15s ease;
-    }
-
-    .search-input:focus {
-        outline: none;
-        border-color: var(--pines-green);
-        box-shadow: 0 0 0 3px rgba(60, 121, 57, 0.1);
-    }
-
-    .search-icon {
-        position: absolute;
-        left: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: var(--gray-400);
-        pointer-events: none;
-    }
-
-    .view-toggle {
-        display: flex;
-        gap: 8px;
-    }
-
-    .view-btn {
-        padding: 8px 16px;
-        background: white;
-        border: 1px solid var(--gray-300);
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 500;
-        color: var(--gray-700);
-        cursor: pointer;
-        transition: all 0.15s ease;
-        text-decoration: none;
-    }
-
-    .view-btn:hover {
-        background: var(--gray-50);
-        text-decoration: none;
-    }
-
-    .view-btn.active {
-        background: var(--pines-green);
-        color: white;
-        border-color: var(--pines-green);
-    }
-
-    /* Stats Bar */
-    .stats-bar {
-        display: flex;
-        gap: 16px;
-        padding: 16px 32px;
-        background: white;
-        border-bottom: 1px solid var(--gray-200);
-        flex-wrap: wrap;
-    }
-
-    .stat-card {
-        flex: 1;
-        min-width: 150px;
-        padding: 16px;
-        background: var(--gray-50);
-        border-radius: 8px;
-        border: 1px solid var(--gray-200);
-        transition: all 0.15s ease;
-    }
-
-    .stat-card:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-
-    .stat-card.alert {
-        background: #fef2f2;
-        border-color: #fecaca;
-    }
-
-    .stat-value {
-        font-size: 28px;
-        font-weight: 700;
-        color: var(--gray-900);
-    }
-
-    .stat-card.alert .stat-value {
-        color: var(--red-500);
-    }
-
-    .stat-label {
-        font-size: 13px;
-        color: var(--gray-600);
-        margin-top: 4px;
-    }
-
-    /* Filter Pills */
-    .filter-group {
-        display: flex;
-        gap: 6px;
-        flex-wrap: wrap;
-        padding: 12px 32px;
-        background: white;
-        border-bottom: 1px solid var(--gray-200);
-    }
-
-    .filter-pill {
-        padding: 6px 12px;
-        border: 2px solid var(--gray-300);
-        background: white;
-        border-radius: 16px;
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--gray-700);
-        cursor: pointer;
-        transition: all 0.15s ease;
-        user-select: none;
-    }
-
-    .filter-pill:hover {
-        border-color: var(--pines-green);
-        background: rgba(60, 121, 57, 0.05);
-    }
-
-    .filter-pill.active {
-        background: var(--pines-green);
-        color: white;
-        border-color: var(--pines-green);
-    }
-
-    /* Table Container */
-    .table-container {
-        padding: 16px 32px 32px;
-    }
-
-    .year-section {
-        display: none;
-    }
-
-    .year-section.active {
-        display: block;
-    }
-
-    .data-table {
-        width: 100%;
-        background: white;
-        border-radius: 8px;
-        border: 1px solid var(--gray-200);
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-
-    .data-table thead th {
-        background: var(--gray-50);
-        padding: 12px 16px;
-        text-align: left;
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--gray-600);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        border-bottom: 1px solid var(--gray-200);
-    }
-
-    .data-table thead th:first-child {
-        padding-left: 24px;
-        border-radius: 8px 0 0 0;
-    }
-
-    .data-table thead th:last-child {
-        border-radius: 0 8px 0 0;
-    }
-
-    .data-table tbody tr {
-        border-bottom: 1px solid var(--gray-200);
-        transition: background 0.1s ease;
-        cursor: pointer;
-    }
-
-    .data-table tbody tr:hover {
-        background: var(--gray-50);
-    }
-
-    .data-table tbody tr.selected {
-        background: #f0f9ff !important;
-        border-left: 3px solid var(--pines-green);
-    }
-
-    .data-table tbody tr.locked {
-        opacity: 0.6;
-    }
-
-    .data-table tbody tr.waiting-room {
-        background: #fffbeb;
-    }
-
-    .data-table tbody tr.duplicate-jersey {
-        background: #fef2f2;
-    }
-
-    .data-table tbody tr:last-child {
-        border-bottom: none;
-    }
-
-    .data-table td {
-        padding: 16px;
-        font-size: 14px;
-        color: var(--gray-900);
-        vertical-align: middle;
-    }
-
-    .data-table td:first-child {
-        padding-left: 24px;
-    }
-
-    /* Player Info */
-    .player-name {
-        font-weight: 600;
-        color: var(--gray-900);
-    }
-
-    .player-email {
-        font-size: 13px;
-        color: var(--gray-500);
-        margin-top: 2px;
-    }
-
-    /* Jersey Badge */
-    .jersey-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 32px;
-        padding: 4px 8px;
-        background: var(--gray-100);
-        border: 2px solid var(--gray-300);
-        border-radius: 6px;
-        font-weight: 700;
-        font-size: 14px;
-        color: var(--gray-900);
-    }
-
-    /* Sport Tags */
-    .sport-tags {
-        display: flex;
-        gap: 4px;
-        flex-wrap: wrap;
-    }
-
-    .sport-tag {
-        padding: 4px 8px;
-        background: var(--gray-100);
-        color: var(--gray-700);
-        border-radius: 4px;
-        font-size: 12px;
-        font-weight: 500;
-    }
-
-    /* Status Badge */
-    .status-badge {
-        padding: 4px 10px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: 600;
-    }
-
-    .status-badge.sent {
-        background: #dcfce7;
-        color: #15803d;
-    }
-
-    .status-badge.pending {
-        background: #fef3c7;
-        color: #a16207;
-    }
-
-    /* Actions */
-    .row-actions {
-        display: flex;
-        gap: 4px;
-        opacity: 0;
-        transition: opacity 0.15s ease;
-    }
-
-    .data-table tbody tr:hover .row-actions {
-        opacity: 1;
-    }
-
-    /* Lock Toggle */
-    .lock-toggle {
-        width: 40px;
-        height: 22px;
-        appearance: none;
-        background: #ccc;
-        border-radius: 22px;
-        cursor: pointer;
-        position: relative;
-        transition: all 0.3s;
-        border: 2px solid #ddd;
-    }
-
-    .lock-toggle:checked {
-        background: var(--pines-green);
-        border-color: var(--pines-green);
-    }
-
-    .lock-toggle::before {
-        content: '';
-        position: absolute;
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        background: white;
-        top: 1px;
-        left: 1px;
-        transition: transform 0.3s;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-
-    .lock-toggle:checked::before {
-        transform: translateX(18px);
-    }
-
-    /* Inline Editing */
-    .edit-mode input,
-    .edit-mode select {
-        padding: 6px 8px;
-        border: 1px solid var(--gray-300);
-        border-radius: 4px;
-        font-size: 13px;
-    }
-
-    .edit-mode input:focus,
-    .edit-mode select:focus {
-        outline: none;
-        border-color: var(--pines-green);
-        box-shadow: 0 0 0 2px rgba(60, 121, 57, 0.1);
-    }
-
-    /* Detail Sidebar */
-    .detail-sidebar {
-        position: fixed;
-        top: 0;
-        right: -380px;
-        width: 380px;
-        height: 100vh;
-        background: white;
-        border-left: 1px solid var(--gray-200);
-        box-shadow: -4px 0 24px rgba(0, 0, 0, 0.1);
-        transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        z-index: 1000;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-
-    .detail-sidebar.open {
-        right: 0;
-    }
-
-    .detail-header {
-        padding: 16px 20px;
-        border-bottom: 1px solid var(--gray-200);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    .detail-tabs {
-        display: flex;
-        gap: 2px;
-    }
-
-    .detail-tab {
-        padding: 6px 12px;
-        background: transparent;
-        border: none;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--gray-600);
-        cursor: pointer;
-        transition: all 0.15s ease;
-    }
-
-    .detail-tab.active {
-        background: var(--gray-100);
-        color: var(--gray-900);
-    }
-
-    .close-detail {
-        width: 28px;
-        height: 28px;
-        border: none;
-        background: transparent;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 18px;
-        color: var(--gray-500);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.15s ease;
-    }
-
-    .close-detail:hover {
-        background: var(--gray-100);
-    }
-
-    .detail-content {
-        flex: 1;
-        overflow-y: auto;
-        padding-bottom: 20px;
-    }
-
-    .detail-section {
-        padding: 20px;
-        border-bottom: 1px solid var(--gray-200);
-    }
-
-    .player-info-compact {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 16px;
-    }
-
-    .player-avatar-small {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        background: var(--pines-green);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: 700;
-        font-size: 18px;
-    }
-
-    .player-info-text {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .player-name-compact {
-        font-size: 15px;
-        font-weight: 600;
-        color: var(--gray-900);
-    }
-
-    .player-email-compact {
-        font-size: 13px;
-        color: var(--gray-500);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .info-row {
-        display: flex;
-        justify-content: space-between;
-        padding: 10px 0;
-        font-size: 13px;
-    }
-
-    /* Detail Sidebar Form Controls */
-    .detail-sidebar .form-control {
-        padding: 6px 10px;
-        border: 1px solid var(--gray-300);
-        border-radius: 6px;
-        font-size: 14px;
-        font-family: inherit;
-        transition: all 0.15s ease;
-        background: white;
-        color: var(--gray-900);
-    }
-
-    .detail-sidebar .form-control:focus {
-        outline: none;
-        border-color: var(--pines-green);
-        box-shadow: 0 0 0 3px rgba(60, 121, 57, 0.1);
-    }
-
-    .detail-sidebar .info-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px 0;
-        font-size: 13px;
-        min-height: 36px;
-    }
-
-    .detail-sidebar .info-row .edit-mode {
-        margin-left: auto;
-    }
-
-    #edit-sports-container {
-        margin-left: auto;
-        font-size: 13px;
-        max-width: 150px;
-    }
-
-    #edit-sports-container label {
-        cursor: pointer;
-        padding: 3px 0;
-        display: flex;
-        align-items: center;
-        font-weight: normal;
-        color: var(--gray-700);
-    }
-
-    #edit-sports-container label:hover {
-        color: var(--gray-900);
-    }
-
-    #edit-sports-container input[type="checkbox"] {
-        margin-right: 8px;
-        cursor: pointer;
-        width: 16px;
-        height: 16px;
-        accent-color: var(--pines-green);
-    }
-
-    .detail-sidebar .view-mode,
-    .detail-sidebar .edit-mode {
-        transition: opacity 0.15s ease;
-    }
+from fastapi import FastAPI, Depends, Request, Form, status, HTTPException
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware
+from sqlalchemy.orm import Session
+from collections import defaultdict
+from datetime import datetime
+from pydantic import BaseModel
+from typing import List
+import os
+import csv
+import io
+
+from .database import Base, engine, SessionLocal
+from .models import Player, Registration, User, EmailTemplate
+from .auth import authenticate_user, create_user
+from .email import (
+    send_confirmation_email,
+    send_pines_confirmation_email,
+    process_inbound_email,
+    save_inbound_email,
+    normalize_division,
+    DIVISION_ORDER,
+)
+
+# ---------------------------------------------------------------------
+# Global Config
+# ---------------------------------------------------------------------
+CURRENT_SEASON = os.getenv("CURRENT_SEASON", "2025")
+
+app = FastAPI()
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "secret-key"))
+templates = Jinja2Templates(directory="app/templates")
+Base.metadata.create_all(bind=engine)
+
+# ---------------------------------------------------------------------
+# Pydantic Models
+# ---------------------------------------------------------------------
+class PlayerUpdate(BaseModel):
+    full_name: str
+    birth_year: int | None
+    jersey_number: int | None  # Allow None for jersey_number
+    parent_email: str
+
+class PlayerSportsUpdate(BaseModel):
+    sports: List[str]
+
+class DivisionUpdate(BaseModel):
+    division: str
+
+class PlayerLock(BaseModel):
+    locked: bool
+
+class PlayerInlineCreate(BaseModel):
+    full_name: str
+    birth_year: int | None
+    parent_email: str
+    sport: str
+    division: str
+    season: str
+
+class EmailTemplateUpdate(BaseModel):
+    name: str
+    subject: str
+    body_html: str
+
+# ---------------------------------------------------------------------
+# Utility
+# ---------------------------------------------------------------------
+def calculate_u_division(birth_year: int, season_year: int = None) -> str:
+    """Calculate display-only U-division label (does not modify player data)."""
+    if season_year is None:
+        season_year = int(CURRENT_SEASON) if CURRENT_SEASON.isdigit() else 2025
+    u_number = (season_year - birth_year) + 1
+    return f"U{u_number}"
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def require_login(request: Request):
+    if not request.session.get("user_id"):
+        raise HTTPException(
+            status_code=status.HTTP_303_SEE_OTHER,
+            headers={"Location": "/login"}
+        )
+
+@app.on_event("startup")
+def ensure_admin_user() -> None:
+    db = SessionLocal()
+    try:
+        if not db.query(User).first():
+            email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+            password = os.getenv("ADMIN_PASSWORD", "admin")
+            create_user(db, email, password)
+    finally:
+        db.close()
+
+# ---------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------
+@app.get("/")
+def read_root():
+    return {"message": "POSA Jersey App is running!"}
+
+# ---------------------------------------------------------------------
+# Authentication
+# ---------------------------------------------------------------------
+@app.get("/login", response_class=HTMLResponse)
+def login_form(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+
+@app.post("/login")
+def login(
+    request: Request,
+    email: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    user = authenticate_user(db, email, password)
+    if not user:
+        return templates.TemplateResponse(
+            "login.html",
+            {"request": request, "error": "Invalid credentials"},
+            status_code=400
+        )
+    request.session["user_id"] = user.id
+    return RedirectResponse("/admin", status_code=302)
+
+@app.get("/logout")
+def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse("/login", status_code=302)
+
+# ---------------------------------------------------------------------
+# Invite
+# ---------------------------------------------------------------------
+@app.get("/invite", response_class=HTMLResponse)
+def invite_form(request: Request):
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        return RedirectResponse(exc.headers["Location"], status_code=exc.status_code)
+    return templates.TemplateResponse("invite_user.html", {"request": request, "error": None})
+
+@app.post("/invite")
+def invite_user(
+    request: Request,
+    email: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        return RedirectResponse(exc.headers["Location"], status_code=exc.status_code)
+
+    if db.query(User).filter(User.email == email).first():
+        return templates.TemplateResponse(
+            "invite_user.html",
+            {"request": request, "error": "User already exists"},
+            status_code=400
+        )
+    create_user(db, email, password)
+    return RedirectResponse("/admin", status_code=302)
+
+# ---------------------------------------------------------------------
+# Admin Dashboard
+# ---------------------------------------------------------------------
+@app.get("/admin", response_class=HTMLResponse)
+def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Depends(get_db)):
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        return RedirectResponse(exc.headers["Location"], status_code=exc.status_code)
+
+    # Get all players
+    players = db.query(Player).all()
+    season_year = int(CURRENT_SEASON) if CURRENT_SEASON.isdigit() else 2025
+
+    # Calculate birth year counts (exclude Waiting Room players)
+    birth_year_counts = {}
+    for player in players:
+        if player.birth_year:
+            # Only count if they have at least one non-Waiting Room registration
+            has_valid_division = any(
+                r.division not in {"", "Unknown", "Waiting Room"} 
+                for r in player.registrations
+            )
+            if has_valid_division:
+                year = player.birth_year
+                birth_year_counts[year] = birth_year_counts.get(year, 0) + 1
     
-    .detail-sidebar .btn-group-edit {
-        display: flex;
-        gap: 8px;
-        margin-top: 20px;
-        padding-top: 20px;
-        border-top: 1px solid var(--gray-200);
-    }
+    # Sort birth years from newest to oldest
+    birth_year_counts = dict(sorted(birth_year_counts.items(), reverse=True))
 
-    /* Activity Tab Styles */
-    .activity-list {
-        max-height: 400px;
-        overflow-y: auto;
-    }
-    
-    .activity-item {
-        padding: 12px;
-        border-left: 3px solid var(--gray-300);
-        margin-bottom: 12px;
-        background: var(--gray-50);
-        border-radius: 0 6px 6px 0;
-        transition: all 0.15s ease;
-        position: relative;
-    }
-    
-    .activity-item:hover {
-        background: white;
-        border-left-color: var(--pines-green);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    }
-    
-    .activity-item.activity-edit {
-        border-left-color: var(--blue-500);
-    }
-    
-    .activity-item.activity-email {
-        border-left-color: var(--green-500);
-    }
-    
-    .activity-item.activity-delete {
-        border-left-color: var(--red-500);
-    }
-    
-    .activity-item.activity-create {
-        border-left-color: var(--yellow-500);
-    }
-    
-    .activity-icon {
-        position: absolute;
-        left: -12px;
-        top: 12px;
-        width: 24px;
-        height: 24px;
-        background: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 12px;
-        border: 2px solid var(--gray-300);
-    }
-    
-    .activity-item.activity-edit .activity-icon {
-        border-color: var(--blue-500);
-    }
-    
-    .activity-item.activity-email .activity-icon {
-        border-color: var(--green-500);
-    }
-    
-    .activity-item.activity-delete .activity-icon {
-        border-color: var(--red-500);
-    }
-    
-    .activity-item.activity-create .activity-icon {
-        border-color: var(--yellow-500);
-    }
-    
-    .activity-title {
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--gray-900);
-        margin-bottom: 4px;
-    }
-    
-    .activity-details {
-        font-size: 12px;
-        color: var(--gray-600);
-        margin-bottom: 4px;
-        line-height: 1.4;
-    }
-    
-    .activity-details .change-item {
-        display: block;
-        padding: 2px 0;
-    }
-    
-    .activity-details .old-value {
-        color: var(--red-500);
-        text-decoration: line-through;
-    }
-    
-    .activity-details .new-value {
-        color: var(--green-500);
-        font-weight: 500;
-    }
-    
-    .activity-timestamp {
-        font-size: 11px;
-        color: var(--gray-500);
-        margin-top: 6px;
-    }
-    
-    .activity-empty {
-        color: var(--gray-500);
-        text-align: center;
-        padding: 40px 20px;
-    }
-    
-    .detail-tab.active {
-        background: var(--gray-100);
-        color: var(--gray-900);
-    }
+    # Identify duplicates by birth year + sport + jersey number
+    birth_year_sport_jersey = defaultdict(list)
+    for p in players:
+        for reg in p.registrations:
+            key = ((reg.sport or "").strip().lower(), p.birth_year, p.jersey_number)
+            birth_year_sport_jersey[key].append(p.id)
+    duplicate_ids = {pid for ids in birth_year_sport_jersey.values() if len(ids) > 1 for pid in ids}
 
-    .info-label {
-        color: var(--gray-600);
-        font-weight: 500;
-    }
+    EXCLUDED_DIVISIONS = {"", "Unknown"}
+    counted_player_ids = set()
 
-    .info-value {
-        color: var(--gray-900);
-        font-weight: 600;
-    }
-
-    .action-list {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-    }
-
-    .action-item {
-        display: flex;
-        align-items: center;
-        padding: 10px 12px;
-        background: white;
-        border: 1px solid var(--gray-200);
-        border-radius: 6px;
-        cursor: pointer;
-        transition: all 0.15s ease;
-    }
-
-    .action-item:hover {
-        background: var(--gray-50);
-    }
-
-    .action-icon {
-        width: 32px;
-        height: 32px;
-        border-radius: 6px;
-        background: var(--gray-100);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-        font-size: 16px;
-    }
-
-    .action-title {
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--gray-900);
-    }
-
-    .action-description {
-        font-size: 12px;
-        color: var(--gray-500);
-    }
-
-    .detail-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.3);
-        opacity: 0;
-        visibility: hidden;
-        transition: all 0.3s ease;
-        z-index: 999;
-    }
-
-    .detail-overlay.active {
-        opacity: 1;
-        visibility: visible;
-    }
-
-    .detail-section-title {
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        color: var(--gray-500);
-        letter-spacing: 0.5px;
-        margin-bottom: 12px;
-    }
-
-    /* Add Player Row */
-    .add-row td {
-        padding: 12px !important;
-        text-align: center;
-        background: var(--gray-50);
-    }
-
-    .add-form-row {
-        background: #f0f9ff;
-    }
-
-    .add-form-row td {
-        padding: 12px 16px;
-    }
-
-    .add-form-row input,
-    .add-form-row select {
-        width: 100%;
-        padding: 6px 8px;
-        border: 1px solid var(--gray-300);
-        border-radius: 4px;
-        font-size: 13px;
-    }
-
-    @media (max-width: 768px) {
-        .sidebar {
-            display: none;
-        }
-    }
-</style>
-</head>
-<body>
-
-<div class="app-container">
-    <!-- Left Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <div class="logo">POSA Sports</div>
-        </div>
+    # ------------------- DIVISION VIEW -------------------
+    if view == "division":
+        players_by_division = defaultdict(list)
+        unassigned_players = []
+        waiting_room_players = []
         
-        <nav class="sidebar-nav">
-            <div class="nav-section">
-                <div class="nav-section-title">Main</div>
-                <a href="#all" class="nav-item nav-year-link active" data-year="all">
-                    <span class="icon">👥</span>
-                    <span>All Athletes</span>
-                </a>
-                <a href="#waiting-room" class="nav-item nav-year-link" data-year="waiting">
-                    <span class="icon">⏳</span>
-                    <span>Waiting Room</span>
-                    {% if waiting_room_players %}
-                    <span class="badge">{{ waiting_room_players|length }}</span>
-                    {% endif %}
-                </a>
-            </div>
+        for p in players:
+            sports = sorted({(r.sport or "").strip().lower() for r in p.registrations if r.sport})
+            divisions = sorted({(r.division or "").strip() for r in p.registrations if r.division})
+            confirmation_sent = any(r.confirmation_sent for r in p.registrations)
+            reg_id = p.registrations[0].id if p.registrations else None
 
-            <div class="nav-section">
-                <div class="nav-section-title">Views</div>
-                <a href="/admin?view=birthyear" class="nav-item {% if view == 'birthyear' %}active{% endif %}">
-                    <span class="icon">🎂</span>
-                    <span>By Birth Year</span>
-                </a>
-                <a href="/admin?view=division" class="nav-item {% if view == 'division' %}active{% endif %}">
-                    <span class="icon">📊</span>
-                    <span>By Division</span>
-                </a>
-            </div>
-
-            {% if view == 'birthyear' %}
-            <div class="nav-section">
-                <div class="nav-section-title">Birth Years</div>
-                {% for year in group_list %}
-                <a href="#year-{{ year }}" class="nav-item nav-year-link" data-year="{{ year }}">
-                    <span class="icon">📅</span>
-                    <span>{{ birth_year_labels[year] if birth_year_labels else year }}</span>
-                    <span class="badge" style="background: var(--gray-400);">{{ birth_year_counts.get(year, 0) }}</span>
-                </a>
-                {% endfor %}
-            </div>
-            {% elif view == 'division' %}
-            <div class="nav-section">
-                <div class="nav-section-title">Divisions</div>
-                {% for division in group_list %}
-                <a href="#division-{{ loop.index }}" class="nav-item nav-scroll-link" title="{{ division }}">
-                    <span class="icon">{% if division == 'Pend Oreille Pines (High School Club Team)' %}🌲{% else %}⚽{% endif %}</span>
-                    <span>{% if division == 'Pend Oreille Pines (High School Club Team)' %}Pines HS Club{% else %}{{ division }}{% endif %}</span>
-                    <span class="badge" style="background: var(--gray-400);">{{ players_by_group[division]|length }}</span>
-                </a>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            <div class="nav-section">
-                <div class="nav-section-title">Settings</div>
-                <a href="/email-templates" class="nav-item">
-                    <span class="icon">✉️</span>
-                    <span>Email Templates</span>
-                </a>
-                <a href="/invite" class="nav-item">
-                    <span class="icon">👤</span>
-                    <span>Invite User</span>
-                </a>
-            </div>
-        </nav>
-
-        <div class="sidebar-footer">
-            <a href="/logout" class="user-menu">
-                <div class="user-avatar">AD</div>
-                <div class="user-info">
-                    <div class="user-name">Admin</div>
-                    <div class="user-role">Logout</div>
-                </div>
-            </a>
-        </div>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="main-content">
-<!-- Page Header -->
-<div class="page-header">
-    <div class="header-top">
-        <h1 class="page-title">Athletes Dashboard</h1>
-        <div class="header-actions">
-            <div class="view-toggle">
-                <a href="/admin?view=birthyear" class="view-btn {% if view == 'birthyear' %}active{% endif %}">
-                    🎂 Birth Year
-                </a>
-                <a href="/admin?view=division" class="view-btn {% if view == 'division' %}active{% endif %}">
-                    📊 Division
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toolbar -->
-    <div class="toolbar">
-        <div class="search-box">
-            <span class="search-icon">🔍</span>
-            <input type="text" id="athlete-search" class="search-input" placeholder="Search athletes by name, email, or jersey...">
-        </div>
-    </div>
-</div>
-
-<div class="main-content-scroll">
-<!-- Stats -->
-<div class="stats-bar">
-    <div class="stat-card">
-        <div class="stat-value" id="stat-total">{{ total_players }}</div>
-        <div class="stat-label" id="stat-total-label">Total Athletes</div>
-    </div>
-    <div class="stat-card {% if waiting_room_players %}alert{% endif %}" style="cursor: pointer;" onclick="filterByYear('waiting')">
-        <div class="stat-value" id="stat-waiting">{{ waiting_room_players|length if waiting_room_players else 0 }}</div>
-        <div class="stat-label" id="stat-waiting-label">Waiting Room</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value" id="stat-years">{{ birth_year_counts|length }}</div>
-        <div class="stat-label" id="stat-years-label">Birth Years</div>
-    </div>
-    <div class="stat-card" id="clear-filters-card" style="display: none; cursor: pointer; background: var(--pines-green); color: white;" onclick="clearAllFilters()">
-        <div class="stat-value" style="font-size: 18px;">✖</div>
-        <div class="stat-label" style="color: white;">Clear Filters</div>
-    </div>
-</div>
-
-<!-- Sport Filter -->
-<div class="filter-group">
-    <div class="filter-pill active" data-sport="all">🌲 All Sports</div>
-    <div class="filter-pill" data-sport="soccer">⚽ Soccer</div>
-    <div class="filter-pill" data-sport="basketball">🏀 Basketball</div>
-    <div class="filter-pill" data-sport="baseball">⚾ Baseball</div>
-    <div class="filter-pill" data-sport="softball">🥎 Softball</div>
-    <div class="filter-pill" data-sport="volleyball">🏐 Volleyball</div>
-    <div class="filter-pill" data-sport="flag">🏈 Flag Football</div>
-</div>
-
-<!-- Table -->
-<div class="table-container">
-    {% macro player_table(players) %}
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>🔒</th>
-                <th>Athlete</th>
-                <th>Birth Year</th>
-                <th>Sports</th>
-                <th>Division</th>
-                <th>Jersey</th>
-                <th>Email Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for player in players %}
-            <tr data-player-id="{{ player.id }}" 
-                data-reg-id="{{ player.registration_id }}"
-                data-sports="{{ player.sports|join(',') }}"
-                data-confirmation-sent="{{ player.confirmation_sent|lower }}"
-                class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %} {% if player.division == 'Waiting Room' %}waiting-room{% endif %}">
-                <td>
-                    <input type="checkbox" class="lock-toggle" {% if player.locked %}checked{% endif %}>
-                </td>
-                <td>
-                    <div>
-                        <div class="player-name">{{ player.full_name }}</div>
-                        <div class="player-email">{{ player.parent_email }}</div>
-                    </div>
-                </td>
-                <td>
-                    <span class="birth-year">{{ player.birth_year or '-' }}</span>
-                    <select class="d-none edit-birth-year">
-                        <option value="">-</option>
-                        {% for year in range(2005, 2026) %}
-                        <option value="{{ year }}" {% if player.birth_year == year %}selected{% endif %}>{{ year }}</option>
-                        {% endfor %}
-                    </select>
-                </td>
-                <td>
-                    <div class="sport-tags view-sports">
-                        {% for sport in player.sports %}
-                        <span class="sport-tag">{{ sport }}</span>
-                        {% endfor %}
-                    </div>
-                </td>
-                <td>
-                    <span class="division">{{ player.division }}</span>
-                    <select class="d-none edit-division">
-                        <option value="Waiting Room">Waiting Room</option>
-                        <option value="U4">U4</option>
-                        <option value="U6">U6</option>
-                        <option value="U8">U8</option>
-                        <option value="U10">U10</option>
-                        <option value="U12">U12</option>
-                        <option value="U14">U14</option>
-                        <option value="Pend Oreille Pines (High School Club Team)">Pines HS</option>
-                    </select>
-                </td>
-                <td>
-                    <span class="jersey-badge">{{ player.jersey_number if player.jersey_number else '-' }}</span>
-                    <input class="d-none edit-jersey-number" type="number" value="{{ player.jersey_number if player.jersey_number else '' }}">
-                </td>
-                <td>
-                    {% if player.confirmation_sent %}
-                    <span class="status-badge sent">✓ Sent</span>
-                    {% else %}
-                    <span class="status-badge pending">⏳ Pending</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <div class="row-actions">
-                        <button class="btn btn-sm btn-primary btn-edit" title="Edit">✏️</button>
-                        <button class="btn btn-sm btn-success btn-save d-none" title="Save">💾</button>
-                        <button class="btn btn-sm btn-secondary btn-cancel d-none" title="Cancel">✖</button>
-                        <button class="btn btn-sm btn-info btn-send-email" title="Send email">📧</button>
-                        <button class="btn btn-sm btn-danger btn-delete" title="Delete">🗑️</button>
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-            <tr class="add-row">
-                <td colspan="8">
-                    <button class="btn btn-primary btn-show-add-form">➕ Add New Player</button>
-                </td>
-            </tr>
-            <tr class="add-form-row d-none">
-                <td></td>
-                <td><input class="new-full-name" placeholder="Full Name"></td>
-                <td>
-                    <select class="new-birth-year">
-                        <option value="">-</option>
-                        {% for year in range(2005, 2026) %}
-                        <option value="{{ year }}">{{ year }}</option>
-                        {% endfor %}
-                    </select>
-                </td>
-                <td>
-                    <select class="new-sport">
-                        <option value="soccer">Soccer</option>
-                        <option value="basketball">Basketball</option>
-                        <option value="baseball">Baseball</option>
-                        <option value="softball">Softball</option>
-                        <option value="volleyball">Volleyball</option>
-                        <option value="flag">Flag</option>
-                    </select>
-                </td>
-                <td>
-                    <select class="new-division">
-                        <option value="U4">U4</option>
-                        <option value="U6">U6</option>
-                        <option value="U8">U8</option>
-                        <option value="U10">U10</option>
-                        <option value="U12">U12</option>
-                        <option value="U14">U14</option>
-                        <option value="Pend Oreille Pines (High School Club Team)">Pines HS</option>
-                    </select>
-                </td>
-                <td>-</td>
-                <td><input class="new-parent-email" placeholder="Parent Email"></td>
-                <td>
-                    <div style="display: flex; gap: 4px;">
-                        <button class="btn btn-sm btn-success btn-add-save">💾</button>
-                        <button class="btn btn-sm btn-secondary btn-add-cancel">✖</button>
-                    </div>
-                </td>
-            </tr>
-        </tbody>
-    </table>
-    {% endmacro %}
-
-    <!-- All Athletes Section -->
-    <div class="year-section active" id="section-all">
-        {% if view == 'birthyear' %}
-            {% for group in group_list %}
-            <h3 style="margin: 20px 0 12px 0; color: var(--gray-900); font-size: 16px; font-weight: 700;">
-                {{ birth_year_labels[group] if birth_year_labels else group }}
-            </h3>
-            {{ player_table(players_by_group[group]) }}
-            {% endfor %}
-        {% else %}
-            {% for group in group_list %}
-            <h3 style="margin: 20px 0 12px 0; color: var(--gray-900); font-size: 16px; font-weight: 700;">
-                {{ group }}
-            </h3>
-            {{ player_table(players_by_group[group]) }}
-            {% endfor %}
-        {% endif %}
-    </div>
-
-    <!-- Waiting Room Section -->
-    <div class="year-section" id="section-waiting">
-        <h3 style="margin: 20px 0 12px 0; color: var(--red-500); font-size: 16px; font-weight: 700;">
-            ⏳ Waiting Room {% if waiting_room_players %}({{ waiting_room_players|length }}){% else %}(0){% endif %}
-        </h3>
-        {% if waiting_room_players %}
-        {{ player_table(waiting_room_players) }}
-        {% else %}
-        <div style="background: white; border: 1px solid var(--gray-200); border-radius: 8px; padding: 40px; text-align: center;">
-            <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
-            <div style="font-size: 18px; font-weight: 600; color: var(--gray-900); margin-bottom: 8px;">No Players Waiting</div>
-            <div style="font-size: 14px; color: var(--gray-600);">All athletes have been assigned to their divisions!</div>
-        </div>
-        {% endif %}
-    </div>
-
-    {% if view == 'birthyear' %}
-        {% for group in group_list %}
-        <div class="year-section" id="section-{{ group }}">
-            <h3 style="margin: 20px 0 12px 0; color: var(--gray-900); font-size: 16px; font-weight: 700;">
-                {{ birth_year_labels[group] if birth_year_labels else group }}
-            </h3>
-            {{ player_table(players_by_group[group]) }}
-        </div>
-        {% endfor %}
-    {% endif %}
-</div>
-</div>
-
-<!-- Detail Sidebar -->
-<aside class="detail-sidebar" id="detail-sidebar">
-    <div class="detail-header">
-        <div class="detail-tabs">
-            <button class="detail-tab active" onclick="switchDetailTab('details')">Details</button>
-            <button class="detail-tab" onclick="switchDetailTab('activity')">Activity</button>
-        </div>
-        <button class="close-detail" onclick="closeDetail()">✕</button>
-    </div>
-
-    <div class="detail-content">
-        <!-- Details Tab Content -->
-        <div id="details-tab-content">
-            <div class="detail-section">
-                <div class="player-info-compact">
-                    <div class="player-avatar-small" id="detail-avatar">-</div>
-                    <div class="player-info-text">
-                        <div class="player-name-compact view-mode" id="detail-name">Select an athlete</div>
-                        <input type="text" class="form-control edit-mode d-none" id="edit-name" style="font-size: 15px; font-weight: 600;">
-                        <div class="player-email-compact view-mode" id="detail-email">-</div>
-                        <input type="email" class="form-control edit-mode d-none" id="edit-email" style="font-size: 13px;">
-                    </div>
-                </div>
-
-                <div class="info-row">
-                    <span class="info-label">Jersey</span>
-                    <span class="info-value view-mode" id="detail-jersey">#-</span>
-                    <input type="number" class="form-control edit-mode d-none" id="edit-jersey" style="width: 100px; margin-left: auto;">
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Birth Year</span>
-                    <span class="info-value view-mode" id="detail-birth-year">-</span>
-                    <select class="form-control edit-mode d-none" id="edit-birth-year" style="width: 120px; margin-left: auto;">
-                        <option value="">-</option>
-                        {% for year in range(2005, 2026) %}
-                        <option value="{{ year }}">{{ year }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Division</span>
-                    <span class="info-value view-mode" id="detail-division">-</span>
-                    <select class="form-control edit-mode d-none" id="edit-division" style="width: 150px; margin-left: auto;">
-                        <option value="Waiting Room">Waiting Room</option>
-                        <option value="U4">U4</option>
-                        <option value="U6">U6</option>
-                        <option value="U8">U8</option>
-                        <option value="U10">U10</option>
-                        <option value="U12">U12</option>
-                        <option value="U14">U14</option>
-                        <option value="Pend Oreille Pines (High School Club Team)">Pines HS</option>
-                    </select>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Sports</span>
-                    <span class="info-value view-mode" id="detail-sports">-</span>
-                    <div class="edit-mode d-none" id="edit-sports-container">
-                        <label style="display: block; margin: 2px;"><input type="checkbox" value="soccer"> Soccer</label>
-                        <label style="display: block; margin: 2px;"><input type="checkbox" value="basketball"> Basketball</label>
-                        <label style="display: block; margin: 2px;"><input type="checkbox" value="baseball"> Baseball</label>
-                        <label style="display: block; margin: 2px;"><input type="checkbox" value="softball"> Softball</label>
-                        <label style="display: block; margin: 2px;"><input type="checkbox" value="volleyball"> Volleyball</label>
-                        <label style="display: block; margin: 2px;"><input type="checkbox" value="flag"> Flag Football</label>
-                    </div>
-                </div>
-                
-                <!-- Edit action buttons -->
-                <div class="edit-mode d-none btn-group-edit">
-                    <button class="btn btn-success" onclick="saveDetailEdits()">💾 Save</button>
-                    <button class="btn btn-secondary" onclick="cancelDetailEdit()">✖ Cancel</button>
-                </div>
-            </div>
-
-            <div class="detail-section view-mode">
-                <div class="detail-section-title">Quick Actions</div>
-                <div class="action-list">
-                    <div class="action-item" id="detail-edit-btn" onclick="enableDetailEdit()">
-                        <div class="action-icon">✏️</div>
-                        <div>
-                            <div class="action-title">Edit Athlete</div>
-                            <div class="action-description">Update information</div>
-                        </div>
-                    </div>
-                    <div class="action-item" id="detail-email-btn">
-                        <div class="action-icon">📧</div>
-                        <div>
-                            <div class="action-title">Send Email</div>
-                            <div class="action-description">Jersey confirmation</div>
-                        </div>
-                    </div>
-                    <div class="action-item" id="detail-delete-btn" style="border-color: var(--red-500);">
-                        <div class="action-icon" style="background: #fef2f2; color: var(--red-500);">🗑️</div>
-                        <div>
-                            <div class="action-title" style="color: var(--red-500);">Delete Athlete</div>
-                            <div class="action-description">Remove from system</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Activity Tab Content -->
-        <div id="activity-tab-content" class="d-none">
-            <div class="detail-section">
-                <div class="activity-header">
-                    <h4 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: var(--gray-900);">Activity History</h4>
-                </div>
-                <div class="activity-list" id="activity-list">
-                    <div class="activity-empty">
-                        <div style="text-align: center; padding: 40px 20px;">
-                            <div style="font-size: 36px; margin-bottom: 12px;">📋</div>
-                            <div style="color: var(--gray-600); font-size: 14px;">No activity recorded for this session</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</aside>
-
-<div class="detail-overlay" id="detail-overlay" onclick="closeDetail()"></div>
-
-<script>
-    let activeSportFilter = 'all';
-    let currentSelectedRow = null;
-    let currentYear = 'all';
-    const detailSidebar = document.getElementById('detail-sidebar');
-    const detailOverlay = document.getElementById('detail-overlay');
-
-    // Filter by year function
-    function filterByYear(year) {
-        currentYear = year;
-        
-        // Hide all year sections
-        document.querySelectorAll('.year-section').forEach(section => {
-            section.classList.remove('active');
-        });
-        
-        // Show the selected year section
-        const targetSection = document.getElementById(`section-${year}`);
-        if (targetSection) {
-            targetSection.classList.add('active');
-        }
-        
-        // Update active state in sidebar
-        document.querySelectorAll('.nav-year-link').forEach(link => {
-            link.classList.remove('active');
-        });
-        
-        // Find and activate the clicked link
-        const activeLink = document.querySelector(`.nav-year-link[data-year="${year}"]`);
-        if (activeLink) {
-            activeLink.classList.add('active');
-        }
-        
-        // Scroll to top of main content
-        document.querySelector('.main-content-scroll').scrollTop = 0;
-        
-        // Update statistics
-        updateStatistics();
-        
-        // Apply sport filter to the new view
-        if (activeSportFilter !== 'all') {
-            applySportFilter();
-        }
-    }
-    
-    // Clear all filters
-    function clearAllFilters() {
-        // Reset year filter
-        filterByYear('all');
-        
-        // Reset sport filter
-        document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
-        document.querySelector('.filter-pill[data-sport="all"]').classList.add('active');
-        activeSportFilter = 'all';
-        
-        // Clear search
-        document.getElementById('athlete-search').value = '';
-        
-        // Re-apply filters (this will show everything)
-        applySportFilter();
-    }
-    
-    // Update statistics based on current filter
-    function updateStatistics() {
-        const currentSection = document.querySelector('.year-section.active');
-        if (!currentSection) return;
-        
-        // Count visible players
-        const visiblePlayers = currentSection.querySelectorAll('tbody tr[data-player-id]');
-        let totalCount = 0;
-        let waitingRoomCount = 0;
-        const birthYears = new Set();
-        
-        visiblePlayers.forEach(row => {
-            // Skip if hidden by sport filter or search
-            if (row.style.display !== 'none') {
-                totalCount++;
-                
-                // Check if waiting room
-                if (row.classList.contains('waiting-room')) {
-                    waitingRoomCount++;
+            # Check if player is in Waiting Room
+            if "Waiting Room" in divisions:
+                player_data = {
+                    "id": p.id,
+                    "registration_id": reg_id,
+                    "full_name": p.full_name,
+                    "birth_year": p.birth_year,
+                    "parent_email": p.parent_email,
+                    "jersey_number": p.jersey_number,
+                    "sports": sports,
+                    "division": "Waiting Room",
+                    "divisions": divisions,
+                    "confirmation_sent": confirmation_sent,
+                    "locked": p.locked,
+                    "is_duplicate": p.id in duplicate_ids,
                 }
-                
-                // Get birth year
-                const birthYear = row.querySelector('.birth-year')?.textContent?.trim();
-                if (birthYear && birthYear !== '-') {
-                    birthYears.add(birthYear);
-                }
+                waiting_room_players.append(player_data)
+                continue
+
+            valid_divisions = [d for d in divisions if d not in EXCLUDED_DIVISIONS]
+            primary_division = valid_divisions[0] if valid_divisions else "Unknown"
+
+            player_data = {
+                "id": p.id,
+                "registration_id": reg_id,
+                "full_name": p.full_name,
+                "birth_year": p.birth_year,
+                "parent_email": p.parent_email,
+                "jersey_number": p.jersey_number,
+                "sports": sports,
+                "division": primary_division,
+                "divisions": divisions,
+                "confirmation_sent": confirmation_sent,
+                "locked": p.locked,
+                "is_duplicate": p.id in duplicate_ids,
             }
-        });
-        
-        // Update the stat cards
-        document.getElementById('stat-total').textContent = totalCount;
-        document.getElementById('stat-waiting').textContent = waitingRoomCount;
-        document.getElementById('stat-years').textContent = birthYears.size;
-        
-        // Update stat label to show it's filtered
-        const totalLabel = document.getElementById('stat-total-label');
-        const totalCard = document.querySelector('.stat-card');
-        const clearFilterCard = document.getElementById('clear-filters-card');
-        const searchValue = document.getElementById('athlete-search').value;
-        
-        let isFiltered = false;
-        
-        if (currentYear === 'all') {
-            totalLabel.textContent = 'Total Athletes';
-            totalCard.style.background = '';
-        } else if (currentYear === 'waiting') {
-            totalLabel.textContent = 'Waiting Room Athletes';
-            totalCard.style.background = '#fff3cd';
-            isFiltered = true;
-        } else {
-            totalLabel.textContent = `Year ${currentYear} Athletes`;
-            totalCard.style.background = '#e0f2fe';
-            isFiltered = true;
-        }
-        
-        // Show sport filter in label if applied
-        if (activeSportFilter !== 'all') {
-            const currentLabel = totalLabel.textContent;
-            totalLabel.textContent = currentLabel + ` (${activeSportFilter})`;
-            isFiltered = true;
-        }
-        
-        // Check if search is active
-        if (searchValue.length > 0) {
-            isFiltered = true;
-        }
-        
-        // Show/hide clear filters button
-        clearFilterCard.style.display = isFiltered ? 'block' : 'none';
-    }
 
-    // Sport Filter
-    function applySportFilter() {
-        const currentSection = document.querySelector('.year-section.active');
-        if (!currentSection) return;
-        
-        currentSection.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
-            const playerSports = (row.dataset.sports || '').toLowerCase();
-            if (activeSportFilter === 'all' || playerSports.includes(activeSportFilter.toLowerCase())) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-        
-        // Update statistics after filtering
-        updateStatistics();
-    }
+            if primary_division in EXCLUDED_DIVISIONS:
+                unassigned_players.append(player_data)
+            else:
+                players_by_division[primary_division].append(player_data)
+                counted_player_ids.add(p.id)
 
-    document.querySelectorAll('.filter-pill').forEach(pill => {
-        pill.addEventListener('click', () => {
-            document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
-            pill.classList.add('active');
-            
-            const sport = pill.dataset.sport;
-            activeSportFilter = sport;
-            applySportFilter();
-        });
-    });
+        sorted_players = dict(sorted(players_by_division.items(), key=lambda x: DIVISION_ORDER.get(x[0], 999)))
 
-    // Search
-    document.getElementById('athlete-search').addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase();
-        const currentSection = document.querySelector('.year-section.active');
-        if (!currentSection) return;
-        
-        currentSection.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
-            const name = row.querySelector('.player-name').textContent.toLowerCase();
-            const email = row.querySelector('.player-email').textContent.toLowerCase();
-            const jersey = row.querySelector('.jersey-badge').textContent;
-            
-            if (name.includes(query) || email.includes(query) || jersey.includes(query)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-        
-        // Update statistics after search
-        updateStatistics();
-    });
+        for division, plist in sorted_players.items():
+            plist.sort(key=lambda p: (p["jersey_number"] is None, p["jersey_number"]))
 
-    // Activity tracking - Display real database info
-    function updateActivityTab() {
-        if (!currentDetailPlayer || !currentDetailRow) return;
-        
-        const activityList = document.getElementById('activity-list');
-        let activityHTML = '';
-        
-        // Get data from the row (this would come from your database)
-        const confirmationSent = currentDetailRow.dataset.confirmationSent === 'true';
-        const sports = currentDetailRow.dataset.sports;
-        const division = currentDetailRow.querySelector('.division').textContent;
-        
-        // Build activity items based on available data
-        const activities = [];
-        
-        // Registration created (we don't have the exact date in the frontend, but in a real app you'd fetch this)
-        activities.push({
-            type: 'create',
-            icon: '➕',
-            title: 'Athlete Registered',
-            details: `Added to system${division ? ' in ' + division : ''}`,
-            className: 'activity-create'
-        });
-        
-        // Email status
-        if (confirmationSent) {
-            activities.push({
-                type: 'email',
-                icon: '📧',
-                title: 'Confirmation Email Sent',
-                details: `Jersey information sent to ${currentDetailPlayer.email}`,
-                className: 'activity-email'
-            });
-        }
-        
-        // Sports assigned
-        if (sports) {
-            activities.push({
-                type: 'sports',
-                icon: '⚽',
-                title: 'Sports Assigned',
-                details: `Registered for: ${sports.split(',').join(', ')}`,
-                className: 'activity-edit'
-            });
-        }
-        
-        if (activities.length === 0) {
-            activityList.innerHTML = `
-                <div class="activity-empty">
-                    <div style="text-align: center; padding: 40px 20px;">
-                        <div style="font-size: 36px; margin-bottom: 12px;">📋</div>
-                        <div style="color: var(--gray-600); font-size: 14px;">No activity data available</div>
-                    </div>
-                </div>
-            `;
-        } else {
-            activityHTML = activities.map(activity => `
-                <div class="activity-item ${activity.className}">
-                    <div class="activity-icon">${activity.icon}</div>
-                    <div class="activity-title">${activity.title}</div>
-                    <div class="activity-details">${activity.details}</div>
-                </div>
-            `).join('');
-            
-            activityList.innerHTML = activityHTML;
-        }
-        
-        // Add note about limited data
-        activityList.innerHTML += `
-            <div style="margin-top: 20px; padding: 12px; background: var(--gray-100); border-radius: 6px; font-size: 12px; color: var(--gray-600);">
-                <strong>Note:</strong> Currently showing available database fields. For full activity history, consider adding timestamp fields to track when players are edited.
-            </div>
-        `;
-    }
+        return templates.TemplateResponse("admin.html", {
+            "request": request,
+            "view": "division",
+            "players_by_group": sorted_players,
+            "group_list": list(sorted_players.keys()),
+            "unassigned_players": unassigned_players,
+            "waiting_room_players": waiting_room_players,
+            "total_players": len(counted_player_ids),
+            "birth_year_counts": birth_year_counts,
+        })
+
+    # ------------------- BIRTH YEAR VIEW -------------------
+    players_by_birth_year = defaultdict(list)
+    waiting_room_players = []
     
-    function switchDetailTab(tab) {
-        // Update tab buttons
-        document.querySelectorAll('.detail-tab').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        
-        // Update content visibility
-        if (tab === 'activity') {
-            document.querySelector('.detail-tab:nth-child(2)').classList.add('active');
-            document.getElementById('details-tab-content').classList.add('d-none');
-            document.getElementById('activity-tab-content').classList.remove('d-none');
-            updateActivityTab();
-        } else {
-            document.querySelector('.detail-tab:nth-child(1)').classList.add('active');
-            document.getElementById('details-tab-content').classList.remove('d-none');
-            document.getElementById('activity-tab-content').classList.add('d-none');
+    for p in players:
+        sports = sorted({(r.sport or "").strip().lower() for r in p.registrations if r.sport})
+        confirmation_sent = any(r.confirmation_sent for r in p.registrations)
+        reg_id = p.registrations[0].id if p.registrations else None
+        divisions = {(r.division or "").strip() for r in p.registrations if r.division}
+
+        # Check if player is in Waiting Room
+        if "Waiting Room" in divisions:
+            player_data = {
+                "id": p.id,
+                "registration_id": reg_id,
+                "full_name": p.full_name,
+                "birth_year": p.birth_year,
+                "parent_email": p.parent_email,
+                "jersey_number": p.jersey_number,
+                "sports": sports,
+                "division": "Waiting Room",
+                "confirmation_sent": confirmation_sent,
+                "locked": p.locked,
+                "is_duplicate": p.id in duplicate_ids,
+            }
+            waiting_room_players.append(player_data)
+            continue
+
+        player_data = {
+            "id": p.id,
+            "registration_id": reg_id,
+            "full_name": p.full_name,
+            "birth_year": p.birth_year,
+            "parent_email": p.parent_email,
+            "jersey_number": p.jersey_number,
+            "sports": sports,
+            "division": (p.registrations[0].division if p.registrations else ""),
+            "confirmation_sent": confirmation_sent,
+            "locked": p.locked,
+            "is_duplicate": p.id in duplicate_ids,
         }
+
+        if p.birth_year:
+            players_by_birth_year[p.birth_year].append(player_data)
+            counted_player_ids.add(p.id)
+
+    birth_year_list = sorted(players_by_birth_year.keys(), reverse=True)
+    birth_year_labels = {
+        by: f"{by} / {calculate_u_division(by, season_year)}"
+        for by in birth_year_list
     }
+
+    for plist in players_by_birth_year.values():
+        plist.sort(key=lambda p: (p["jersey_number"] is None, p["jersey_number"]))
+
+    sorted_players = dict(sorted(players_by_birth_year.items(), reverse=True))
+
+    return templates.TemplateResponse("admin.html", {
+        "request": request,
+        "view": "birthyear",
+        "players_by_group": sorted_players,
+        "group_list": birth_year_list,
+        "birth_year_labels": birth_year_labels,
+        "unassigned_players": [],
+        "waiting_room_players": waiting_room_players,
+        "total_players": len(counted_player_ids),
+        "birth_year_counts": birth_year_counts,
+    })
+
+# ---------------------------------------------------------------------
+# Player Management
+# ---------------------------------------------------------------------
+@app.post("/players/inline")
+def create_player_inline(payload: PlayerInlineCreate, request: Request, db: Session = Depends(get_db)):
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        raise exc
+
+    from .services.assign import assign_jersey_number
     
-    // Detail Sidebar
-    let currentDetailPlayer = null;
-    let currentDetailRow = null;
+    # Check if player already exists
+    existing = db.query(Player).filter(Player.full_name == payload.full_name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Player already exists")
     
-    function openDetail(row) {
-        if (currentSelectedRow) {
-            currentSelectedRow.classList.remove('selected');
-        }
-        
-        currentSelectedRow = row;
-        currentDetailRow = row;
-        row.classList.add('selected');
-        
-        const playerId = row.dataset.playerId;
-        const regId = row.dataset.regId;
-        const name = row.querySelector('.player-name').textContent.trim();
-        const email = row.querySelector('.player-email').textContent.trim();
-        const jersey = row.querySelector('.jersey-badge').textContent.trim();
-        const birthYear = row.querySelector('.birth-year').textContent.trim();
-        const division = row.querySelector('.division').textContent.trim();
-        const sports = Array.from(row.querySelectorAll('.sport-tag')).map(t => t.textContent.trim());
-        const initials = name.split(' ').map(n => n[0]).join('');
-        
-        // Store current player data
-        currentDetailPlayer = {
-            id: playerId,
-            regId: regId,
-            name: name,
-            email: email,
-            jersey: jersey === '-' ? '' : jersey,
-            birthYear: birthYear === '-' ? '' : birthYear,
-            division: division,
-            sports: sports
-        };
-        
-        // Update view mode displays
-        document.getElementById('detail-name').textContent = name;
-        document.getElementById('detail-email').textContent = email;
-        document.getElementById('detail-avatar').textContent = initials;
-        document.getElementById('detail-jersey').textContent = '#' + jersey;
-        document.getElementById('detail-birth-year').textContent = birthYear;
-        document.getElementById('detail-division').textContent = division;
-        document.getElementById('detail-sports').textContent = sports.join(', ') || '-';
-        
-        // Setup edit form values
-        document.getElementById('edit-name').value = name;
-        document.getElementById('edit-email').value = email;
-        document.getElementById('edit-jersey').value = jersey === '-' ? '' : jersey;
-        document.getElementById('edit-birth-year').value = birthYear === '-' ? '' : birthYear;
-        document.getElementById('edit-division').value = division;
-        
-        // Setup sports checkboxes
-        document.querySelectorAll('#edit-sports-container input[type="checkbox"]').forEach(cb => {
-            cb.checked = sports.includes(cb.value);
-        });
-        
-        // Wire up email action
-        document.getElementById('detail-email-btn').onclick = async () => {
-            const response = await fetch(`/registrations/${regId}/send_email`, { method: 'POST' });
-            if (response.ok) {
-                alert('Email sent!');
-                // Update the UI to show email was sent
-                const statusBadge = row.querySelector('.status-badge');
-                if (statusBadge) {
-                    statusBadge.className = 'status-badge sent';
-                    statusBadge.textContent = '✓ Sent';
-                }
-                updateActivityTab();
-            }
-        };
-        
-        // Wire up delete action
-        document.getElementById('detail-delete-btn').onclick = async () => {
-            if (!confirm(`Delete ${name}?`)) return;
-            await fetch(`/players/${playerId}`, { method: 'DELETE' });
-            closeDetail();
-            row.remove();
-            updateStatistics();
-        };
-        
-        // Make sure we're in view mode
-        cancelDetailEdit();
-        
-        detailSidebar.classList.add('open');
-        detailOverlay.classList.add('active');
-    }
-
-    function closeDetail() {
-        detailSidebar.classList.remove('open');
-        detailOverlay.classList.remove('active');
-        if (currentSelectedRow) {
-            currentSelectedRow.classList.remove('selected');
-            currentSelectedRow = null;
-        }
-        currentDetailPlayer = null;
-        currentDetailRow = null;
-        cancelDetailEdit();
-        // Reset to Details tab
-        switchDetailTab('details');
-        // Clear refresh interval
-        if (activityRefreshInterval) {
-            clearInterval(activityRefreshInterval);
-            activityRefreshInterval = null;
-        }
-    }
+    # Assign jersey number
+    jersey = assign_jersey_number(db, payload.birth_year)
     
-    function enableDetailEdit() {
-        // Show edit mode elements
-        document.querySelectorAll('.detail-content .edit-mode').forEach(el => {
-            el.classList.remove('d-none');
-        });
-        // Hide view mode elements
-        document.querySelectorAll('.detail-content .view-mode').forEach(el => {
-            el.classList.add('d-none');
-        });
-    }
+    # Create player
+    player = Player(
+        full_name=payload.full_name,
+        birth_year=payload.birth_year,
+        parent_email=payload.parent_email,
+        jersey_number=jersey
+    )
+    db.add(player)
+    db.flush()
     
-    function cancelDetailEdit() {
-        // Hide edit mode elements
-        document.querySelectorAll('.detail-content .edit-mode').forEach(el => {
-            el.classList.add('d-none');
-        });
-        // Show view mode elements
-        document.querySelectorAll('.detail-content .view-mode').forEach(el => {
-            el.classList.remove('d-none');
-        });
-    }
+    # Create registration
+    reg = Registration(
+        player_id=player.id,
+        program=f"{payload.season} {payload.sport}",
+        division=payload.division,
+        sport=payload.sport.strip().lower(),
+        season=payload.season,
+        confirmation_sent=False
+    )
+    db.add(reg)
+    db.commit()
+    db.refresh(player)
+    db.refresh(reg)
     
-    async function saveDetailEdits() {
-        if (!currentDetailPlayer) return;
-        
-        const newName = document.getElementById('edit-name').value;
-        const newEmail = document.getElementById('edit-email').value;
-        const newJersey = document.getElementById('edit-jersey').value;
-        const newBirthYear = document.getElementById('edit-birth-year').value;
-        const newDivision = document.getElementById('edit-division').value;
-        
-        // Get selected sports
-        const selectedSports = [];
-        document.querySelectorAll('#edit-sports-container input[type="checkbox"]:checked').forEach(cb => {
-            selectedSports.push(cb.value);
-        });
-        
-        // Track changes for activity log
-        const changes = [];
-        
-        if (currentDetailPlayer.name !== newName) {
-            changes.push({ field: 'Name', old: currentDetailPlayer.name, new: newName });
-        }
-        if (currentDetailPlayer.email !== newEmail) {
-            changes.push({ field: 'Email', old: currentDetailPlayer.email, new: newEmail });
-        }
-        if ((currentDetailPlayer.jersey || '') !== newJersey) {
-            changes.push({ field: 'Jersey', old: currentDetailPlayer.jersey || '-', new: newJersey || '-' });
-        }
-        if ((currentDetailPlayer.birthYear || '') !== newBirthYear) {
-            changes.push({ field: 'Birth Year', old: currentDetailPlayer.birthYear || '-', new: newBirthYear || '-' });
-        }
-        if (currentDetailPlayer.division !== newDivision) {
-            changes.push({ field: 'Division', old: currentDetailPlayer.division, new: newDivision });
-        }
-        
-        // Check sports changes
-        const oldSports = currentDetailPlayer.sports.sort().join(', ');
-        const newSports = selectedSports.sort().join(', ');
-        if (oldSports !== newSports) {
-            changes.push({ field: 'Sports', old: oldSports || '(none)', new: newSports || '(none)' });
-        }
-        
-        try {
-            // Update player basic info
-            await fetch(`/players/${currentDetailPlayer.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    full_name: newName,
-                    birth_year: newBirthYear ? parseInt(newBirthYear) : null,
-                    jersey_number: newJersey ? parseInt(newJersey) : 0,
-                    parent_email: newEmail
-                })
-            });
-            
-            // Update sports
-            await fetch(`/players/${currentDetailPlayer.id}/sports`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sports: selectedSports })
-            });
-            
-            // Update division if registration exists
-            if (currentDetailPlayer.regId) {
-                await fetch(`/registrations/${currentDetailPlayer.regId}/division`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ division: newDivision })
-                });
-            }
-            
-            // Log the activity
-            if (changes.length > 0) {
-                logActivity(currentDetailPlayer.id, 'edit', 'Athlete information updated', changes);
-            }
-            
-            // Update the display
-            document.getElementById('detail-name').textContent = newName;
-            document.getElementById('detail-email').textContent = newEmail;
-            document.getElementById('detail-jersey').textContent = '#' + (newJersey || '-');
-            document.getElementById('detail-birth-year').textContent = newBirthYear || '-';
-            document.getElementById('detail-division').textContent = newDivision;
-            document.getElementById('detail-sports').textContent = selectedSports.join(', ') || '-';
-            document.getElementById('detail-avatar').textContent = newName.split(' ').map(n => n[0]).join('');
-            
-            // Update the table row
-            if (currentDetailRow) {
-                currentDetailRow.querySelector('.player-name').textContent = newName;
-                currentDetailRow.querySelector('.player-email').textContent = newEmail;
-                currentDetailRow.querySelector('.jersey-badge').textContent = newJersey || '-';
-                currentDetailRow.querySelector('.birth-year').textContent = newBirthYear || '-';
-                currentDetailRow.querySelector('.division').textContent = newDivision;
-                
-                // Update sport tags
-                const sportTagsContainer = currentDetailRow.querySelector('.sport-tags');
-                sportTagsContainer.innerHTML = '';
-                selectedSports.forEach(sport => {
-                    const tag = document.createElement('span');
-                    tag.className = 'sport-tag';
-                    tag.textContent = sport;
-                    sportTagsContainer.appendChild(tag);
-                });
-                
-                // Update data attribute for filtering
-                currentDetailRow.dataset.sports = selectedSports.join(',');
-            }
-            
-            // Update stored data
-            currentDetailPlayer.name = newName;
-            currentDetailPlayer.email = newEmail;
-            currentDetailPlayer.jersey = newJersey;
-            currentDetailPlayer.birthYear = newBirthYear;
-            currentDetailPlayer.division = newDivision;
-            currentDetailPlayer.sports = selectedSports;
-            
-            // Switch back to view mode
-            cancelDetailEdit();
-            
-            // Update statistics
-            updateStatistics();
-            
-        } catch (error) {
-            console.error('Error saving edits:', error);
-            alert('Failed to save changes. Please try again.');
-        }
+    return {
+        "id": player.id,
+        "registration_id": reg.id,
+        "full_name": player.full_name,
+        "birth_year": player.birth_year,
+        "parent_email": player.parent_email,
+        "jersey_number": player.jersey_number,
+        "sport": payload.sport.strip().lower(),
+        "division": payload.division
     }
 
-    // Year navigation links
-    {% if view == 'birthyear' %}
-    document.querySelectorAll('.nav-year-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const year = link.dataset.year;
-            filterByYear(year);
-        });
-    });
-    {% endif %}
-
-    // Division scroll links (keep existing functionality for division view)
-    {% if view == 'division' %}
-    document.querySelectorAll('.nav-scroll-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const targetId = link.getAttribute('href').substring(1);
-            const targetElement = document.getElementById(targetId);
-            
-            if (targetElement) {
-                const scrollContainer = document.querySelector('.main-content-scroll');
-                const elementPosition = targetElement.offsetTop;
-                const offsetPosition = elementPosition - 20; // 20px padding from top
-                
-                scrollContainer.scrollTo({
-                    top: offsetPosition,
-                    behavior: 'smooth'
-                });
-            }
-        });
-    });
+@app.put("/players/{player_id}")
+def update_player(player_id: int, payload: PlayerUpdate, request: Request, db: Session = Depends(get_db)):
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        raise exc
     
-    // Initialize statistics on page load
-    updateStatistics();
-    {% endif %}
+    player = db.query(Player).get(player_id)
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    # Validate required fields
+    if not payload.full_name or not payload.parent_email:
+        raise HTTPException(status_code=400, detail="Name and email are required")
+    
+    # Log what we're updating
+    print(f"Updating player {player_id}: jersey_number={payload.jersey_number}, birth_year={payload.birth_year}")
+    
+    # If birth year is being set for the first time and they don't have a jersey, assign one
+    if payload.birth_year and not player.birth_year and not player.jersey_number:
+        from .services.assign import assign_jersey_number
+        player.jersey_number = assign_jersey_number(db, payload.birth_year)
+        print(f"Auto-assigned jersey number {player.jersey_number}")
+    elif payload.jersey_number is not None:
+        # Only update jersey number if a value was explicitly provided
+        player.jersey_number = payload.jersey_number
+        print(f"Set jersey number to {player.jersey_number}")
+    
+    player.full_name = payload.full_name
+    player.birth_year = payload.birth_year
+    player.parent_email = payload.parent_email
+    
+    db.commit()
+    db.refresh(player)
+    
+    print(f"Player {player_id} updated successfully. Jersey: {player.jersey_number}")
+    return {"status": "updated", "jersey_number": player.jersey_number}
 
-    // Make rows clickable
-    function attachRowEventHandlers() {
-        document.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
-            // Remove existing listeners to avoid duplicates
-            const newRow = row.cloneNode(true);
-            row.parentNode.replaceChild(newRow, row);
-            
-            newRow.addEventListener('click', (e) => {
-                if (e.target.closest('.row-actions') || e.target.closest('.lock-toggle')) {
-                    return;
-                }
-                openDetail(newRow);
-            });
-            
-            // Re-attach row handlers
-            attachRowHandlers(newRow);
-        });
+@app.delete("/players/{player_id}")
+def delete_player(player_id: int, request: Request, db: Session = Depends(get_db)):
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        raise exc
+    
+    player = db.query(Player).get(player_id)
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    db.delete(player)
+    db.commit()
+    return {"status": "deleted"}
+
+@app.put("/players/{player_id}/sports")
+def update_player_sports(player_id: int, payload: PlayerSportsUpdate, request: Request, db: Session = Depends(get_db)):
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        raise exc
+    
+    player = db.query(Player).get(player_id)
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    # Get current registrations
+    current_regs = db.query(Registration).filter(Registration.player_id == player_id).all()
+    current_sports = {reg.sport.lower() for reg in current_regs}
+    new_sports = {sport.lower() for sport in payload.sports}
+    
+    # Remove sports that are no longer selected
+    for reg in current_regs:
+        if reg.sport.lower() not in new_sports:
+            db.delete(reg)
+    
+    # Add new sports
+    season_year = int(CURRENT_SEASON) if CURRENT_SEASON.isdigit() else datetime.now().year
+    for sport in new_sports:
+        if sport not in current_sports:
+            new_reg = Registration(
+                player_id=player_id,
+                program=f"{season_year} {sport}",
+                division=current_regs[0].division if current_regs else "",
+                sport=sport,
+                season=str(season_year),
+                confirmation_sent=False
+            )
+            db.add(new_reg)
+    
+    db.commit()
+    
+    # Get updated registrations
+    updated_regs = db.query(Registration).filter(Registration.player_id == player_id).all()
+    return {
+        "sports": [reg.sport for reg in updated_regs],
+        "registration_id": updated_regs[0].id if updated_regs else None
     }
 
-    // ESC to close
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && detailSidebar.classList.contains('open')) {
-            closeDetail();
-        }
-    });
+@app.put("/players/{player_id}/lock")
+def lock_player(player_id: int, payload: PlayerLock, request: Request, db: Session = Depends(get_db)):
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        raise exc
+    
+    player = db.query(Player).get(player_id)
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    player.locked = payload.locked
+    db.commit()
+    return {"locked": player.locked}
 
-    // Edit/Save/Cancel functionality
-    function attachRowHandlers(row) {
-        // Store original values for the row
-        let originalValues = {};
-        
-        row.querySelector('.btn-edit')?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            
-            // Store original values before entering edit mode
-            originalValues = {
-                full_name: row.querySelector('.player-name').textContent.trim(),
-                parent_email: row.querySelector('.player-email').textContent.trim(),
-                birth_year: row.querySelector('.birth-year').textContent.trim(),
-                division: row.querySelector('.division').textContent.trim(),
-                jersey_number: row.querySelector('.jersey-badge').textContent.trim()
-            };
-            
-            row.querySelector('.birth-year').classList.add('d-none');
-            row.querySelector('.edit-birth-year').classList.remove('d-none');
-            row.querySelector('.division').classList.add('d-none');
-            row.querySelector('.edit-division').classList.remove('d-none');
-            row.querySelector('.jersey-badge').classList.add('d-none');
-            row.querySelector('.edit-jersey-number').classList.remove('d-none');
-            row.querySelector('.btn-edit').classList.add('d-none');
-            row.querySelector('.btn-save').classList.remove('d-none');
-            row.querySelector('.btn-cancel').classList.remove('d-none');
-            row.classList.add('edit-mode');
-        });
-
-        row.querySelector('.btn-cancel')?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            row.querySelector('.birth-year').classList.remove('d-none');
-            row.querySelector('.edit-birth-year').classList.add('d-none');
-            row.querySelector('.division').classList.remove('d-none');
-            row.querySelector('.edit-division').classList.add('d-none');
-            row.querySelector('.jersey-badge').classList.remove('d-none');
-            row.querySelector('.edit-jersey-number').classList.add('d-none');
-            row.querySelector('.btn-edit').classList.remove('d-none');
-            row.querySelector('.btn-save').classList.add('d-none');
-            row.querySelector('.btn-cancel').classList.add('d-none');
-            row.classList.remove('edit-mode');
-            
-            // Clear stored values
-            originalValues = {};
-        });
-
-        row.querySelector('.btn-save')?.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const id = row.dataset.playerId;
-            const regId = row.dataset.regId;
-            const birthYear = row.querySelector('.edit-birth-year').value;
-            const division = row.querySelector('.edit-division').value;
-            const jersey = row.querySelector('.edit-jersey-number').value;
-
-            // Validate that we have the required data
-            if (!originalValues.full_name || !originalValues.parent_email) {
-                alert('Error: Missing player data. Please refresh the page and try again.');
-                return;
-            }
-
-            try {
-                // Update player
-                const playerResponse = await fetch(`/players/${id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        full_name: originalValues.full_name,  // Use stored value
-                        birth_year: birthYear ? parseInt(birthYear) : null,
-                        jersey_number: jersey ? parseInt(jersey) : null,  // Use null instead of 0
-                        parent_email: originalValues.parent_email  // Use stored value
-                    })
-                });
-
-                if (!playerResponse.ok) {
-                    throw new Error('Failed to update player');
-                }
-
-                // Update division if needed
-                if (regId && division !== originalValues.division) {
-                    const divisionResponse = await fetch(`/registrations/${regId}/division`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ division })
-                    });
-                    
-                    if (!divisionResponse.ok) {
-                        throw new Error('Failed to update division');
-                    }
-                }
-
-                // Show success message before reload
-                const alertMsg = division !== originalValues.division 
-                    ? `Player updated successfully. Note: Player moved to ${division} division.`
-                    : 'Player updated successfully.';
-                    
-                if (division !== originalValues.division) {
-                    alert(alertMsg);
-                }
-                
-                location.reload();
-                
-            } catch (error) {
-                console.error('Error saving player:', error);
-                alert('Failed to save changes. Please try again.');
-            }
-        });
-
-        row.querySelector('.btn-delete')?.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const id = row.dataset.playerId;
-            const playerName = row.querySelector('.player-name').textContent.trim();
-            
-            if (!confirm(`Delete ${playerName}?`)) return;
-            
-            await fetch(`/players/${id}`, { method: 'DELETE' });
-            logActivity(id, 'delete', 'Athlete deleted', [
-                { action: `${playerName} removed from system` }
-            ]);
-            row.remove();
-            updateStatistics();
-        });
-
-        row.querySelector('.btn-send-email')?.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const regId = row.dataset.regId;
-            const playerId = row.dataset.playerId;
-            const playerName = row.querySelector('.player-name').textContent.trim();
-            const playerEmail = row.querySelector('.player-email').textContent.trim();
-            
-            const response = await fetch(`/registrations/${regId}/send_email`, { method: 'POST' });
-            if (response.ok) {
-                logActivity(playerId, 'email', 'Confirmation email sent', [
-                    { action: `Email sent to ${playerEmail}` }
-                ]);
-                alert('Email sent!');
-                location.reload();
-            }
-        });
-
-        row.querySelector('.lock-toggle')?.addEventListener('change', async (e) => {
-            e.stopPropagation();
-            const id = row.dataset.playerId;
-            const locked = e.target.checked;
-            const playerName = row.querySelector('.player-name').textContent.trim();
-            
-            await fetch(`/players/${id}/lock`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ locked })
-            });
-            
-            if (locked) {
-                row.classList.add('locked');
-                logActivity(id, 'lock', 'Athlete locked', [
-                    { action: `${playerName} is now locked from automatic updates` }
-                ]);
-            } else {
-                row.classList.remove('locked');
-                logActivity(id, 'unlock', 'Athlete unlocked', [
-                    { action: `${playerName} can now receive automatic updates` }
-                ]);
-            }
-        });
+# ---------------------------------------------------------------------
+# Registration Management
+# ---------------------------------------------------------------------
+@app.put("/registrations/{reg_id}/division")
+def update_registration_division(reg_id: int, payload: DivisionUpdate, request: Request, db: Session = Depends(get_db)):
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        raise exc
+    
+    from .services.assign import assign_jersey_number
+    
+    reg = db.query(Registration).get(reg_id)
+    if not reg:
+        raise HTTPException(status_code=404, detail="Registration not found")
+    
+    old_division = reg.division
+    new_division = normalize_division(payload.division, reg.player.birth_year)
+    
+    print(f"Updating division for {reg.player.full_name}: {old_division} -> {new_division}")
+    
+    # Update division
+    reg.division = new_division
+    
+    # If moving OUT of Waiting Room and player needs a jersey, assign one
+    if old_division == "Waiting Room" and new_division != "Waiting Room":
+        if not reg.player.jersey_number and reg.player.birth_year:
+            new_jersey = assign_jersey_number(db, reg.player.birth_year)
+            reg.player.jersey_number = new_jersey
+            print(f"Assigned jersey {new_jersey} to player {reg.player.full_name} (moving from Waiting Room)")
+    # If moving to a different division (not from Waiting Room), reassign jersey number
+    elif old_division != "Waiting Room" and old_division != new_division and new_division != "Waiting Room":
+        if reg.player.birth_year:
+            new_jersey = assign_jersey_number(db, reg.player.birth_year)
+            reg.player.jersey_number = new_jersey
+            print(f"Reassigned jersey {new_jersey} to player {reg.player.full_name} (moved from {old_division} to {new_division})")
+    
+    db.commit()
+    db.refresh(reg)
+    
+    print(f"Division update complete. Jersey: {reg.player.jersey_number}")
+    return {
+        "division": reg.division,
+        "jersey_number": reg.player.jersey_number
     }
 
-    // Attach handlers to all rows initially
-    attachRowEventHandlers();
-
-    // Add player functionality
-    document.querySelectorAll('.btn-show-add-form').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tbody = btn.closest('tbody');
-            tbody.querySelector('.add-row').classList.add('d-none');
-            tbody.querySelector('.add-form-row').classList.remove('d-none');
-        });
-    });
-
-    document.querySelectorAll('.btn-add-cancel').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tbody = btn.closest('tbody');
-            tbody.querySelector('.add-row').classList.remove('d-none');
-            tbody.querySelector('.add-form-row').classList.add('d-none');
-        });
-    });
-
-    document.querySelectorAll('.btn-add-save').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const tbody = btn.closest('tbody');
-            const fullName = tbody.querySelector('.new-full-name').value;
-            const birthYear = tbody.querySelector('.new-birth-year').value;
-            const parentEmail = tbody.querySelector('.new-parent-email').value;
-            const sport = tbody.querySelector('.new-sport').value;
-            const division = tbody.querySelector('.new-division').value;
-            
-            const payload = {
-                full_name: fullName,
-                birth_year: birthYear ? parseInt(birthYear) : null,
-                parent_email: parentEmail,
-                sport: sport,
-                division: division,
-                season: new Date().getFullYear().toString()
-            };
-            
-            const response = await fetch('/players/inline', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                // Log the creation activity
-                logActivity(data.id.toString(), 'create', 'Athlete created', [
-                    { action: `${fullName} added to the system` },
-                    { action: `Division: ${division}, Sport: ${sport}` }
-                ]);
-                location.reload();
-            } else {
-                alert('Failed to add player');
+@app.post("/registrations/{reg_id}/send_email")
+def send_registration_email(reg_id: int, request: Request, db: Session = Depends(get_db)):
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        raise exc
+    
+    reg = db.query(Registration).get(reg_id)
+    if not reg:
+        raise HTTPException(status_code=404, detail="Registration not found")
+    
+    # Get registrations that came in together (same order)
+    parent_email = reg.player.parent_email
+    
+    # If this registration has an order number, batch by order number
+    # Otherwise, only send this single registration
+    if reg.order_number:
+        all_regs = (
+            db.query(Registration)
+            .join(Player)
+            .filter(Player.parent_email == parent_email)
+            .filter(Registration.order_number == reg.order_number)
+            .filter(Registration.confirmation_sent == False)
+            .all()
+        )
+    else:
+        # No order number means this was manually added, only send this one
+        all_regs = [reg] if not reg.confirmation_sent else []
+    
+    if not all_regs:
+        return {"status": "no unsent registrations"}
+    
+    # Group by division type (Pines HS vs others)
+    pines_regs = []
+    standard_regs = []
+    
+    for r in all_regs:
+        if r.division == "Pend Oreille Pines (High School Club Team)":
+            pines_regs.append(r)
+        else:
+            standard_regs.append(r)
+    
+    # Send Pines email if applicable
+    if pines_regs:
+        pines_players = [
+            {
+                "name": r.player.full_name,
+                "jersey_number": r.player.jersey_number,
+                "sport": r.sport
             }
-        });
-    });
-</script>
+            for r in pines_regs
+        ]
+        send_pines_confirmation_email(parent_email, pines_players, pines_regs, db)
+    
+    # Send standard email if applicable
+    if standard_regs:
+        standard_players = [
+            {
+                "name": r.player.full_name,
+                "jersey_number": r.player.jersey_number,
+                "sport": r.sport
+            }
+            for r in standard_regs
+        ]
+        from .email import PROMO_CODES
+        promo_code = PROMO_CODES.get(len(standard_players))
+        send_confirmation_email(parent_email, standard_players, promo_code, standard_regs, db)
+    
+    return {"status": "sent"}
 
-    </main>
-</div>
+# ---------------------------------------------------------------------
+# Email Template Management
+# ---------------------------------------------------------------------
+@app.get("/email-templates", response_class=HTMLResponse)
+def email_templates_page(request: Request, db: Session = Depends(get_db)):
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        return RedirectResponse(exc.headers["Location"], status_code=exc.status_code)
+    
+    standard_template = db.query(EmailTemplate).filter(
+        EmailTemplate.name == "standard_confirmation"
+    ).first()
+    
+    pines_template = db.query(EmailTemplate).filter(
+        EmailTemplate.name == "pines_confirmation"
+    ).first()
+    
+    return templates.TemplateResponse("email_templates.html", {
+        "request": request,
+        "standard_template": standard_template,
+        "pines_template": pines_template
+    })
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+@app.post("/email-templates")
+def save_email_template(payload: EmailTemplateUpdate, request: Request, db: Session = Depends(get_db)):
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        raise exc
+    
+    template = db.query(EmailTemplate).filter(
+        EmailTemplate.name == payload.name
+    ).first()
+    
+    if template:
+        template.subject = payload.subject
+        template.body_html = payload.body_html
+        template.updated_at = datetime.utcnow()
+    else:
+        template = EmailTemplate(
+            name=payload.name,
+            subject=payload.subject,
+            body_html=payload.body_html
+        )
+        db.add(template)
+    
+    db.commit()
+    return {"status": "saved"}
+
+# ---------------------------------------------------------------------
+# Email Webhook
+# ---------------------------------------------------------------------
+@app.post("/email/receive")
+async def receive_email(request: Request, db: Session = Depends(get_db)):
+    """Receive inbound emails from SendGrid or similar service."""
+    body = await request.body()
+    email_text = body.decode('utf-8')
+    
+    # Save for debugging in development
+    if os.getenv("ENV") != "production":
+        save_inbound_email(email_text)
+    
+    # Process the email
+    process_inbound_email(email_text, db)
+    
+    return {"status": "received"}
