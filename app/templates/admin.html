@@ -591,6 +591,199 @@
     .data-table tbody tr:hover .row-actions {
         opacity: 1;
     }
+    
+    /* Action Button Styles */
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 5px 10px;
+        font-size: 12px;
+        font-weight: 500;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        white-space: nowrap;
+        background: white;
+        color: var(--gray-700);
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .action-btn.edit {
+        border-color: var(--gray-300);
+    }
+    
+    .action-btn.edit:hover {
+        background: var(--gray-50);
+        border-color: var(--gray-400);
+    }
+    
+    .action-btn.save {
+        background: var(--green-500);
+        color: white;
+    }
+    
+    .action-btn.save:hover {
+        background: #2e5e2d;
+    }
+    
+    .action-btn.cancel {
+        background: var(--gray-500);
+        color: white;
+    }
+    
+    .action-btn.cancel:hover {
+        background: var(--gray-600);
+    }
+    
+    .action-btn.email {
+        border-color: var(--blue-500);
+        color: var(--blue-500);
+    }
+    
+    .action-btn.email:hover {
+        background: var(--blue-500);
+        color: white;
+    }
+    
+    .action-btn.delete {
+        border-color: var(--red-500);
+        color: var(--red-500);
+    }
+    
+    .action-btn.delete:hover {
+        background: var(--red-500);
+        color: white;
+    }
+    
+    /* Action Icons */
+    .action-icon {
+        font-size: 14px;
+    }
+    
+    /* Hide text on smaller screens, show only icons */
+    @media (max-width: 1400px) {
+        .action-btn-text {
+            display: none;
+        }
+        
+        .action-btn {
+            padding: 5px 8px;
+        }
+    }
+    
+    /* Tooltip for icon-only mode */
+    .action-btn[title] {
+        position: relative;
+    }
+    
+    .action-btn[title]:hover::after {
+        content: attr(title);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 4px 8px;
+        background: var(--gray-900);
+        color: white;
+        font-size: 11px;
+        border-radius: 4px;
+        white-space: nowrap;
+        z-index: 1000;
+        pointer-events: none;
+        margin-bottom: 4px;
+    }
+    
+    .action-btn[title]:hover::before {
+        content: '';
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 4px solid transparent;
+        border-top-color: var(--gray-900);
+        margin-bottom: -4px;
+        z-index: 1000;
+        pointer-events: none;
+    }
+    
+    /* Alternative: Dropdown Actions Menu */
+    .action-dropdown {
+        position: relative;
+        display: inline-block;
+    }
+    
+    .action-dropdown-btn {
+        padding: 4px 8px;
+        background: white;
+        border: 1px solid var(--gray-300);
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        color: var(--gray-600);
+        transition: all 0.15s ease;
+    }
+    
+    .action-dropdown-btn:hover {
+        background: var(--gray-50);
+        border-color: var(--gray-400);
+    }
+    
+    .action-dropdown-menu {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: 100%;
+        margin-top: 4px;
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        z-index: 100;
+        min-width: 140px;
+    }
+    
+    .action-dropdown.open .action-dropdown-menu {
+        display: block;
+    }
+    
+    .action-dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        font-size: 13px;
+        color: var(--gray-700);
+        cursor: pointer;
+        transition: background 0.15s ease;
+        border: none;
+        background: none;
+        width: 100%;
+        text-align: left;
+    }
+    
+    .action-dropdown-item:hover {
+        background: var(--gray-50);
+    }
+    
+    .action-dropdown-item.delete {
+        color: var(--red-500);
+    }
+    
+    .action-dropdown-item.delete:hover {
+        background: #fef2f2;
+    }
+    
+    .action-dropdown-divider {
+        height: 1px;
+        background: var(--gray-200);
+        margin: 4px 0;
+    }
 
     /* Checkbox Styles */
     .player-checkbox, .select-all-checkbox {
@@ -1340,11 +1533,49 @@
                 </td>
                 <td>
                     <div class="row-actions">
-                        <button class="btn btn-sm btn-primary btn-edit" title="Edit">✏️</button>
-                        <button class="btn btn-sm btn-success btn-save d-none" title="Save">💾</button>
-                        <button class="btn btn-sm btn-secondary btn-cancel d-none" title="Cancel">✖</button>
-                        <button class="btn btn-sm btn-info btn-send-email" title="Send email">📧</button>
-                        <button class="btn btn-sm btn-danger btn-delete" title="Delete">🗑️</button>
+                        <!-- Option 1: Text + Icon buttons (default, responsive) -->
+                        <button class="action-btn edit btn-edit" title="Edit athlete details">
+                            <span class="action-icon">✏️</span>
+                            <span class="action-btn-text">Edit</span>
+                        </button>
+                        <button class="action-btn save d-none btn-save" title="Save changes">
+                            <span class="action-icon">✓</span>
+                            <span class="action-btn-text">Save</span>
+                        </button>
+                        <button class="action-btn cancel d-none btn-cancel" title="Cancel editing">
+                            <span class="action-icon">✖</span>
+                            <span class="action-btn-text">Cancel</span>
+                        </button>
+                        <button class="action-btn email btn-send-email" title="Send confirmation email">
+                            <span class="action-icon">✉️</span>
+                            <span class="action-btn-text">Email</span>
+                        </button>
+                        <button class="action-btn delete btn-delete" title="Delete athlete">
+                            <span class="action-icon">🗑️</span>
+                            <span class="action-btn-text">Delete</span>
+                        </button>
+                        
+                        <!-- Option 2: Dropdown menu (commented out - uncomment to use) -->
+                        <!-- 
+                        <div class="action-dropdown">
+                            <button class="action-dropdown-btn" onclick="toggleActionMenu(this)">⋮</button>
+                            <div class="action-dropdown-menu">
+                                <button class="action-dropdown-item btn-edit">
+                                    <span>✏️</span>
+                                    <span>Edit</span>
+                                </button>
+                                <button class="action-dropdown-item btn-send-email">
+                                    <span>📧</span>
+                                    <span>Send Email</span>
+                                </button>
+                                <div class="action-dropdown-divider"></div>
+                                <button class="action-dropdown-item delete btn-delete">
+                                    <span>🗑️</span>
+                                    <span>Delete</span>
+                                </button>
+                            </div>
+                        </div>
+                        -->
                     </div>
                 </td>
             </tr>
@@ -1590,6 +1821,31 @@
             bar.classList.remove('active');
         }
     }
+    
+    // Dropdown menu toggle (if using dropdown design)
+    function toggleActionMenu(button) {
+        const dropdown = button.closest('.action-dropdown');
+        const wasOpen = dropdown.classList.contains('open');
+        
+        // Close all other dropdowns
+        document.querySelectorAll('.action-dropdown.open').forEach(d => {
+            d.classList.remove('open');
+        });
+        
+        // Toggle this dropdown
+        if (!wasOpen) {
+            dropdown.classList.add('open');
+        }
+    }
+    
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.action-dropdown')) {
+            document.querySelectorAll('.action-dropdown.open').forEach(d => {
+                d.classList.remove('open');
+            });
+        }
+    });
     
     function clearSelection() {
         selectedPlayers.clear();
