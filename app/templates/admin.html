@@ -496,10 +496,6 @@
         border-left: 3px solid var(--pines-green);
     }
 
-    .data-table tbody tr.locked {
-        opacity: 0.6;
-    }
-
     .data-table tbody tr.waiting-room {
         background: #fffbeb;
     }
@@ -596,39 +592,78 @@
         opacity: 1;
     }
 
-    /* Lock Toggle */
-    .lock-toggle {
-        width: 40px;
-        height: 22px;
-        appearance: none;
-        background: #ccc;
-        border-radius: 22px;
+    /* Checkbox Styles */
+    .player-checkbox, .select-all-checkbox {
+        width: 18px;
+        height: 18px;
         cursor: pointer;
-        position: relative;
-        transition: all 0.3s;
-        border: 2px solid #ddd;
+        accent-color: var(--pines-green);
     }
 
-    .lock-toggle:checked {
+    .player-checkbox:hover, .select-all-checkbox:hover {
+        transform: scale(1.1);
+    }
+
+    /* Selected Row Style */
+    .data-table tbody tr.row-selected {
+        background: #f0fdf4 !important;
+        border-left: 3px solid var(--pines-green);
+    }
+
+    /* Bulk Actions Bar */
+    .bulk-actions-bar {
+        display: none;
+        padding: 12px 32px;
         background: var(--pines-green);
-        border-color: var(--pines-green);
+        color: white;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
-    .lock-toggle::before {
-        content: '';
-        position: absolute;
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
+    .bulk-actions-bar.active {
+        display: flex;
+    }
+
+    .bulk-actions-info {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-weight: 600;
+    }
+
+    .bulk-actions-buttons {
+        display: flex;
+        gap: 8px;
+    }
+
+    .bulk-action-btn {
+        padding: 6px 12px;
         background: white;
-        top: 1px;
-        left: 1px;
-        transition: transform 0.3s;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        color: var(--gray-700);
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s ease;
     }
 
-    .lock-toggle:checked::before {
-        transform: translateX(18px);
+    .bulk-action-btn:hover {
+        background: var(--gray-100);
+        transform: translateY(-1px);
+    }
+
+    .bulk-action-btn.danger {
+        background: var(--red-500);
+        color: white;
+    }
+
+    .bulk-action-btn.danger:hover {
+        background: #dc2626;
     }
 
     /* Inline Editing */
@@ -1185,6 +1220,19 @@
 </div>
 
 <div class="main-content-scroll">
+<!-- Bulk Actions Bar -->
+<div class="bulk-actions-bar" id="bulk-actions-bar">
+    <div class="bulk-actions-info">
+        <span id="selected-count">0 selected</span>
+        <button class="bulk-action-btn" onclick="clearSelection()">Clear Selection</button>
+    </div>
+    <div class="bulk-actions-buttons">
+        <button class="bulk-action-btn" onclick="bulkSendEmails()">📧 Send Emails</button>
+        <button class="bulk-action-btn" onclick="bulkUpdateDivision()">📊 Update Division</button>
+        <button class="bulk-action-btn danger" onclick="bulkDelete()">🗑️ Delete Selected</button>
+    </div>
+</div>
+
 <!-- Stats -->
 <div class="stats-bar">
     <div class="stat-card">
@@ -1222,7 +1270,9 @@
     <table class="data-table">
         <thead>
             <tr>
-                <th>🔒</th>
+                <th style="width: 40px;">
+                    <input type="checkbox" class="select-all-checkbox" title="Select all">
+                </th>
                 <th>Athlete</th>
                 <th>Birth Year</th>
                 <th>Sports</th>
@@ -1238,9 +1288,9 @@
                 data-reg-id="{{ player.registration_id }}"
                 data-sports="{{ player.sports|join(',') }}"
                 data-confirmation-sent="{{ player.confirmation_sent|lower }}"
-                class="{% if player.locked %}locked{% endif %} {% if player.is_duplicate %}duplicate-jersey{% endif %} {% if player.division == 'Waiting Room' %}waiting-room{% endif %}">
+                class="{% if player.is_duplicate %}duplicate-jersey{% endif %} {% if player.division == 'Waiting Room' %}waiting-room{% endif %}">
                 <td>
-                    <input type="checkbox" class="lock-toggle" {% if player.locked %}checked{% endif %}>
+                    <input type="checkbox" class="player-checkbox" data-player-id="{{ player.id }}" data-reg-id="{{ player.registration_id }}">
                 </td>
                 <td>
                     <div>
@@ -1526,6 +1576,178 @@
     const detailSidebar = document.getElementById('detail-sidebar');
     const detailOverlay = document.getElementById('detail-overlay');
     let activityRefreshInterval = null;
+    let selectedPlayers = new Set();
+    
+    // Multi-select functionality
+    function updateBulkActionsBar() {
+        const bar = document.getElementById('bulk-actions-bar');
+        const countSpan = document.getElementById('selected-count');
+        
+        if (selectedPlayers.size > 0) {
+            bar.classList.add('active');
+            countSpan.textContent = `${selectedPlayers.size} selected`;
+        } else {
+            bar.classList.remove('active');
+        }
+    }
+    
+    function clearSelection() {
+        selectedPlayers.clear();
+        document.querySelectorAll('.player-checkbox').forEach(cb => {
+            cb.checked = false;
+            cb.closest('tr').classList.remove('row-selected');
+        });
+        document.querySelectorAll('.select-all-checkbox').forEach(cb => cb.checked = false);
+        updateBulkActionsBar();
+    }
+    
+    function selectAll(checkbox) {
+        const section = checkbox.closest('.year-section');
+        const visibleRows = section.querySelectorAll('tbody tr[data-player-id]:not([style*="display: none"])');
+        
+        if (checkbox.checked) {
+            visibleRows.forEach(row => {
+                const cb = row.querySelector('.player-checkbox');
+                if (cb && !cb.checked) {
+                    cb.checked = true;
+                    row.classList.add('row-selected');
+                    const playerId = cb.dataset.playerId;
+                    const regId = cb.dataset.regId;
+                    selectedPlayers.add(`${playerId}:${regId}`);
+                }
+            });
+        } else {
+            visibleRows.forEach(row => {
+                const cb = row.querySelector('.player-checkbox');
+                if (cb) {
+                    cb.checked = false;
+                    row.classList.remove('row-selected');
+                    const playerId = cb.dataset.playerId;
+                    const regId = cb.dataset.regId;
+                    selectedPlayers.delete(`${playerId}:${regId}`);
+                }
+            });
+        }
+        updateBulkActionsBar();
+    }
+    
+    function togglePlayerSelection(checkbox) {
+        const row = checkbox.closest('tr');
+        const playerId = checkbox.dataset.playerId;
+        const regId = checkbox.dataset.regId;
+        const key = `${playerId}:${regId}`;
+        
+        if (checkbox.checked) {
+            selectedPlayers.add(key);
+            row.classList.add('row-selected');
+        } else {
+            selectedPlayers.delete(key);
+            row.classList.remove('row-selected');
+        }
+        
+        // Update select-all checkbox state
+        const table = checkbox.closest('table');
+        const allCheckboxes = table.querySelectorAll('.player-checkbox');
+        const checkedBoxes = table.querySelectorAll('.player-checkbox:checked');
+        const selectAllCb = table.querySelector('.select-all-checkbox');
+        
+        if (selectAllCb) {
+            selectAllCb.checked = allCheckboxes.length > 0 && allCheckboxes.length === checkedBoxes.length;
+        }
+        
+        updateBulkActionsBar();
+    }
+    
+    // Bulk action handlers
+    async function bulkSendEmails() {
+        if (selectedPlayers.size === 0) return;
+        
+        if (!confirm(`Send confirmation emails to ${selectedPlayers.size} selected athletes?`)) return;
+        
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (const key of selectedPlayers) {
+            const [playerId, regId] = key.split(':');
+            if (regId && regId !== 'null' && regId !== 'undefined') {
+                try {
+                    const response = await fetch(`/registrations/${regId}/send_email`, { method: 'POST' });
+                    if (response.ok) {
+                        successCount++;
+                    } else {
+                        failCount++;
+                    }
+                } catch (error) {
+                    failCount++;
+                }
+            }
+        }
+        
+        alert(`Emails sent!\n✅ Success: ${successCount}\n❌ Failed: ${failCount}`);
+        clearSelection();
+        location.reload();
+    }
+    
+    async function bulkDelete() {
+        if (selectedPlayers.size === 0) return;
+        
+        if (!confirm(`Delete ${selectedPlayers.size} selected athletes? This cannot be undone!`)) return;
+        
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (const key of selectedPlayers) {
+            const [playerId, regId] = key.split(':');
+            try {
+                const response = await fetch(`/players/${playerId}`, { method: 'DELETE' });
+                if (response.ok) {
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            } catch (error) {
+                failCount++;
+            }
+        }
+        
+        alert(`Delete operation complete!\n✅ Deleted: ${successCount}\n❌ Failed: ${failCount}`);
+        clearSelection();
+        location.reload();
+    }
+    
+    async function bulkUpdateDivision() {
+        if (selectedPlayers.size === 0) return;
+        
+        const newDivision = prompt('Enter the division for all selected athletes:\n\nOptions: U4, U6, U8, U10, U12, U14, Pines HS, Waiting Room');
+        if (!newDivision) return;
+        
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (const key of selectedPlayers) {
+            const [playerId, regId] = key.split(':');
+            if (regId && regId !== 'null' && regId !== 'undefined') {
+                try {
+                    const response = await fetch(`/registrations/${regId}/division`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ division: newDivision })
+                    });
+                    if (response.ok) {
+                        successCount++;
+                    } else {
+                        failCount++;
+                    }
+                } catch (error) {
+                    failCount++;
+                }
+            }
+        }
+        
+        alert(`Division update complete!\n✅ Updated: ${successCount}\n❌ Failed: ${failCount}`);
+        clearSelection();
+        location.reload();
+    }
     
     // Activity logging function (for session-based tracking)
     function logActivity(playerId, type, title, changes) {
@@ -2116,7 +2338,8 @@
             row.parentNode.replaceChild(newRow, row);
             
             newRow.addEventListener('click', (e) => {
-                if (e.target.closest('.row-actions') || e.target.closest('.lock-toggle')) {
+                // Don't open detail if clicking on checkbox or action buttons
+                if (e.target.closest('.row-actions') || e.target.closest('.player-checkbox')) {
                     return;
                 }
                 openDetail(newRow);
@@ -2124,6 +2347,13 @@
             
             // Re-attach row handlers
             attachRowHandlers(newRow);
+        });
+        
+        // Attach select-all checkbox handlers
+        document.querySelectorAll('.select-all-checkbox').forEach(cb => {
+            cb.addEventListener('change', function() {
+                selectAll(this);
+            });
         });
     }
 
@@ -2223,20 +2453,16 @@
                         throw new Error('Failed to update division');
                     }
                     
-                    // Get the response data which includes the new jersey number
+                    // Get the response data which includes the jersey number
                     const divisionData = await divisionResponse.json();
                     if (divisionData.jersey_number !== undefined) {
-                        console.log(`Player jersey number updated to: ${divisionData.jersey_number}`);
+                        console.log(`Player jersey number: ${divisionData.jersey_number}`);
                     }
                 }
 
                 // Show success message before reload
-                const alertMsg = division !== originalValues.division 
-                    ? `Player updated successfully. Note: Jersey may have been reassigned for ${division} division.`
-                    : 'Player updated successfully.';
-                    
                 if (division !== originalValues.division) {
-                    alert(alertMsg);
+                    console.log(`Player moved to ${division} division.`);
                 }
                 
                 location.reload();
@@ -2278,30 +2504,11 @@
                 location.reload();
             }
         });
-
-        row.querySelector('.lock-toggle')?.addEventListener('change', async (e) => {
+        
+        // Add checkbox handler
+        row.querySelector('.player-checkbox')?.addEventListener('change', function(e) {
             e.stopPropagation();
-            const id = row.dataset.playerId;
-            const locked = e.target.checked;
-            const playerName = row.querySelector('.player-name').textContent.trim();
-            
-            await fetch(`/players/${id}/lock`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ locked })
-            });
-            
-            if (locked) {
-                row.classList.add('locked');
-                logActivity(id, 'lock', 'Athlete locked', [
-                    { action: `${playerName} is now locked from automatic updates` }
-                ]);
-            } else {
-                row.classList.remove('locked');
-                logActivity(id, 'unlock', 'Athlete unlocked', [
-                    { action: `${playerName} can now receive automatic updates` }
-                ]);
-            }
+            togglePlayerSelection(this);
         });
     }
 
