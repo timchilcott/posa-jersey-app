@@ -2115,8 +2115,21 @@
 
     // Edit/Save/Cancel functionality
     function attachRowHandlers(row) {
+        // Store original values for the row
+        let originalValues = {};
+        
         row.querySelector('.btn-edit')?.addEventListener('click', (e) => {
             e.stopPropagation();
+            
+            // Store original values before entering edit mode
+            originalValues = {
+                full_name: row.querySelector('.player-name').textContent.trim(),
+                parent_email: row.querySelector('.player-email').textContent.trim(),
+                birth_year: row.querySelector('.birth-year').textContent.trim(),
+                division: row.querySelector('.division').textContent.trim(),
+                jersey_number: row.querySelector('.jersey-badge').textContent.trim()
+            };
+            
             row.querySelector('.birth-year').classList.add('d-none');
             row.querySelector('.edit-birth-year').classList.remove('d-none');
             row.querySelector('.division').classList.add('d-none');
@@ -2141,6 +2154,9 @@
             row.querySelector('.btn-save').classList.add('d-none');
             row.querySelector('.btn-cancel').classList.add('d-none');
             row.classList.remove('edit-mode');
+            
+            // Clear stored values
+            originalValues = {};
         });
 
         row.querySelector('.btn-save')?.addEventListener('click', async (e) => {
@@ -2151,28 +2167,57 @@
             const division = row.querySelector('.edit-division').value;
             const jersey = row.querySelector('.edit-jersey-number').value;
 
-            // Update player
-            await fetch(`/players/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    full_name: row.querySelector('.player-name').textContent,
-                    birth_year: birthYear ? parseInt(birthYear) : null,
-                    jersey_number: jersey ? parseInt(jersey) : 0,
-                    parent_email: row.querySelector('.player-email').textContent
-                })
-            });
-
-            // Update division
-            if (regId) {
-                await fetch(`/registrations/${regId}/division`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ division })
-                });
+            // Validate that we have the required data
+            if (!originalValues.full_name || !originalValues.parent_email) {
+                alert('Error: Missing player data. Please refresh the page and try again.');
+                return;
             }
 
-            location.reload();
+            try {
+                // Update player
+                const playerResponse = await fetch(`/players/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        full_name: originalValues.full_name,  // Use stored value
+                        birth_year: birthYear ? parseInt(birthYear) : null,
+                        jersey_number: jersey ? parseInt(jersey) : null,  // Use null instead of 0
+                        parent_email: originalValues.parent_email  // Use stored value
+                    })
+                });
+
+                if (!playerResponse.ok) {
+                    throw new Error('Failed to update player');
+                }
+
+                // Update division if needed
+                if (regId && division !== originalValues.division) {
+                    const divisionResponse = await fetch(`/registrations/${regId}/division`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ division })
+                    });
+                    
+                    if (!divisionResponse.ok) {
+                        throw new Error('Failed to update division');
+                    }
+                }
+
+                // Show success message before reload
+                const alertMsg = division !== originalValues.division 
+                    ? `Player updated successfully. Note: Player moved to ${division} division.`
+                    : 'Player updated successfully.';
+                    
+                if (division !== originalValues.division) {
+                    alert(alertMsg);
+                }
+                
+                location.reload();
+                
+            } catch (error) {
+                console.error('Error saving player:', error);
+                alert('Failed to save changes. Please try again.');
+            }
         });
 
         row.querySelector('.btn-delete')?.addEventListener('click', async (e) => {
