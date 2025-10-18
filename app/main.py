@@ -39,7 +39,7 @@ Base.metadata.create_all(bind=engine)
 class PlayerUpdate(BaseModel):
     full_name: str
     birth_year: int | None
-    jersey_number: int
+    jersey_number: int | None  # Allow None for jersey_number
     parent_email: str
 
 class PlayerSportsUpdate(BaseModel):
@@ -414,18 +414,32 @@ def update_player(player_id: int, payload: PlayerUpdate, request: Request, db: S
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
     
+    # Validate required fields
+    if not payload.full_name or not payload.parent_email:
+        raise HTTPException(status_code=400, detail="Name and email are required")
+    
+    # Log what we're updating
+    print(f"Updating player {player_id}: jersey_number={payload.jersey_number}, birth_year={payload.birth_year}")
+    
     # If birth year is being set for the first time and they don't have a jersey, assign one
     if payload.birth_year and not player.birth_year and not player.jersey_number:
         from .services.assign import assign_jersey_number
         player.jersey_number = assign_jersey_number(db, payload.birth_year)
+        print(f"Auto-assigned jersey number {player.jersey_number}")
+    elif payload.jersey_number is not None:
+        # Only update jersey number if a value was explicitly provided
+        player.jersey_number = payload.jersey_number
+        print(f"Set jersey number to {player.jersey_number}")
     
     player.full_name = payload.full_name
     player.birth_year = payload.birth_year
-    player.jersey_number = payload.jersey_number
     player.parent_email = payload.parent_email
     
     db.commit()
-    return {"status": "updated"}
+    db.refresh(player)
+    
+    print(f"Player {player_id} updated successfully. Jersey: {player.jersey_number}")
+    return {"status": "updated", "jersey_number": player.jersey_number}
 
 @app.delete("/players/{player_id}")
 def delete_player(player_id: int, request: Request, db: Session = Depends(get_db)):
@@ -520,6 +534,8 @@ def update_registration_division(reg_id: int, payload: DivisionUpdate, request: 
     old_division = reg.division
     new_division = normalize_division(payload.division, reg.player.birth_year)
     
+    print(f"Updating division for {reg.player.full_name}: {old_division} -> {new_division}")
+    
     # Update division
     reg.division = new_division
     
@@ -528,12 +544,18 @@ def update_registration_division(reg_id: int, payload: DivisionUpdate, request: 
         if not reg.player.jersey_number and reg.player.birth_year:
             new_jersey = assign_jersey_number(db, reg.player.birth_year)
             reg.player.jersey_number = new_jersey
+            print(f"Assigned jersey {new_jersey} to player {reg.player.full_name} (moving from Waiting Room)")
     # If moving to a different division (not from Waiting Room), reassign jersey number
-    elif old_division != "Waiting Room" and old_division != new_division:
-        new_jersey = assign_jersey_number(db, reg.player.birth_year)
-        reg.player.jersey_number = new_jersey
+    elif old_division != "Waiting Room" and old_division != new_division and new_division != "Waiting Room":
+        if reg.player.birth_year:
+            new_jersey = assign_jersey_number(db, reg.player.birth_year)
+            reg.player.jersey_number = new_jersey
+            print(f"Reassigned jersey {new_jersey} to player {reg.player.full_name} (moved from {old_division} to {new_division})")
     
     db.commit()
+    db.refresh(reg)
+    
+    print(f"Division update complete. Jersey: {reg.player.jersey_number}")
     return {
         "division": reg.division,
         "jersey_number": reg.player.jersey_number
