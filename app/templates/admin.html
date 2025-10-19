@@ -3,1154 +3,2945 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - POSA Jersey App</title>
+    <title>POSA Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        :root {
-            --posa-green: #2d5016;
-            --posa-gold: #c8aa6e;
-            --pine-dark: #1a3a0f;
-        }
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
 
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+    :root {
+        --posa-navy: #0D1831;
+        --pines-green: #3C7939;
+        --gray-900: #1f1f1f;
+        --gray-800: #2d2d2d;
+        --gray-700: #4a4a4a;
+        --gray-600: #6b6b6b;
+        --gray-500: #8d8d8d;
+        --gray-400: #b3b3b3;
+        --gray-300: #d1d1d1;
+        --gray-200: #e8e8e8;
+        --gray-100: #f5f5f5;
+        --gray-50: #fafafa;
+        --blue-500: #3b82f6;
+        --red-500: #ef4444;
+        --yellow-500: #f59e0b;
+        --green-500: var(--pines-green);
+    }
 
-        .navbar {
-            background: linear-gradient(135deg, var(--posa-green) 0%, var(--pine-dark) 100%);
-            padding: 1rem 0;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-        }
+    body {
+        background: var(--gray-50);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    }
 
-        .navbar-brand {
-            font-weight: 700;
-            font-size: 1.5rem;
-            color: var(--posa-gold) !important;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+    .app-container {
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+    }
 
-        .navbar-brand::before {
-            content: "🌲";
-            font-size: 1.8rem;
-        }
+    /* Left Sidebar */
+    .sidebar {
+        width: 240px;
+        background: white;
+        border-right: 1px solid var(--gray-200);
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+    }
 
-        .main-container {
-            max-width: 1400px;
-            margin: 2rem auto;
-            padding: 0 1rem;
-        }
+    .sidebar-header {
+        padding: 20px;
+        border-bottom: 1px solid var(--gray-200);
+    }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 20px;
-            margin-bottom: 24px;
-        }
+    .logo {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--posa-navy);
+    }
 
-        .stat-card {
-            background: white;
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
+    .logo::before {
+        content: "🌲 ";
+        font-size: 1.3rem;
+    }
 
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-        }
+    .sidebar-nav {
+        flex: 1;
+        padding: 12px;
+        overflow-y: auto;
+    }
 
-        .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-        }
+    .nav-section {
+        margin-bottom: 24px;
+    }
 
-        .stat-value {
-            font-size: 2.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 8px;
-        }
+    .nav-section-title {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--gray-500);
+        padding: 8px 12px;
+        letter-spacing: 0.5px;
+    }
 
-        .stat-label {
-            color: #64748b;
-            font-size: 0.9rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
+    .nav-item {
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        border-radius: 6px;
+        color: var(--gray-700);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.15s ease;
+        cursor: pointer;
+        margin-bottom: 2px;
+    }
 
-        .search-box {
-            background: white;
-            padding: 24px;
-            border-radius: 16px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-            margin-bottom: 24px;
-        }
+    .nav-item > span:nth-child(2) {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 
-        .search-box input {
-            border: 2px solid #e9ecef;
-            border-radius: 12px;
-            padding: 12px 16px;
-            font-size: 0.95rem;
-            transition: all 0.2s;
-        }
+    .nav-item:hover {
+        background: var(--gray-100);
+        color: var(--gray-900);
+        text-decoration: none;
+    }
 
-        .search-box input:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-            outline: none;
-        }
+    .nav-item.active {
+        background: var(--pines-green);
+        color: white;
+    }
 
-        .search-box .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            border-radius: 12px;
-            padding: 12px 28px;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-            transition: all 0.2s;
-        }
+    .nav-item .icon {
+        margin-right: 10px;
+        font-size: 16px;
+    }
 
-        .search-box .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
-        }
+    .nav-item .badge {
+        margin-left: auto;
+        background: var(--red-500);
+        color: white;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: 10px;
+        min-width: 18px;
+        text-align: center;
+    }
 
-        .clear-search {
-            cursor: pointer;
-            color: #dc3545;
-            margin-left: 16px;
-            font-weight: 600;
-            transition: all 0.2s;
-            padding: 8px 16px;
-            border-radius: 8px;
-        }
+    .sidebar-footer {
+        padding: 16px;
+        border-top: 1px solid var(--gray-200);
+    }
 
-        .clear-search:hover {
-            background: #ffe5e8;
-        }
+    .user-menu {
+        display: flex;
+        align-items: center;
+        padding: 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.15s ease;
+        text-decoration: none;
+        color: inherit;
+    }
 
-        #view-toggle {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 24px;
-        }
+    .user-menu:hover {
+        background: var(--gray-100);
+        text-decoration: none;
+    }
 
-        #view-toggle .btn {
-            border: 2px solid #e9ecef;
-            background: white;
-            color: #495057;
-            border-radius: 12px;
-            padding: 10px 20px;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
+    .user-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--pines-green);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 14px;
+        margin-right: 10px;
+    }
 
-        #view-toggle .btn:hover {
-            border-color: #667eea;
-            background: #f0f2ff;
-            color: #667eea;
-        }
+    .user-info {
+        flex: 1;
+    }
 
-        #view-toggle .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-color: transparent;
-        }
+    .user-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--gray-900);
+    }
 
-        #view-toggle .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-        }
+    .user-role {
+        font-size: 12px;
+        color: var(--gray-500);
+    }
 
-        .nav-pills {
-            gap: 8px;
-            background: white;
-            padding: 16px;
-            border-radius: 16px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-            margin-bottom: 20px;
-        }
+    /* Main Content Area */
+    .main-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: var(--gray-50);
+    }
 
-        .nav-pills .nav-link {
-            border-radius: 12px;
-            padding: 10px 20px;
-            color: #495057;
-            font-weight: 600;
-            transition: all 0.2s;
-            border: 2px solid transparent;
-        }
+    .main-content-scroll {
+        flex: 1;
+        overflow-y: auto;
+    }
 
-        .nav-pills .nav-link:hover {
-            background: #f8f9fa;
-            color: #667eea;
-        }
+    .container {
+        max-width: 100% !important;
+        padding: 0 !important;
+    }
 
-        .nav-pills .nav-link.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-        }
+    /* Page Header */
+    .page-header {
+        background: white;
+        border-bottom: 1px solid var(--gray-200);
+        padding: 16px 32px;
+    }
 
-        .table {
-            background: white;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-            margin-bottom: 0;
-        }
+    .header-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
 
-        .table thead {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
+    .page-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin: 0;
+    }
 
-        .table thead th {
-            border: none;
-            padding: 16px 12px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
+    .header-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
 
-        .table tbody tr {
-            border-bottom: 1px solid #f0f0f0;
-            transition: all 0.2s;
-        }
+    .btn {
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
 
-        .table tbody tr:hover {
-            background: #f8f9fa;
-        }
+    .btn-sm {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
 
-        .table tbody tr:last-child {
-            border-bottom: none;
-        }
+    .btn-primary {
+        background: var(--pines-green);
+        color: white;
+    }
 
-        .table tbody td {
-            padding: 14px 12px;
-            vertical-align: middle;
-        }
+    .btn-primary:hover {
+        background: #2e5e2d;
+    }
 
-        tr.locked td {
-            color: #adb5bd;
-            opacity: 0.6;
-        }
+    .btn-secondary {
+        background: white;
+        color: var(--gray-700);
+        border: 1px solid var(--gray-300);
+    }
 
-        tr.locked .btn {
-            pointer-events: none;
-            opacity: 0.5;
-        }
+    .btn-secondary:hover {
+        background: var(--gray-50);
+    }
 
-        tr.duplicate-jersey {
-            background: #fff3cd !important;
-            border-left: 4px solid #ffc107;
-        }
+    .btn-danger {
+        background: var(--red-500);
+        color: white;
+    }
 
-        tr.waiting-room {
-            background: #fff4e6 !important;
-            border-left: 4px solid #ff9800;
-        }
+    .btn-danger:hover {
+        background: #dc2626;
+    }
 
-        .sport-tag {
-            display: inline-block;
-            padding: 4px 12px;
-            margin: 2px;
-            border-radius: 16px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            background: #e3f2fd;
-            color: #1976d2;
-            border: 1px solid #bbdefb;
-        }
+    .btn-success {
+        background: var(--pines-green);
+        color: white;
+    }
 
-        .sport-checkbox-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
+    .btn-info {
+        background: var(--blue-500);
+        color: white;
+    }
 
-        .sport-checkbox-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
+    /* Toolbar */
+    .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
 
-        .edit-sports {
+    .search-box {
+        flex: 1;
+        min-width: 280px;
+        position: relative;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 8px 12px 8px 36px;
+        border: 1px solid var(--gray-300);
+        border-radius: 6px;
+        font-size: 14px;
+        transition: all 0.15s ease;
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: var(--pines-green);
+        box-shadow: 0 0 0 3px rgba(60, 121, 57, 0.1);
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--gray-400);
+        pointer-events: none;
+    }
+
+    .view-toggle {
+        display: flex;
+        gap: 8px;
+    }
+
+    .view-btn {
+        padding: 8px 16px;
+        background: white;
+        border: 1px solid var(--gray-300);
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--gray-700);
+        cursor: pointer;
+        transition: all 0.15s ease;
+        text-decoration: none;
+    }
+
+    .view-btn:hover {
+        background: var(--gray-50);
+        text-decoration: none;
+    }
+
+    .view-btn.active {
+        background: var(--pines-green);
+        color: white;
+        border-color: var(--pines-green);
+    }
+
+    /* Stats Bar */
+    .stats-bar {
+        display: flex;
+        gap: 16px;
+        padding: 16px 32px;
+        background: white;
+        border-bottom: 1px solid var(--gray-200);
+        flex-wrap: wrap;
+    }
+
+    .stat-card {
+        flex: 1;
+        min-width: 150px;
+        padding: 16px;
+        background: var(--gray-50);
+        border-radius: 8px;
+        border: 1px solid var(--gray-200);
+        transition: all 0.15s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-card.alert {
+        background: #fef2f2;
+        border-color: #fecaca;
+    }
+
+    .stat-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--gray-900);
+    }
+
+    .stat-card.alert .stat-value {
+        color: var(--red-500);
+    }
+
+    .stat-label {
+        font-size: 13px;
+        color: var(--gray-600);
+        margin-top: 4px;
+    }
+
+    /* Filter Pills */
+    .filter-group {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        padding: 12px 32px;
+        background: white;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .filter-pill {
+        padding: 6px 12px;
+        border: 2px solid var(--gray-300);
+        background: white;
+        border-radius: 16px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--gray-700);
+        cursor: pointer;
+        transition: all 0.15s ease;
+        user-select: none;
+    }
+
+    .filter-pill:hover {
+        border-color: var(--pines-green);
+        background: rgba(60, 121, 57, 0.05);
+    }
+
+    .filter-pill.active {
+        background: var(--pines-green);
+        color: white;
+        border-color: var(--pines-green);
+    }
+
+    /* Table Container */
+    .table-container {
+        padding: 16px 32px 32px;
+    }
+
+    .year-section {
+        display: none;
+    }
+
+    .year-section.active {
+        display: block;
+    }
+
+    .data-table {
+        width: 100%;
+        background: white;
+        border-radius: 8px;
+        border: 1px solid var(--gray-200);
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .data-table thead th {
+        background: var(--gray-50);
+        padding: 12px 16px;
+        text-align: left;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .data-table thead th:first-child {
+        padding-left: 24px;
+        border-radius: 8px 0 0 0;
+    }
+
+    .data-table thead th:last-child {
+        border-radius: 0 8px 0 0;
+    }
+
+    .data-table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
+        transition: background 0.1s ease;
+        cursor: pointer;
+    }
+
+    .data-table tbody tr:hover {
+        background: var(--gray-50);
+    }
+
+    .data-table tbody tr.selected {
+        background: #f0f9ff !important;
+        border-left: 3px solid var(--pines-green);
+    }
+
+    .data-table tbody tr.waiting-room {
+        background: #fffbeb;
+    }
+
+    .data-table tbody tr.duplicate-jersey {
+        background: #fef2f2;
+    }
+
+    .data-table tbody tr:last-child {
+        border-bottom: none;
+    }
+
+    .data-table td {
+        padding: 16px;
+        font-size: 14px;
+        color: var(--gray-900);
+        vertical-align: middle;
+    }
+
+    .data-table td:first-child {
+        padding-left: 24px;
+    }
+
+    /* Player Info */
+    .player-name {
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+
+    .player-email {
+        font-size: 13px;
+        color: var(--gray-500);
+        margin-top: 2px;
+    }
+
+    /* Jersey Badge */
+    .jersey-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 32px;
+        padding: 4px 8px;
+        background: var(--gray-100);
+        border: 2px solid var(--gray-300);
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 14px;
+        color: var(--gray-900);
+    }
+
+    /* Sport Tags */
+    .sport-tags {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+    }
+
+    .sport-tag {
+        padding: 4px 8px;
+        background: var(--gray-100);
+        color: var(--gray-700);
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    /* Status Badge */
+    .status-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .status-badge.sent {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .status-badge.pending {
+        background: #fef3c7;
+        color: #a16207;
+    }
+
+    /* Actions - Always visible for better discoverability */
+    .row-actions {
+        display: flex;
+        gap: 6px;
+        opacity: 0.85;
+        transition: opacity 0.2s ease;
+    }
+
+    .data-table tbody tr:hover .row-actions {
+        opacity: 1;
+    }
+    
+    /* Add a subtle background to actions column for better visual separation */
+    .data-table td:last-child {
+        background: linear-gradient(90deg, transparent 0%, rgba(248, 250, 252, 0.5) 20%);
+    }
+    
+    .data-table tbody tr:hover td:last-child {
+        background: linear-gradient(90deg, transparent 0%, rgba(248, 250, 252, 0.8) 20%);
+    }
+    
+    /* ===== OUTLINED GHOST BUTTON STYLES (OPTION 4) ===== */
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 14px;
+        font-size: 13px;
+        font-weight: 600;
+        border: 2px solid;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+        min-width: 90px;
+        justify-content: center;
+        background: white;
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .action-btn:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* Edit Button */
+    .action-btn.edit {
+        border-color: #6366f1;
+        color: #6366f1;
+    }
+    
+    .action-btn.edit:hover {
+        background: #6366f1;
+        color: white;
+    }
+    
+    /* Save Button */
+    .action-btn.save {
+        border-color: #22c55e;
+        color: #22c55e;
+    }
+    
+    .action-btn.save:hover {
+        background: #22c55e;
+        color: white;
+    }
+    
+    /* Cancel Button */
+    .action-btn.cancel {
+        border-color: #94a3b8;
+        color: #94a3b8;
+    }
+    
+    .action-btn.cancel:hover {
+        background: #94a3b8;
+        color: white;
+    }
+    
+    /* Email Button */
+    .action-btn.email {
+        border-color: #0ea5e9;
+        color: #0ea5e9;
+    }
+    
+    .action-btn.email:hover {
+        background: #0ea5e9;
+        color: white;
+    }
+    
+    .action-btn.email:disabled,
+    .action-btn.email.sent {
+        border-color: #94a3b8;
+        color: #94a3b8;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+    
+    .action-btn.email:disabled:hover,
+    .action-btn.email.sent:hover {
+        transform: none;
+        box-shadow: none;
+        background: white;
+        color: #94a3b8;
+    }
+    
+    /* Delete Button */
+    .action-btn.delete {
+        border-color: #ef4444;
+        color: #ef4444;
+    }
+    
+    .action-btn.delete:hover {
+        background: #ef4444;
+        color: white;
+        animation: danger-shake 0.3s ease;
+    }
+    
+    @keyframes danger-shake {
+        0%, 100% { transform: translateX(0) translateY(-2px); }
+        25% { transform: translateX(-2px) translateY(-2px); }
+        75% { transform: translateX(2px) translateY(-2px); }
+    }
+    
+    /* Action Icons */
+    .action-btn .action-icon {
+        font-size: 16px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+    }
+    
+    .action-btn-text {
+        font-size: 13px;
+        font-weight: 600;
+    }
+    /* ===== END OUTLINED GHOST BUTTON STYLES ===== */
+    
+    @keyframes subtle-pulse {
+        0%, 100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.7;
+        }
+    }
+    
+    @keyframes slide-in {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    /* Alternative: Dropdown Actions Menu */
+    .action-dropdown {
+        position: relative;
+        display: inline-block;
+    }
+    
+    .action-dropdown-btn {
+        padding: 4px 8px;
+        background: white;
+        border: 1px solid var(--gray-300);
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        color: var(--gray-600);
+        transition: all 0.15s ease;
+    }
+    
+    .action-dropdown-btn:hover {
+        background: var(--gray-50);
+        border-color: var(--gray-400);
+    }
+    
+    .action-dropdown-menu {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: 100%;
+        margin-top: 4px;
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        z-index: 100;
+        min-width: 140px;
+    }
+    
+    .action-dropdown.open .action-dropdown-menu {
+        display: block;
+    }
+    
+    .action-dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        font-size: 13px;
+        color: var(--gray-700);
+        cursor: pointer;
+        transition: background 0.15s ease;
+        border: none;
+        background: none;
+        width: 100%;
+        text-align: left;
+    }
+    
+    .action-dropdown-item:hover {
+        background: var(--gray-50);
+    }
+    
+    .action-dropdown-item.delete {
+        color: var(--red-500);
+    }
+    
+    .action-dropdown-item.delete:hover {
+        background: #fef2f2;
+    }
+    
+    .action-dropdown-divider {
+        height: 1px;
+        background: var(--gray-200);
+        margin: 4px 0;
+    }
+
+    /* Checkbox Styles */
+    .player-checkbox, .select-all-checkbox {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: var(--pines-green);
+    }
+
+    .player-checkbox:hover, .select-all-checkbox:hover {
+        transform: scale(1.1);
+    }
+
+    /* Selected Row Style */
+    .data-table tbody tr.row-selected {
+        background: #f0fdf4 !important;
+        border-left: 3px solid var(--pines-green);
+    }
+
+    /* Bulk Actions Bar */
+    .bulk-actions-bar {
+        display: none;
+        padding: 12px 32px;
+        background: var(--pines-green);
+        color: white;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .bulk-actions-bar.active {
+        display: flex;
+    }
+
+    .bulk-actions-info {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-weight: 600;
+    }
+
+    .bulk-actions-buttons {
+        display: flex;
+        gap: 8px;
+    }
+
+    .bulk-action-btn {
+        padding: 8px 16px;
+        background: white;
+        color: var(--gray-700);
+        border: 1px solid var(--gray-300);
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .bulk-action-btn:hover {
+        background: var(--gray-100);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .bulk-action-btn.danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        border: none;
+    }
+
+    .bulk-action-btn.danger:hover {
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        animation: danger-shake 0.3s ease;
+    }
+
+    /* Inline Editing */
+    .edit-mode input,
+    .edit-mode select {
+        padding: 6px 8px;
+        border: 1px solid var(--gray-300);
+        border-radius: 4px;
+        font-size: 13px;
+    }
+
+    .edit-mode input:focus,
+    .edit-mode select:focus {
+        outline: none;
+        border-color: var(--pines-green);
+        box-shadow: 0 0 0 2px rgba(60, 121, 57, 0.1);
+    }
+
+    /* Detail Sidebar */
+    .detail-sidebar {
+        position: fixed;
+        top: 0;
+        right: -380px;
+        width: 380px;
+        height: 100vh;
+        background: white;
+        border-left: 1px solid var(--gray-200);
+        box-shadow: -4px 0 24px rgba(0, 0, 0, 0.1);
+        transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .detail-sidebar.open {
+        right: 0;
+    }
+
+    .detail-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--gray-200);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .detail-tabs {
+        display: flex;
+        gap: 2px;
+    }
+
+    .detail-tab {
+        padding: 6px 12px;
+        background: transparent;
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--gray-600);
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .detail-tab.active {
+        background: var(--gray-100);
+        color: var(--gray-900);
+    }
+
+    .close-detail {
+        width: 28px;
+        height: 28px;
+        border: none;
+        background: transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 18px;
+        color: var(--gray-500);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s ease;
+    }
+
+    .close-detail:hover {
+        background: var(--gray-100);
+    }
+
+    .detail-content {
+        flex: 1;
+        overflow-y: auto;
+        padding-bottom: 20px;
+    }
+
+    .detail-section {
+        padding: 20px;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .player-info-compact {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .player-avatar-small {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: var(--pines-green);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 18px;
+    }
+
+    .player-info-text {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .player-name-compact {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+
+    .player-email-compact {
+        font-size: 13px;
+        color: var(--gray-500);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        font-size: 13px;
+    }
+
+    /* Detail Sidebar Form Controls */
+    .detail-sidebar .form-control {
+        padding: 6px 10px;
+        border: 1px solid var(--gray-300);
+        border-radius: 6px;
+        font-size: 14px;
+        font-family: inherit;
+        transition: all 0.15s ease;
+        background: white;
+        color: var(--gray-900);
+    }
+
+    .detail-sidebar .form-control:focus {
+        outline: none;
+        border-color: var(--pines-green);
+        box-shadow: 0 0 0 3px rgba(60, 121, 57, 0.1);
+    }
+
+    .detail-sidebar .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        font-size: 13px;
+        min-height: 36px;
+    }
+
+    .detail-sidebar .info-row .edit-mode {
+        margin-left: auto;
+    }
+
+    #edit-sports-container {
+        margin-left: auto;
+        font-size: 13px;
+        max-width: 150px;
+    }
+
+    #edit-sports-container label {
+        cursor: pointer;
+        padding: 3px 0;
+        display: flex;
+        align-items: center;
+        font-weight: normal;
+        color: var(--gray-700);
+    }
+
+    #edit-sports-container label:hover {
+        color: var(--gray-900);
+    }
+
+    #edit-sports-container input[type="checkbox"] {
+        margin-right: 8px;
+        cursor: pointer;
+        width: 16px;
+        height: 16px;
+        accent-color: var(--pines-green);
+    }
+
+    .detail-sidebar .view-mode,
+    .detail-sidebar .edit-mode {
+        transition: opacity 0.15s ease;
+    }
+    
+    .detail-sidebar .btn-group-edit {
+        display: flex;
+        gap: 8px;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid var(--gray-200);
+    }
+
+    /* Activity Tab Styles */
+    .activity-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .activity-item {
+        padding: 12px;
+        border-left: 3px solid var(--gray-300);
+        margin-bottom: 12px;
+        background: var(--gray-50);
+        border-radius: 0 6px 6px 0;
+        transition: all 0.15s ease;
+        position: relative;
+    }
+    
+    .activity-item:hover {
+        background: white;
+        border-left-color: var(--pines-green);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    
+    .activity-item.activity-edit {
+        border-left-color: var(--blue-500);
+    }
+    
+    .activity-item.activity-email {
+        border-left-color: var(--green-500);
+    }
+    
+    .activity-item.activity-delete {
+        border-left-color: var(--red-500);
+    }
+    
+    .activity-item.activity-create {
+        border-left-color: var(--yellow-500);
+    }
+    
+    .activity-icon {
+        position: absolute;
+        left: -12px;
+        top: 12px;
+        width: 24px;
+        height: 24px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        border: 2px solid var(--gray-300);
+    }
+    
+    .activity-item.activity-edit .activity-icon {
+        border-color: var(--blue-500);
+    }
+    
+    .activity-item.activity-email .activity-icon {
+        border-color: var(--green-500);
+    }
+    
+    .activity-item.activity-delete .activity-icon {
+        border-color: var(--red-500);
+    }
+    
+    .activity-item.activity-create .activity-icon {
+        border-color: var(--yellow-500);
+    }
+    
+    .activity-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin-bottom: 4px;
+    }
+    
+    .activity-details {
+        font-size: 12px;
+        color: var(--gray-600);
+        margin-bottom: 4px;
+        line-height: 1.4;
+    }
+    
+    .activity-details .change-item {
+        display: block;
+        padding: 2px 0;
+    }
+    
+    .activity-details .old-value {
+        color: var(--red-500);
+        text-decoration: line-through;
+    }
+    
+    .activity-details .new-value {
+        color: var(--green-500);
+        font-weight: 500;
+    }
+    
+    .activity-timestamp {
+        font-size: 11px;
+        color: var(--gray-500);
+        margin-top: 6px;
+    }
+    
+    .activity-empty {
+        color: var(--gray-500);
+        text-align: center;
+        padding: 40px 20px;
+    }
+    
+    .detail-tab.active {
+        background: var(--gray-100);
+        color: var(--gray-900);
+    }
+
+    .info-label {
+        color: var(--gray-600);
+        font-weight: 500;
+    }
+
+    .info-value {
+        color: var(--gray-900);
+        font-weight: 600;
+    }
+
+    .action-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .action-item {
+        display: flex;
+        align-items: center;
+        padding: 10px 12px;
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .action-item:hover {
+        background: var(--gray-50);
+        transform: translateX(4px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .action-item#detail-edit-btn:hover {
+        border-color: #667eea;
+        background: linear-gradient(90deg, rgba(102, 126, 234, 0.05) 0%, transparent 100%);
+    }
+    
+    .action-item#detail-email-btn:hover {
+        border-color: #06b6d4;
+        background: linear-gradient(90deg, rgba(6, 182, 212, 0.05) 0%, transparent 100%);
+    }
+    
+    .action-item#detail-delete-btn {
+        border-color: rgba(239, 68, 68, 0.3);
+        background: linear-gradient(90deg, rgba(239, 68, 68, 0.02) 0%, transparent 100%);
+    }
+    
+    .action-item#detail-delete-btn:hover {
+        border-color: var(--red-500);
+        background: linear-gradient(90deg, rgba(239, 68, 68, 0.1) 0%, transparent 100%);
+        animation: danger-shake 0.3s ease;
+    }
+    
+    /* Sidebar action icons */
+    .action-item .action-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        background: var(--gray-100);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 12px;
+        font-size: 18px;
+        transition: all 0.2s ease;
+    }
+    
+    #detail-edit-btn .action-icon {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        color: #667eea;
+    }
+    
+    #detail-email-btn .action-icon {
+        background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(8, 145, 178, 0.1) 100%);
+        color: #06b6d4;
+    }
+    
+    #detail-delete-btn .action-icon {
+        background: #fef2f2;
+        color: var(--red-500);
+    }
+    
+    .action-item:hover .action-icon {
+        transform: scale(1.1);
+    }
+
+    .action-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+
+    .action-description {
+        font-size: 12px;
+        color: var(--gray-500);
+    }
+
+    .detail-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.3);
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        z-index: 999;
+    }
+
+    .detail-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .detail-section-title {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--gray-500);
+        letter-spacing: 0.5px;
+        margin-bottom: 12px;
+    }
+
+    /* Add Player Row */
+    .add-row td {
+        padding: 12px !important;
+        text-align: center;
+        background: var(--gray-50);
+    }
+
+    .add-form-row {
+        background: #f0f9ff;
+    }
+
+    .add-form-row td {
+        padding: 12px 16px;
+    }
+
+    .add-form-row input,
+    .add-form-row select {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1px solid var(--gray-300);
+        border-radius: 4px;
+        font-size: 13px;
+    }
+
+    @media (max-width: 768px) {
+        .sidebar {
             display: none;
         }
-
-        /* OUTLINED GHOST BUTTON STYLES - OPTION 4 */
-        .btn {
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            border: 2px solid;
-            cursor: pointer;
-            transition: all 0.2s;
-            min-width: 90px;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            justify-content: center;
-            background: white;
-        }
-
-        .btn-edit {
-            border-color: #6366f1;
-            color: #6366f1;
-        }
-
-        .btn-edit:hover {
-            background: #6366f1;
-            color: white;
-        }
-
-        .btn-email {
-            border-color: #0ea5e9;
-            color: #0ea5e9;
-        }
-
-        .btn-email:hover {
-            background: #0ea5e9;
-            color: white;
-        }
-
-        .btn-email:disabled {
-            border-color: #94a3b8;
-            color: #94a3b8;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-
-        .btn-email.sent {
-            border-color: #22c55e;
-            color: #22c55e;
-        }
-
-        .btn-email.sent:hover {
-            background: #22c55e;
-            color: white;
-        }
-
-        .btn-delete {
-            border-color: #ef4444;
-            color: #ef4444;
-        }
-
-        .btn-delete:hover {
-            background: #ef4444;
-            color: white;
-            animation: shake 0.3s;
-        }
-
-        .btn-save {
-            border-color: #22c55e;
-            color: #22c55e;
-        }
-
-        .btn-save:hover {
-            background: #22c55e;
-            color: white;
-        }
-
-        .btn-cancel {
-            border-color: #94a3b8;
-            color: #94a3b8;
-        }
-
-        .btn-cancel:hover {
-            background: #94a3b8;
-            color: white;
-        }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        .success-notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            padding: 16px 24px;
-            border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
-            animation: slideIn 0.3s ease-out;
-            z-index: 1000;
-            font-weight: 600;
-        }
-
-        .form-control {
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            padding: 8px 12px;
-            transition: all 0.2s;
-        }
-
-        .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            outline: none;
-        }
-
-        .form-select {
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            padding: 8px 12px;
-            transition: all 0.2s;
-        }
-
-        .form-select:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            outline: none;
-        }
-
-        .form-check-input {
-            border: 2px solid #e9ecef;
-            transition: all 0.2s;
-        }
-
-        .form-check-input:checked {
-            background-color: #667eea;
-            border-color: #667eea;
-        }
-
-        .form-check-input:focus {
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .lock-switch {
-            cursor: pointer;
-            font-size: 1.2rem;
-        }
-
-        .table-container {
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-        }
-    </style>
+    }
+</style>
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="/">POSA Jersey App</a>
-        <div class="ms-auto">
-            <a href="/logout" class="btn btn-outline-light">Logout</a>
+<div class="app-container">
+    <!-- Left Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">POSA Sports</div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-section-title">Main</div>
+                <a href="#all" class="nav-item nav-year-link active" data-year="all">
+                    <span class="icon">👥</span>
+                    <span>All Athletes</span>
+                </a>
+                <a href="#waiting-room" class="nav-item nav-year-link" data-year="waiting">
+                    <span class="icon">⏳</span>
+                    <span>Waiting Room</span>
+                    {% if waiting_room_players %}
+                    <span class="badge">{{ waiting_room_players|length }}</span>
+                    {% endif %}
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Views</div>
+                <a href="/admin?view=birthyear" class="nav-item {% if view == 'birthyear' %}active{% endif %}">
+                    <span class="icon">🎂</span>
+                    <span>By Birth Year</span>
+                </a>
+                <a href="/admin?view=division" class="nav-item {% if view == 'division' %}active{% endif %}">
+                    <span class="icon">📊</span>
+                    <span>By Division</span>
+                </a>
+            </div>
+
+            {% if view == 'birthyear' %}
+            <div class="nav-section">
+                <div class="nav-section-title">Birth Years</div>
+                {% for year in group_list %}
+                <a href="#year-{{ year }}" class="nav-item nav-year-link" data-year="{{ year }}">
+                    <span class="icon">📅</span>
+                    <span>{{ birth_year_labels[year] if birth_year_labels else year }}</span>
+                    <span class="badge" style="background: var(--gray-400);">{{ birth_year_counts.get(year, 0) }}</span>
+                </a>
+                {% endfor %}
+            </div>
+            {% elif view == 'division' %}
+            <div class="nav-section">
+                <div class="nav-section-title">Divisions</div>
+                {% for division in group_list %}
+                <a href="#division-{{ loop.index }}" class="nav-item nav-scroll-link" title="{{ division }}">
+                    <span class="icon">{% if division == 'Pend Oreille Pines (High School Club Team)' %}🌲{% else %}⚽{% endif %}</span>
+                    <span>{% if division == 'Pend Oreille Pines (High School Club Team)' %}Pines HS Club{% else %}{{ division }}{% endif %}</span>
+                    <span class="badge" style="background: var(--gray-400);">{{ players_by_group[division]|length }}</span>
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="nav-section">
+                <div class="nav-section-title">Settings</div>
+                <a href="/email-templates" class="nav-item">
+                    <span class="icon">✉️</span>
+                    <span>Email Templates</span>
+                </a>
+                <a href="/invite" class="nav-item">
+                    <span class="icon">👤</span>
+                    <span>Invite User</span>
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="/logout" class="user-menu">
+                <div class="user-avatar">AD</div>
+                <div class="user-info">
+                    <div class="user-name">Admin</div>
+                    <div class="user-role">Logout</div>
+                </div>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+<!-- Page Header -->
+<div class="page-header">
+    <div class="header-top">
+        <h1 class="page-title">Athletes Dashboard</h1>
+        <div class="header-actions">
+            <div class="view-toggle">
+                <a href="/admin?view=birthyear" class="view-btn {% if view == 'birthyear' %}active{% endif %}">
+                    🎂 Birth Year
+                </a>
+                <a href="/admin?view=division" class="view-btn {% if view == 'division' %}active{% endif %}">
+                    📊 Division
+                </a>
+            </div>
         </div>
     </div>
-</nav>
 
-<div class="main-container">
-    <main>
-        <!-- Stats Cards -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value" id="total-players">0</div>
-                <div class="stat-label">Total Athletes</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="assigned-jerseys">0</div>
-                <div class="stat-label">Jerseys Assigned</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="duplicate-count">0</div>
-                <div class="stat-label">Duplicate Jerseys</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="waiting-count">0</div>
-                <div class="stat-label">Waiting Room</div>
-            </div>
-        </div>
-
-        <!-- Search Box -->
+    <!-- Toolbar -->
+    <div class="toolbar">
         <div class="search-box">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <input type="text" id="search-input" class="form-control" placeholder="🔍 Search by name, email, or jersey...">
-                </div>
-                <div class="col-md-3">
-                    <select id="sport-filter" class="form-select">
-                        <option value="">All Sports</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select id="division-filter" class="form-select">
-                        <option value="">All Divisions</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button id="search-btn" class="btn btn-primary w-100">Search</button>
-                </div>
-            </div>
-            <div id="search-status" style="margin-top: 12px; color: #64748b; font-weight: 500;"></div>
+            <span class="search-icon">🔍</span>
+            <input type="text" id="athlete-search" class="search-input" placeholder="Search athletes by name, email, or jersey...">
         </div>
-
-        <!-- View Toggle -->
-        <div id="view-toggle">
-            <button class="btn btn-primary" data-view="birth-year">👶 Birth Year View</button>
-            <button class="btn" data-view="division">🏆 Division View</button>
-        </div>
-
-        <!-- Birth Year View -->
-        <div id="birth-year-view">
-            <ul class="nav nav-pills" id="year-tabs" role="tablist"></ul>
-            <div class="tab-content" id="year-content"></div>
-        </div>
-
-        <!-- Division View -->
-        <div id="division-view" style="display: none;">
-            <ul class="nav nav-pills" id="division-tabs" role="tablist"></ul>
-            <div class="tab-content" id="division-content"></div>
-        </div>
-
-        <!-- Quick Add Section -->
-        <div class="table-container mt-4">
-            <h4 style="margin-bottom: 20px; color: #333; font-weight: 700;">➕ Quick Add Athlete</h4>
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <input type="text" id="quick-name" class="form-control" placeholder="Full Name">
-                </div>
-                <div class="col-md-2">
-                    <input type="number" id="quick-jersey" class="form-control" placeholder="Jersey #">
-                </div>
-                <div class="col-md-2">
-                    <input type="number" id="quick-birth-year" class="form-control" placeholder="Birth Year">
-                </div>
-                <div class="col-md-2">
-                    <input type="email" id="quick-email" class="form-control" placeholder="Email">
-                </div>
-                <div class="col-md-1">
-                    <select id="quick-sport" class="form-select">
-                        <option value="">Sport</option>
-                        <option value="soccer">⚽ Soccer</option>
-                        <option value="basketball">🏀 Basketball</option>
-                        <option value="baseball">⚾ Baseball</option>
-                        <option value="softball">🥎 Softball</option>
-                        <option value="volleyball">🏐 Volleyball</option>
-                        <option value="football">🏈 Football</option>
-                    </select>
-                </div>
-                <div class="col-md-1">
-                    <input type="text" id="quick-division" class="form-control" placeholder="Division">
-                </div>
-                <div class="col-md-1">
-                    <button id="quick-add-btn" class="btn btn-save w-100">💾 Add</button>
-                </div>
-            </div>
-        </div>
-    </main>
+    </div>
 </div>
 
-<script>
-    let allPlayers = [];
-    let currentView = 'birth-year';
-    let searchActive = false;
-    let searchResults = [];
+<div class="main-content-scroll">
+<!-- Bulk Actions Bar -->
+<div class="bulk-actions-bar" id="bulk-actions-bar">
+    <div class="bulk-actions-info">
+        <span id="selected-count">0 selected</span>
+        <button class="bulk-action-btn" onclick="clearSelection()">Clear Selection</button>
+    </div>
+    <div class="bulk-actions-buttons">
+        <button class="bulk-action-btn" onclick="bulkSendEmails()">📧 Send Emails</button>
+        <button class="bulk-action-btn" onclick="bulkUpdateDivision()">📊 Update Division</button>
+        <button class="bulk-action-btn danger" onclick="bulkDelete()">🗑️ Delete Selected</button>
+    </div>
+</div>
 
-    // Initialize
-    document.addEventListener('DOMContentLoaded', function() {
-        loadPlayers();
-        setupViewToggle();
-        setupSearch();
-        setupQuickAdd();
+<!-- Stats -->
+<div class="stats-bar">
+    <div class="stat-card">
+        <div class="stat-value" id="stat-total">{{ total_players }}</div>
+        <div class="stat-label" id="stat-total-label">Total Athletes</div>
+    </div>
+    <div class="stat-card {% if waiting_room_players %}alert{% endif %}" style="cursor: pointer;" onclick="filterByYear('waiting')">
+        <div class="stat-value" id="stat-waiting">{{ waiting_room_players|length if waiting_room_players else 0 }}</div>
+        <div class="stat-label" id="stat-waiting-label">Waiting Room</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="stat-years">{{ birth_year_counts|length }}</div>
+        <div class="stat-label" id="stat-years-label">Birth Years</div>
+    </div>
+    <div class="stat-card" id="clear-filters-card" style="display: none; cursor: pointer; background: var(--pines-green); color: white;" onclick="clearAllFilters()">
+        <div class="stat-value" style="font-size: 18px;">✖</div>
+        <div class="stat-label" style="color: white;">Clear Filters</div>
+    </div>
+</div>
+
+<!-- Sport Filter -->
+<div class="filter-group">
+    <div class="filter-pill active" data-sport="all">🌲 All Sports</div>
+    <div class="filter-pill" data-sport="soccer">⚽ Soccer</div>
+    <div class="filter-pill" data-sport="basketball">🏀 Basketball</div>
+    <div class="filter-pill" data-sport="baseball">⚾ Baseball</div>
+    <div class="filter-pill" data-sport="softball">🥎 Softball</div>
+    <div class="filter-pill" data-sport="volleyball">🏐 Volleyball</div>
+    <div class="filter-pill" data-sport="flag">🏈 Flag Football</div>
+</div>
+
+<!-- Table -->
+<div class="table-container">
+    {% macro player_table(players) %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 40px;">
+                    <input type="checkbox" class="select-all-checkbox" title="Select all">
+                </th>
+                <th>Athlete</th>
+                <th>Birth Year</th>
+                <th>Sports</th>
+                <th>Division</th>
+                <th>Jersey</th>
+                <th>Email Status</th>
+                <th style="width: 320px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for player in players %}
+            <tr data-player-id="{{ player.id }}" 
+                data-reg-id="{{ player.registration_id }}"
+                data-sports="{{ player.sports|join(',') }}"
+                data-confirmation-sent="{{ player.confirmation_sent|lower }}"
+                class="{% if player.is_duplicate %}duplicate-jersey{% endif %} {% if player.division == 'Waiting Room' %}waiting-room{% endif %}">
+                <td>
+                    <input type="checkbox" class="player-checkbox" data-player-id="{{ player.id }}" data-reg-id="{{ player.registration_id }}">
+                </td>
+                <td>
+                    <div>
+                        <div class="player-name">{{ player.full_name }}</div>
+                        <div class="player-email">{{ player.parent_email }}</div>
+                    </div>
+                </td>
+                <td>
+                    <span class="birth-year">{{ player.birth_year or '-' }}</span>
+                    <select class="d-none edit-birth-year">
+                        <option value="">-</option>
+                        {% for year in range(2005, 2026) %}
+                        <option value="{{ year }}" {% if player.birth_year == year %}selected{% endif %}>{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td>
+                    <div class="sport-tags view-sports">
+                        {% for sport in player.sports %}
+                        <span class="sport-tag">{{ sport }}</span>
+                        {% endfor %}
+                    </div>
+                </td>
+                <td>
+                    <span class="division">{{ player.division }}</span>
+                    <select class="d-none edit-division">
+                        <option value="Waiting Room">Waiting Room</option>
+                        <option value="U4">U4</option>
+                        <option value="U6">U6</option>
+                        <option value="U8">U8</option>
+                        <option value="U10">U10</option>
+                        <option value="U12">U12</option>
+                        <option value="U14">U14</option>
+                        <option value="Pend Oreille Pines (High School Club Team)">Pines HS</option>
+                    </select>
+                </td>
+                <td>
+                    <span class="jersey-badge">{{ player.jersey_number if player.jersey_number else '-' }}</span>
+                    <input class="d-none edit-jersey-number" type="number" value="{{ player.jersey_number if player.jersey_number else '' }}">
+                </td>
+                <td>
+                    {% if player.confirmation_sent %}
+                    <span class="status-badge sent">✓ Sent</span>
+                    {% else %}
+                    <span class="status-badge pending">⏳ Pending</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="row-actions">
+                        <button class="action-btn edit btn-edit" title="Edit athlete details">
+                            <span class="action-icon">✏️</span>
+                            <span class="action-btn-text">Edit</span>
+                        </button>
+                        <button class="action-btn save d-none btn-save" title="Save changes">
+                            <span class="action-icon">💾</span>
+                            <span class="action-btn-text">Save</span>
+                        </button>
+                        <button class="action-btn cancel d-none btn-cancel" title="Cancel editing">
+                            <span class="action-icon">❌</span>
+                            <span class="action-btn-text">Cancel</span>
+                        </button>
+                        <button class="action-btn email btn-send-email {% if player.confirmation_sent %}sent{% endif %}" 
+                                title="{% if player.confirmation_sent %}Email already sent{% else %}Send confirmation email{% endif %}"
+                                {% if player.confirmation_sent %}disabled{% endif %}>
+                            <span class="action-icon">{% if player.confirmation_sent %}✅{% else %}📧{% endif %}</span>
+                            <span class="action-btn-text">{% if player.confirmation_sent %}Sent{% else %}Email{% endif %}</span>
+                        </button>
+                        <button class="action-btn delete btn-delete" title="Delete athlete permanently">
+                            <span class="action-icon">⚠️</span>
+                            <span class="action-btn-text">Delete</span>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+            <tr class="add-row">
+                <td colspan="8">
+                    <button class="btn btn-primary btn-show-add-form">➕ Add New Player</button>
+                </td>
+            </tr>
+            <tr class="add-form-row d-none">
+                <td></td>
+                <td><input class="new-full-name" placeholder="Full Name"></td>
+                <td>
+                    <select class="new-birth-year">
+                        <option value="">-</option>
+                        {% for year in range(2005, 2026) %}
+                        <option value="{{ year }}">{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td>
+                    <select class="new-sport">
+                        <option value="soccer">Soccer</option>
+                        <option value="basketball">Basketball</option>
+                        <option value="baseball">Baseball</option>
+                        <option value="softball">Softball</option>
+                        <option value="volleyball">Volleyball</option>
+                        <option value="flag">Flag</option>
+                    </select>
+                </td>
+                <td>
+                    <select class="new-division">
+                        <option value="U4">U4</option>
+                        <option value="U6">U6</option>
+                        <option value="U8">U8</option>
+                        <option value="U10">U10</option>
+                        <option value="U12">U12</option>
+                        <option value="U14">U14</option>
+                        <option value="Pend Oreille Pines (High School Club Team)">Pines HS</option>
+                    </select>
+                </td>
+                <td>-</td>
+                <td><input class="new-parent-email" placeholder="Parent Email"></td>
+                <td>
+                    <div style="display: flex; gap: 4px;">
+                        <button class="btn btn-sm btn-success btn-add-save">💾</button>
+                        <button class="btn btn-sm btn-secondary btn-add-cancel">✖</button>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    {% endmacro %}
+
+    <!-- All Athletes Section -->
+    <div class="year-section active" id="section-all">
+        {% if view == 'birthyear' %}
+            {% for group in group_list %}
+            <h3 style="margin: 20px 0 12px 0; color: var(--gray-900); font-size: 16px; font-weight: 700;">
+                {{ birth_year_labels[group] if birth_year_labels else group }}
+            </h3>
+            {{ player_table(players_by_group[group]) }}
+            {% endfor %}
+        {% else %}
+            {% for group in group_list %}
+            <h3 style="margin: 20px 0 12px 0; color: var(--gray-900); font-size: 16px; font-weight: 700;">
+                {{ group }}
+            </h3>
+            {{ player_table(players_by_group[group]) }}
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- Waiting Room Section -->
+    <div class="year-section" id="section-waiting">
+        <h3 style="margin: 20px 0 12px 0; color: var(--red-500); font-size: 16px; font-weight: 700;">
+            ⏳ Waiting Room {% if waiting_room_players %}({{ waiting_room_players|length }}){% else %}(0){% endif %}
+        </h3>
+        {% if waiting_room_players %}
+        {{ player_table(waiting_room_players) }}
+        {% else %}
+        <div style="background: white; border: 1px solid var(--gray-200); border-radius: 8px; padding: 40px; text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
+            <div style="font-size: 18px; font-weight: 600; color: var(--gray-900); margin-bottom: 8px;">No Players Waiting</div>
+            <div style="font-size: 14px; color: var(--gray-600);">All athletes have been assigned to their divisions!</div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if view == 'birthyear' %}
+        {% for group in group_list %}
+        <div class="year-section" id="section-{{ group }}">
+            <h3 style="margin: 20px 0 12px 0; color: var(--gray-900); font-size: 16px; font-weight: 700;">
+                {{ birth_year_labels[group] if birth_year_labels else group }}
+            </h3>
+            {{ player_table(players_by_group[group]) }}
+        </div>
+        {% endfor %}
+    {% endif %}
+</div>
+</div>
+
+<!-- Detail Sidebar -->
+<aside class="detail-sidebar" id="detail-sidebar">
+    <div class="detail-header">
+        <div class="detail-tabs">
+            <button class="detail-tab active" onclick="switchDetailTab('details')">Details</button>
+            <button class="detail-tab" onclick="switchDetailTab('activity')">Activity</button>
+        </div>
+        <button class="close-detail" onclick="closeDetail()">✕</button>
+    </div>
+
+    <div class="detail-content">
+        <!-- Details Tab Content -->
+        <div id="details-tab-content">
+            <div class="detail-section">
+                <div class="player-info-compact">
+                    <div class="player-avatar-small" id="detail-avatar">-</div>
+                    <div class="player-info-text">
+                        <div class="player-name-compact view-mode" id="detail-name">Select an athlete</div>
+                        <input type="text" class="form-control edit-mode d-none" id="edit-name" style="font-size: 15px; font-weight: 600;">
+                        <div class="player-email-compact view-mode" id="detail-email">-</div>
+                        <input type="email" class="form-control edit-mode d-none" id="edit-email" style="font-size: 13px;">
+                    </div>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">Jersey</span>
+                    <span class="info-value view-mode" id="detail-jersey">#-</span>
+                    <input type="number" class="form-control edit-mode d-none" id="edit-jersey" style="width: 100px; margin-left: auto;">
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Birth Year</span>
+                    <span class="info-value view-mode" id="detail-birth-year">-</span>
+                    <select class="form-control edit-mode d-none" id="edit-birth-year" style="width: 120px; margin-left: auto;">
+                        <option value="">-</option>
+                        {% for year in range(2005, 2026) %}
+                        <option value="{{ year }}">{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Division</span>
+                    <span class="info-value view-mode" id="detail-division">-</span>
+                    <select class="form-control edit-mode d-none" id="edit-division" style="width: 150px; margin-left: auto;">
+                        <option value="Waiting Room">Waiting Room</option>
+                        <option value="U4">U4</option>
+                        <option value="U6">U6</option>
+                        <option value="U8">U8</option>
+                        <option value="U10">U10</option>
+                        <option value="U12">U12</option>
+                        <option value="U14">U14</option>
+                        <option value="Pend Oreille Pines (High School Club Team)">Pines HS</option>
+                    </select>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Sports</span>
+                    <span class="info-value view-mode" id="detail-sports">-</span>
+                    <div class="edit-mode d-none" id="edit-sports-container">
+                        <label style="display: block; margin: 2px;"><input type="checkbox" value="soccer"> Soccer</label>
+                        <label style="display: block; margin: 2px;"><input type="checkbox" value="basketball"> Basketball</label>
+                        <label style="display: block; margin: 2px;"><input type="checkbox" value="baseball"> Baseball</label>
+                        <label style="display: block; margin: 2px;"><input type="checkbox" value="softball"> Softball</label>
+                        <label style="display: block; margin: 2px;"><input type="checkbox" value="volleyball"> Volleyball</label>
+                        <label style="display: block; margin: 2px;"><input type="checkbox" value="flag"> Flag Football</label>
+                    </div>
+                </div>
+                
+                <!-- Edit action buttons -->
+                <div class="edit-mode d-none btn-group-edit">
+                    <button class="btn btn-success" onclick="saveDetailEdits()">💾 Save</button>
+                    <button class="btn btn-secondary" onclick="cancelDetailEdit()">✖ Cancel</button>
+                </div>
+            </div>
+
+            <div class="detail-section view-mode">
+                <div class="detail-section-title">Quick Actions</div>
+                <div class="action-list">
+                    <div class="action-item" id="detail-edit-btn" onclick="enableDetailEdit()">
+                        <div class="action-icon">✏️</div>
+                        <div>
+                            <div class="action-title">Edit Athlete</div>
+                            <div class="action-description">Update information</div>
+                        </div>
+                    </div>
+                    <div class="action-item" id="detail-email-btn">
+                        <div class="action-icon">📧</div>
+                        <div>
+                            <div class="action-title">Send Email</div>
+                            <div class="action-description">Jersey confirmation</div>
+                        </div>
+                    </div>
+                    <div class="action-item" id="detail-delete-btn" style="border-color: rgba(239, 68, 68, 0.3);">
+                        <div class="action-icon" style="background: #fef2f2; color: var(--red-500);">⚠️</div>
+                        <div>
+                            <div class="action-title" style="color: var(--red-500);">Delete Athlete</div>
+                            <div class="action-description">Remove from system</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Activity Tab Content -->
+        <div id="activity-tab-content" class="d-none">
+            <div class="detail-section">
+                <div class="activity-header">
+                    <h4 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: var(--gray-900);">Activity History</h4>
+                </div>
+                <div class="activity-list" id="activity-list">
+                    <div class="activity-empty">
+                        <div style="text-align: center; padding: 40px 20px;">
+                            <div style="font-size: 36px; margin-bottom: 12px;">📋</div>
+                            <div style="color: var(--gray-600); font-size: 14px;">No activity recorded for this session</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</aside>
+
+<div class="detail-overlay" id="detail-overlay" onclick="closeDetail()"></div>
+
+<script>
+    let activeSportFilter = 'all';
+    let currentSelectedRow = null;
+    let currentYear = 'all';
+    const detailSidebar = document.getElementById('detail-sidebar');
+    const detailOverlay = document.getElementById('detail-overlay');
+    let activityRefreshInterval = null;
+    let selectedPlayers = new Set();
+    
+    // Multi-select functionality
+    function updateBulkActionsBar() {
+        const bar = document.getElementById('bulk-actions-bar');
+        const countSpan = document.getElementById('selected-count');
+        
+        if (selectedPlayers.size > 0) {
+            bar.classList.add('active');
+            countSpan.textContent = `${selectedPlayers.size} selected`;
+        } else {
+            bar.classList.remove('active');
+        }
+    }
+    
+    // Dropdown menu toggle (if using dropdown design)
+    function toggleActionMenu(button) {
+        const dropdown = button.closest('.action-dropdown');
+        const wasOpen = dropdown.classList.contains('open');
+        
+        // Close all other dropdowns
+        document.querySelectorAll('.action-dropdown.open').forEach(d => {
+            d.classList.remove('open');
+        });
+        
+        // Toggle this dropdown
+        if (!wasOpen) {
+            dropdown.classList.add('open');
+        }
+    }
+    
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.action-dropdown')) {
+            document.querySelectorAll('.action-dropdown.open').forEach(d => {
+                d.classList.remove('open');
+            });
+        }
+    });
+    
+    function clearSelection() {
+        selectedPlayers.clear();
+        document.querySelectorAll('.player-checkbox').forEach(cb => {
+            cb.checked = false;
+            cb.closest('tr').classList.remove('row-selected');
+        });
+        document.querySelectorAll('.select-all-checkbox').forEach(cb => cb.checked = false);
+        updateBulkActionsBar();
+    }
+    
+    function selectAll(checkbox) {
+        const section = checkbox.closest('.year-section');
+        const visibleRows = section.querySelectorAll('tbody tr[data-player-id]:not([style*="display: none"])');
+        
+        if (checkbox.checked) {
+            visibleRows.forEach(row => {
+                const cb = row.querySelector('.player-checkbox');
+                if (cb && !cb.checked) {
+                    cb.checked = true;
+                    row.classList.add('row-selected');
+                    const playerId = cb.dataset.playerId;
+                    const regId = cb.dataset.regId;
+                    selectedPlayers.add(`${playerId}:${regId}`);
+                }
+            });
+        } else {
+            visibleRows.forEach(row => {
+                const cb = row.querySelector('.player-checkbox');
+                if (cb) {
+                    cb.checked = false;
+                    row.classList.remove('row-selected');
+                    const playerId = cb.dataset.playerId;
+                    const regId = cb.dataset.regId;
+                    selectedPlayers.delete(`${playerId}:${regId}`);
+                }
+            });
+        }
+        updateBulkActionsBar();
+    }
+    
+    function togglePlayerSelection(checkbox) {
+        const row = checkbox.closest('tr');
+        const playerId = checkbox.dataset.playerId;
+        const regId = checkbox.dataset.regId;
+        const key = `${playerId}:${regId}`;
+        
+        if (checkbox.checked) {
+            selectedPlayers.add(key);
+            row.classList.add('row-selected');
+        } else {
+            selectedPlayers.delete(key);
+            row.classList.remove('row-selected');
+        }
+        
+        // Update select-all checkbox state
+        const table = checkbox.closest('table');
+        const allCheckboxes = table.querySelectorAll('.player-checkbox');
+        const checkedBoxes = table.querySelectorAll('.player-checkbox:checked');
+        const selectAllCb = table.querySelector('.select-all-checkbox');
+        
+        if (selectAllCb) {
+            selectAllCb.checked = allCheckboxes.length > 0 && allCheckboxes.length === checkedBoxes.length;
+        }
+        
+        updateBulkActionsBar();
+    }
+    
+    // Bulk action handlers
+    async function bulkSendEmails() {
+        if (selectedPlayers.size === 0) return;
+        
+        if (!confirm(`Send confirmation emails to ${selectedPlayers.size} selected athletes?`)) return;
+        
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (const key of selectedPlayers) {
+            const [playerId, regId] = key.split(':');
+            if (regId && regId !== 'null' && regId !== 'undefined') {
+                try {
+                    const response = await fetch(`/registrations/${regId}/send_email`, { method: 'POST' });
+                    if (response.ok) {
+                        successCount++;
+                    } else {
+                        failCount++;
+                    }
+                } catch (error) {
+                    failCount++;
+                }
+            }
+        }
+        
+        alert(`Emails sent!\n✅ Success: ${successCount}\n❌ Failed: ${failCount}`);
+        clearSelection();
+        location.reload();
+    }
+    
+    async function bulkDelete() {
+        if (selectedPlayers.size === 0) return;
+        
+        if (!confirm(`Delete ${selectedPlayers.size} selected athletes? This cannot be undone!`)) return;
+        
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (const key of selectedPlayers) {
+            const [playerId, regId] = key.split(':');
+            try {
+                const response = await fetch(`/players/${playerId}`, { method: 'DELETE' });
+                if (response.ok) {
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            } catch (error) {
+                failCount++;
+            }
+        }
+        
+        alert(`Delete operation complete!\n✅ Deleted: ${successCount}\n❌ Failed: ${failCount}`);
+        clearSelection();
+        location.reload();
+    }
+    
+    async function bulkUpdateDivision() {
+        if (selectedPlayers.size === 0) return;
+        
+        const newDivision = prompt('Enter the division for all selected athletes:\n\nOptions: U4, U6, U8, U10, U12, U14, Pines HS, Waiting Room');
+        if (!newDivision) return;
+        
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (const key of selectedPlayers) {
+            const [playerId, regId] = key.split(':');
+            if (regId && regId !== 'null' && regId !== 'undefined') {
+                try {
+                    const response = await fetch(`/registrations/${regId}/division`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ division: newDivision })
+                    });
+                    if (response.ok) {
+                        successCount++;
+                    } else {
+                        failCount++;
+                    }
+                } catch (error) {
+                    failCount++;
+                }
+            }
+        }
+        
+        alert(`Division update complete!\n✅ Updated: ${successCount}\n❌ Failed: ${failCount}`);
+        clearSelection();
+        location.reload();
+    }
+    
+    // Activity logging function (for session-based tracking)
+    function logActivity(playerId, type, title, changes) {
+        // This is a placeholder for future activity logging
+        // In a real implementation, this would send to a backend API
+        console.log('Activity logged:', { playerId, type, title, changes });
+    }
+
+    // Filter by year function
+    function filterByYear(year) {
+        currentYear = year;
+        
+        // Hide all year sections
+        document.querySelectorAll('.year-section').forEach(section => {
+            section.classList.remove('active');
+        });
+        
+        // Show the selected year section
+        const targetSection = document.getElementById(`section-${year}`);
+        if (targetSection) {
+            targetSection.classList.add('active');
+        }
+        
+        // Update active state in sidebar
+        document.querySelectorAll('.nav-year-link').forEach(link => {
+            link.classList.remove('active');
+        });
+        
+        // Find and activate the clicked link
+        const activeLink = document.querySelector(`.nav-year-link[data-year="${year}"]`);
+        if (activeLink) {
+            activeLink.classList.add('active');
+        }
+        
+        // Scroll to top of main content
+        document.querySelector('.main-content-scroll').scrollTop = 0;
+        
+        // Update statistics
+        updateStatistics();
+        
+        // Apply sport filter to the new view
+        if (activeSportFilter !== 'all') {
+            applySportFilter();
+        }
+    }
+    
+    // Clear all filters
+    function clearAllFilters() {
+        // Reset year filter
+        filterByYear('all');
+        
+        // Reset sport filter
+        document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+        document.querySelector('.filter-pill[data-sport="all"]').classList.add('active');
+        activeSportFilter = 'all';
+        
+        // Clear search
+        document.getElementById('athlete-search').value = '';
+        
+        // Re-apply filters (this will show everything)
+        applySportFilter();
+    }
+    
+    // Update statistics based on current filter
+    function updateStatistics() {
+        const currentSection = document.querySelector('.year-section.active');
+        if (!currentSection) return;
+        
+        // Count visible players
+        const visiblePlayers = currentSection.querySelectorAll('tbody tr[data-player-id]');
+        let totalCount = 0;
+        let waitingRoomCount = 0;
+        const birthYears = new Set();
+        
+        visiblePlayers.forEach(row => {
+            // Skip if hidden by sport filter or search
+            if (row.style.display !== 'none') {
+                totalCount++;
+                
+                // Check if waiting room
+                if (row.classList.contains('waiting-room')) {
+                    waitingRoomCount++;
+                }
+                
+                // Get birth year
+                const birthYear = row.querySelector('.birth-year')?.textContent?.trim();
+                if (birthYear && birthYear !== '-') {
+                    birthYears.add(birthYear);
+                }
+            }
+        });
+        
+        // Update the stat cards
+        document.getElementById('stat-total').textContent = totalCount;
+        document.getElementById('stat-waiting').textContent = waitingRoomCount;
+        document.getElementById('stat-years').textContent = birthYears.size;
+        
+        // Update stat label to show it's filtered
+        const totalLabel = document.getElementById('stat-total-label');
+        const totalCard = document.querySelector('.stat-card');
+        const clearFilterCard = document.getElementById('clear-filters-card');
+        const searchValue = document.getElementById('athlete-search').value;
+        
+        let isFiltered = false;
+        
+        if (currentYear === 'all') {
+            totalLabel.textContent = 'Total Athletes';
+            totalCard.style.background = '';
+        } else if (currentYear === 'waiting') {
+            totalLabel.textContent = 'Waiting Room Athletes';
+            totalCard.style.background = '#fff3cd';
+            isFiltered = true;
+        } else {
+            totalLabel.textContent = `Year ${currentYear} Athletes`;
+            totalCard.style.background = '#e0f2fe';
+            isFiltered = true;
+        }
+        
+        // Show sport filter in label if applied
+        if (activeSportFilter !== 'all') {
+            const currentLabel = totalLabel.textContent;
+            totalLabel.textContent = currentLabel + ` (${activeSportFilter})`;
+            isFiltered = true;
+        }
+        
+        // Check if search is active
+        if (searchValue.length > 0) {
+            isFiltered = true;
+        }
+        
+        // Show/hide clear filters button
+        clearFilterCard.style.display = isFiltered ? 'block' : 'none';
+    }
+
+    // Sport Filter
+    function applySportFilter() {
+        const currentSection = document.querySelector('.year-section.active');
+        if (!currentSection) return;
+        
+        currentSection.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
+            const playerSports = (row.dataset.sports || '').toLowerCase();
+            if (activeSportFilter === 'all' || playerSports.includes(activeSportFilter.toLowerCase())) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        // Update statistics after filtering
+        updateStatistics();
+    }
+
+    document.querySelectorAll('.filter-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+            document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            
+            const sport = pill.dataset.sport;
+            activeSportFilter = sport;
+            applySportFilter();
+        });
     });
 
-    function setupViewToggle() {
-        document.querySelectorAll('#view-toggle .btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const view = this.dataset.view;
-                currentView = view;
+    // Search
+    document.getElementById('athlete-search').addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        const currentSection = document.querySelector('.year-section.active');
+        if (!currentSection) return;
+        
+        currentSection.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
+            const name = row.querySelector('.player-name').textContent.toLowerCase();
+            const email = row.querySelector('.player-email').textContent.toLowerCase();
+            const jersey = row.querySelector('.jersey-badge').textContent;
+            
+            if (name.includes(query) || email.includes(query) || jersey.includes(query)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        // Update statistics after search
+        updateStatistics();
+    });
 
-                document.querySelectorAll('#view-toggle .btn').forEach(b => b.classList.remove('btn-primary'));
-                this.classList.add('btn-primary');
-
-                if (view === 'birth-year') {
-                    document.getElementById('birth-year-view').style.display = 'block';
-                    document.getElementById('division-view').style.display = 'none';
-                } else {
-                    document.getElementById('birth-year-view').style.display = 'none';
-                    document.getElementById('division-view').style.display = 'block';
-                }
-
-                if (searchActive) {
-                    displaySearchResults();
-                } else {
-                    renderTables();
-                }
+    // Activity tracking - Display real database info
+    function updateActivityTab() {
+        if (!currentDetailPlayer || !currentDetailRow) return;
+        
+        const activityList = document.getElementById('activity-list');
+        let activityHTML = '';
+        
+        // Get data from the row (this would come from your database)
+        const confirmationSent = currentDetailRow.dataset.confirmationSent === 'true';
+        const sports = currentDetailRow.dataset.sports;
+        const division = currentDetailRow.querySelector('.division').textContent;
+        
+        // Build activity items based on available data
+        const activities = [];
+        
+        // Registration created (we don't have the exact date in the frontend, but in a real app you'd fetch this)
+        activities.push({
+            type: 'create',
+            icon: '➕',
+            title: 'Athlete Registered',
+            details: `Added to system${division ? ' in ' + division : ''}`,
+            className: 'activity-create'
+        });
+        
+        // Email status
+        if (confirmationSent) {
+            activities.push({
+                type: 'email',
+                icon: '📧',
+                title: 'Confirmation Email Sent',
+                details: `Jersey information sent to ${currentDetailPlayer.email}`,
+                className: 'activity-email'
             });
-        });
-    }
-
-    function setupSearch() {
-        const searchBtn = document.getElementById('search-btn');
-        const searchInput = document.getElementById('search-input');
-        const sportFilter = document.getElementById('sport-filter');
-        const divisionFilter = document.getElementById('division-filter');
-
-        searchBtn.addEventListener('click', performSearch);
-        searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') performSearch();
-        });
-
-        // Clear search functionality
-        searchInput.addEventListener('input', function() {
-            if (this.value === '') {
-                clearSearch();
-            }
-        });
-    }
-
-    function performSearch() {
-        const query = document.getElementById('search-input').value.toLowerCase();
-        const sport = document.getElementById('sport-filter').value;
-        const division = document.getElementById('division-filter').value;
-
-        if (!query && !sport && !division) {
-            clearSearch();
-            return;
         }
-
-        searchResults = allPlayers.filter(player => {
-            const matchesQuery = !query || 
-                player.full_name.toLowerCase().includes(query) ||
-                (player.parent_email && player.parent_email.toLowerCase().includes(query)) ||
-                (player.jersey_number && player.jersey_number.toString().includes(query));
-
-            const matchesSport = !sport || player.sport === sport;
-            const matchesDivision = !division || player.division === division;
-
-            return matchesQuery && matchesSport && matchesDivision;
-        });
-
-        searchActive = true;
-        displaySearchResults();
-
-        const statusDiv = document.getElementById('search-status');
-        statusDiv.innerHTML = `Found ${searchResults.length} athlete(s). <span class="clear-search" onclick="clearSearch()">✖ Clear Search</span>`;
-    }
-
-    function clearSearch() {
-        document.getElementById('search-input').value = '';
-        document.getElementById('sport-filter').value = '';
-        document.getElementById('division-filter').value = '';
-        document.getElementById('search-status').innerHTML = '';
-        searchActive = false;
-        searchResults = [];
-        renderTables();
-    }
-
-    function displaySearchResults() {
-        if (currentView === 'birth-year') {
-            const yearTabs = document.getElementById('year-tabs');
-            const yearContent = document.getElementById('year-content');
-            yearTabs.innerHTML = '<li class="nav-item"><a class="nav-link active" href="#">Search Results</a></li>';
-            yearContent.innerHTML = `<div class="tab-pane fade show active">${generateTable(searchResults)}</div>`;
-        } else {
-            const divTabs = document.getElementById('division-tabs');
-            const divContent = document.getElementById('division-content');
-            divTabs.innerHTML = '<li class="nav-item"><a class="nav-link active" href="#">Search Results</a></li>';
-            divContent.innerHTML = `<div class="tab-pane fade show active">${generateTable(searchResults)}</div>`;
-        }
-    }
-
-    async function loadPlayers() {
-        try {
-            const response = await fetch('/players');
-            allPlayers = await response.json();
-            updateStats();
-            populateFilters();
-            renderTables();
-        } catch (error) {
-            console.error('Error loading players:', error);
-        }
-    }
-
-    function updateStats() {
-        const totalPlayers = allPlayers.length;
-        const assignedJerseys = allPlayers.filter(p => p.jersey_number).length;
         
-        const jerseyMap = new Map();
-        allPlayers.forEach(player => {
-            if (player.jersey_number) {
-                const key = `${player.sport}-${player.division}-${player.jersey_number}`;
-                if (!jerseyMap.has(key)) {
-                    jerseyMap.set(key, []);
-                }
-                jerseyMap.get(key).push(player);
-            }
-        });
-        
-        let duplicateCount = 0;
-        jerseyMap.forEach(players => {
-            if (players.length > 1) {
-                duplicateCount += players.length;
-            }
-        });
-
-        const waitingCount = allPlayers.filter(p => p.in_waiting_room).length;
-
-        document.getElementById('total-players').textContent = totalPlayers;
-        document.getElementById('assigned-jerseys').textContent = assignedJerseys;
-        document.getElementById('duplicate-count').textContent = duplicateCount;
-        document.getElementById('waiting-count').textContent = waitingCount;
-    }
-
-    function populateFilters() {
-        const sports = [...new Set(allPlayers.map(p => p.sport))].filter(Boolean);
-        const divisions = [...new Set(allPlayers.map(p => p.division))].filter(Boolean);
-
-        const sportFilter = document.getElementById('sport-filter');
-        const divisionFilter = document.getElementById('division-filter');
-
-        sports.forEach(sport => {
-            const option = document.createElement('option');
-            option.value = sport;
-            option.textContent = sport;
-            sportFilter.appendChild(option);
-        });
-
-        divisions.forEach(division => {
-            const option = document.createElement('option');
-            option.value = division;
-            option.textContent = division;
-            divisionFilter.appendChild(option);
-        });
-    }
-
-    function renderTables() {
-        if (currentView === 'birth-year') {
-            renderBirthYearView();
-        } else {
-            renderDivisionView();
+        // Sports assigned
+        if (sports) {
+            activities.push({
+                type: 'sports',
+                icon: '⚽',
+                title: 'Sports Assigned',
+                details: `Registered for: ${sports.split(',').join(', ')}`,
+                className: 'activity-edit'
+            });
         }
-    }
-
-    function renderBirthYearView() {
-        const yearGroups = {};
-        allPlayers.forEach(player => {
-            const year = player.birth_year || 'Unknown';
-            if (!yearGroups[year]) yearGroups[year] = [];
-            yearGroups[year].push(player);
-        });
-
-        const years = Object.keys(yearGroups).sort((a, b) => b - a);
-        const yearTabs = document.getElementById('year-tabs');
-        const yearContent = document.getElementById('year-content');
-
-        yearTabs.innerHTML = '';
-        yearContent.innerHTML = '';
-
-        years.forEach((year, index) => {
-            const tabId = `year-${year}`;
-            const isActive = index === 0 ? 'active' : '';
-
-            yearTabs.innerHTML += `
-                <li class="nav-item">
-                    <a class="nav-link ${isActive}" data-bs-toggle="tab" href="#${tabId}">${year} (${yearGroups[year].length})</a>
-                </li>
-            `;
-
-            yearContent.innerHTML += `
-                <div class="tab-pane fade ${isActive ? 'show active' : ''}" id="${tabId}">
-                    ${generateTable(yearGroups[year])}
+        
+        if (activities.length === 0) {
+            activityList.innerHTML = `
+                <div class="activity-empty">
+                    <div style="text-align: center; padding: 40px 20px;">
+                        <div style="font-size: 36px; margin-bottom: 12px;">📋</div>
+                        <div style="color: var(--gray-600); font-size: 14px;">No activity data available</div>
+                    </div>
                 </div>
             `;
-        });
-    }
-
-    function renderDivisionView() {
-        const divisionGroups = {};
-        allPlayers.forEach(player => {
-            const division = player.division || 'Unknown';
-            if (!divisionGroups[division]) divisionGroups[division] = [];
-            divisionGroups[division].push(player);
-        });
-
-        const divisions = Object.keys(divisionGroups).sort();
-        const divTabs = document.getElementById('division-tabs');
-        const divContent = document.getElementById('division-content');
-
-        divTabs.innerHTML = '';
-        divContent.innerHTML = '';
-
-        divisions.forEach((division, index) => {
-            const tabId = `div-${division}`;
-            const isActive = index === 0 ? 'active' : '';
-
-            divTabs.innerHTML += `
-                <li class="nav-item">
-                    <a class="nav-link ${isActive}" data-bs-toggle="tab" href="#${tabId}">${division} (${divisionGroups[division].length})</a>
-                </li>
-            `;
-
-            divContent.innerHTML += `
-                <div class="tab-pane fade ${isActive ? 'show active' : ''}" id="${tabId}">
-                    ${generateTable(divisionGroups[division])}
+        } else {
+            activityHTML = activities.map(activity => `
+                <div class="activity-item ${activity.className}">
+                    <div class="activity-icon">${activity.icon}</div>
+                    <div class="activity-title">${activity.title}</div>
+                    <div class="activity-details">${activity.details}</div>
                 </div>
-            `;
-        });
-    }
-
-    function generateTable(players) {
-        const duplicates = findDuplicateJerseys(players);
-
-        let html = '<div class="table-container"><table class="table table-hover">';
-        html += `
-            <thead>
-                <tr>
-                    <th>🔒</th>
-                    <th>Name</th>
-                    <th>Jersey #</th>
-                    <th>Birth Year</th>
-                    <th>Email</th>
-                    <th>Sport</th>
-                    <th>Division</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
+            `).join('');
+            
+            activityList.innerHTML = activityHTML;
+        }
+        
+        // Add note about limited data
+        activityList.innerHTML += `
+            <div style="margin-top: 20px; padding: 12px; background: var(--gray-100); border-radius: 6px; font-size: 12px; color: var(--gray-600);">
+                <strong>Note:</strong> Currently showing available database fields. For full activity history, consider adding timestamp fields to track when players are edited.
+            </div>
         `;
-
-        players.forEach(player => {
-            const isDuplicate = duplicates.has(`${player.sport}-${player.division}-${player.jersey_number}`);
-            const isWaiting = player.in_waiting_room;
-            let rowClass = '';
-            if (player.is_locked) rowClass = 'locked';
-            else if (isDuplicate && player.jersey_number) rowClass = 'duplicate-jersey';
-            else if (isWaiting) rowClass = 'waiting-room';
-
-            const emailStatus = player.email_sent ? '✅ Sent' : '';
-            const emailBtnClass = player.email_sent ? 'btn-email sent' : 'btn-email';
-            const emailBtnText = player.email_sent ? '✅ Sent' : '📧 Email';
-
-            html += `
-                <tr class="${rowClass}" data-player-id="${player.id}">
-                    <td>
-                        <span class="lock-switch" onclick="toggleLock(${player.id}, ${!player.is_locked})">
-                            ${player.is_locked ? '🔒' : '🔓'}
-                        </span>
-                    </td>
-                    <td class="player-name">${player.full_name}</td>
-                    <td class="player-jersey">${player.jersey_number || '-'}</td>
-                    <td class="player-birth-year">${player.birth_year || '-'}</td>
-                    <td class="player-email">${player.parent_email || '-'}</td>
-                    <td class="player-sport">
-                        <span class="view-sports">${player.sport || '-'}</span>
-                        <div class="edit-sports">
-                            <select class="form-select form-select-sm sport-select">
-                                <option value="">Select Sport</option>
-                                <option value="soccer" ${player.sport === 'soccer' ? 'selected' : ''}>⚽ Soccer</option>
-                                <option value="basketball" ${player.sport === 'basketball' ? 'selected' : ''}>🏀 Basketball</option>
-                                <option value="baseball" ${player.sport === 'baseball' ? 'selected' : ''}>⚾ Baseball</option>
-                                <option value="softball" ${player.sport === 'softball' ? 'selected' : ''}>🥎 Softball</option>
-                                <option value="volleyball" ${player.sport === 'volleyball' ? 'selected' : ''}>🏐 Volleyball</option>
-                                <option value="football" ${player.sport === 'football' ? 'selected' : ''}>🏈 Football</option>
-                            </select>
-                        </div>
-                    </td>
-                    <td class="player-division">
-                        <span class="view-division">${player.division || '-'}</span>
-                        <input type="text" class="form-control form-control-sm edit-division" value="${player.division || ''}" style="display: none;">
-                    </td>
-                    <td>${emailStatus}${isDuplicate && player.jersey_number ? '<br><span style="color: #f59e0b; font-weight: 600;">⚠️ Duplicate</span>' : ''}${isWaiting ? '<br><span style="color: #ff9800; font-weight: 600;">⏳ Waiting</span>' : ''}</td>
-                    <td class="action-buttons">
-                        <button class="btn btn-edit" onclick="editRow(this)">✏️ Edit</button>
-                        <button class="btn ${emailBtnClass}" onclick="sendEmail(${player.id}, this)" ${player.email_sent ? 'disabled' : ''}>${emailBtnText}</button>
-                        <button class="btn btn-delete" onclick="deletePlayer(${player.id})">⚠️ Delete</button>
-                        <button class="btn btn-save" onclick="saveRow(this, ${player.id})" style="display: none;">💾 Save</button>
-                        <button class="btn btn-cancel" onclick="cancelEdit(this)" style="display: none;">❌ Cancel</button>
-                    </td>
-                </tr>
-            `;
+    }
+    
+    function switchDetailTab(tab) {
+        // Update tab buttons
+        document.querySelectorAll('.detail-tab').forEach(btn => {
+            btn.classList.remove('active');
         });
-
-        html += '</tbody></table></div>';
-        return html;
-    }
-
-    function findDuplicateJerseys(players) {
-        const jerseyMap = new Map();
-        const duplicates = new Set();
-
-        players.forEach(player => {
-            if (player.jersey_number) {
-                const key = `${player.sport}-${player.division}-${player.jersey_number}`;
-                if (jerseyMap.has(key)) {
-                    duplicates.add(key);
-                } else {
-                    jerseyMap.set(key, player);
-                }
-            }
-        });
-
-        return duplicates;
-    }
-
-    function editRow(btn) {
-        const row = btn.closest('tr');
-        const cells = row.querySelectorAll('td');
-
-        // Show edit mode
-        row.querySelector('.view-sports').style.display = 'none';
-        row.querySelector('.edit-sports').style.display = 'block';
-        row.querySelector('.view-division').style.display = 'none';
-        row.querySelector('.edit-division').style.display = 'block';
-
-        // Make fields editable
-        const nameCell = row.querySelector('.player-name');
-        const jerseyCell = row.querySelector('.player-jersey');
-        const birthYearCell = row.querySelector('.player-birth-year');
-        const emailCell = row.querySelector('.player-email');
-
-        nameCell.contentEditable = true;
-        jerseyCell.contentEditable = true;
-        birthYearCell.contentEditable = true;
-        emailCell.contentEditable = true;
-
-        nameCell.style.background = '#f0f2ff';
-        jerseyCell.style.background = '#f0f2ff';
-        birthYearCell.style.background = '#f0f2ff';
-        emailCell.style.background = '#f0f2ff';
-
-        // Toggle buttons
-        btn.style.display = 'none';
-        row.querySelector('.btn-email').style.display = 'none';
-        row.querySelector('.btn-delete').style.display = 'none';
-        row.querySelector('.btn-save').style.display = 'inline-flex';
-        row.querySelector('.btn-cancel').style.display = 'inline-flex';
-    }
-
-    function cancelEdit(btn) {
-        const row = btn.closest('tr');
         
-        // Reset edit mode
-        row.querySelector('.view-sports').style.display = 'inline';
-        row.querySelector('.edit-sports').style.display = 'none';
-        row.querySelector('.view-division').style.display = 'inline';
-        row.querySelector('.edit-division').style.display = 'none';
-
-        const nameCell = row.querySelector('.player-name');
-        const jerseyCell = row.querySelector('.player-jersey');
-        const birthYearCell = row.querySelector('.player-birth-year');
-        const emailCell = row.querySelector('.player-email');
-
-        nameCell.contentEditable = false;
-        jerseyCell.contentEditable = false;
-        birthYearCell.contentEditable = false;
-        emailCell.contentEditable = false;
-
-        nameCell.style.background = '';
-        jerseyCell.style.background = '';
-        birthYearCell.style.background = '';
-        emailCell.style.background = '';
-
-        // Toggle buttons
-        btn.style.display = 'none';
-        row.querySelector('.btn-save').style.display = 'none';
-        row.querySelector('.btn-edit').style.display = 'inline-flex';
-        row.querySelector('.btn-email').style.display = 'inline-flex';
-        row.querySelector('.btn-delete').style.display = 'inline-flex';
-
-        loadPlayers(); // Reload to reset data
+        // Update content visibility
+        if (tab === 'activity') {
+            document.querySelector('.detail-tab:nth-child(2)').classList.add('active');
+            document.getElementById('details-tab-content').classList.add('d-none');
+            document.getElementById('activity-tab-content').classList.remove('d-none');
+            updateActivityTab();
+        } else {
+            document.querySelector('.detail-tab:nth-child(1)').classList.add('active');
+            document.getElementById('details-tab-content').classList.remove('d-none');
+            document.getElementById('activity-tab-content').classList.add('d-none');
+        }
+    }
+    
+    // Detail Sidebar
+    let currentDetailPlayer = null;
+    let currentDetailRow = null;
+    
+    function openDetail(row) {
+        if (currentSelectedRow) {
+            currentSelectedRow.classList.remove('selected');
+        }
+        
+        currentSelectedRow = row;
+        currentDetailRow = row;
+        row.classList.add('selected');
+        
+        const playerId = row.dataset.playerId;
+        const regId = row.dataset.regId;
+        const name = row.querySelector('.player-name').textContent.trim();
+        const email = row.querySelector('.player-email').textContent.trim();
+        const jersey = row.querySelector('.jersey-badge').textContent.trim();
+        const birthYear = row.querySelector('.birth-year').textContent.trim();
+        const division = row.querySelector('.division').textContent.trim();
+        const sports = Array.from(row.querySelectorAll('.sport-tag')).map(t => t.textContent.trim());
+        const initials = name.split(' ').map(n => n[0]).join('');
+        
+        // Store current player data
+        currentDetailPlayer = {
+            id: playerId,
+            regId: regId,
+            name: name,
+            email: email,
+            jersey: jersey === '-' ? '' : jersey,
+            birthYear: birthYear === '-' ? '' : birthYear,
+            division: division,
+            sports: sports
+        };
+        
+        // Update view mode displays
+        document.getElementById('detail-name').textContent = name;
+        document.getElementById('detail-email').textContent = email;
+        document.getElementById('detail-avatar').textContent = initials;
+        document.getElementById('detail-jersey').textContent = '#' + jersey;
+        document.getElementById('detail-birth-year').textContent = birthYear;
+        document.getElementById('detail-division').textContent = division;
+        document.getElementById('detail-sports').textContent = sports.join(', ') || '-';
+        
+        // Setup edit form values
+        document.getElementById('edit-name').value = name;
+        document.getElementById('edit-email').value = email;
+        document.getElementById('edit-jersey').value = jersey === '-' ? '' : jersey;
+        document.getElementById('edit-birth-year').value = birthYear === '-' ? '' : birthYear;
+        document.getElementById('edit-division').value = division;
+        
+        // Setup sports checkboxes
+        document.querySelectorAll('#edit-sports-container input[type="checkbox"]').forEach(cb => {
+            cb.checked = sports.includes(cb.value);
+        });
+        
+        // Wire up email action
+        document.getElementById('detail-email-btn').onclick = async () => {
+            const response = await fetch(`/registrations/${regId}/send_email`, { method: 'POST' });
+            if (response.ok) {
+                alert('Email sent!');
+                // Update the UI to show email was sent
+                const statusBadge = row.querySelector('.status-badge');
+                if (statusBadge) {
+                    statusBadge.className = 'status-badge sent';
+                    statusBadge.textContent = '✓ Sent';
+                }
+                updateActivityTab();
+            }
+        };
+        
+        // Wire up delete action
+        document.getElementById('detail-delete-btn').onclick = async () => {
+            if (!confirm(`Delete ${name}?`)) return;
+            await fetch(`/players/${playerId}`, { method: 'DELETE' });
+            closeDetail();
+            row.remove();
+            updateStatistics();
+        };
+        
+        // Make sure we're in view mode
+        cancelDetailEdit();
+        
+        detailSidebar.classList.add('open');
+        detailOverlay.classList.add('active');
     }
 
-    async function saveRow(btn, playerId) {
-        const row = btn.closest('tr');
-
-        const fullName = row.querySelector('.player-name').textContent.trim();
-        const jerseyNumber = row.querySelector('.player-jersey').textContent.trim();
-        const birthYear = row.querySelector('.player-birth-year').textContent.trim();
-        const parentEmail = row.querySelector('.player-email').textContent.trim();
-        const sport = row.querySelector('.sport-select').value;
-        const division = row.querySelector('.edit-division').value.trim();
-
-        const payload = {
-            full_name: fullName,
-            jersey_number: jerseyNumber ? parseInt(jerseyNumber) : null,
-            birth_year: birthYear ? parseInt(birthYear) : null,
-            parent_email: parentEmail,
-            sport: sport,
-            division: division
-        };
-
+    function closeDetail() {
+        detailSidebar.classList.remove('open');
+        detailOverlay.classList.remove('active');
+        if (currentSelectedRow) {
+            currentSelectedRow.classList.remove('selected');
+            currentSelectedRow = null;
+        }
+        currentDetailPlayer = null;
+        currentDetailRow = null;
+        cancelDetailEdit();
+        // Reset to Details tab
+        switchDetailTab('details');
+        // Clear refresh interval
+        if (activityRefreshInterval) {
+            clearInterval(activityRefreshInterval);
+            activityRefreshInterval = null;
+        }
+    }
+    
+    function enableDetailEdit() {
+        // Show edit mode elements
+        document.querySelectorAll('.detail-content .edit-mode').forEach(el => {
+            el.classList.remove('d-none');
+        });
+        // Hide view mode elements
+        document.querySelectorAll('.detail-content .view-mode').forEach(el => {
+            el.classList.add('d-none');
+        });
+    }
+    
+    function cancelDetailEdit() {
+        // Hide edit mode elements
+        document.querySelectorAll('.detail-content .edit-mode').forEach(el => {
+            el.classList.add('d-none');
+        });
+        // Show view mode elements
+        document.querySelectorAll('.detail-content .view-mode').forEach(el => {
+            el.classList.remove('d-none');
+        });
+    }
+    
+    async function saveDetailEdits() {
+        if (!currentDetailPlayer) return;
+        
+        const newName = document.getElementById('edit-name').value;
+        const newEmail = document.getElementById('edit-email').value;
+        const newJersey = document.getElementById('edit-jersey').value;
+        const newBirthYear = document.getElementById('edit-birth-year').value;
+        const newDivision = document.getElementById('edit-division').value;
+        
+        // Get selected sports
+        const selectedSports = [];
+        document.querySelectorAll('#edit-sports-container input[type="checkbox"]:checked').forEach(cb => {
+            selectedSports.push(cb.value);
+        });
+        
+        // Track changes for activity log
+        const changes = [];
+        
+        if (currentDetailPlayer.name !== newName) {
+            changes.push({ field: 'Name', old: currentDetailPlayer.name, new: newName });
+        }
+        if (currentDetailPlayer.email !== newEmail) {
+            changes.push({ field: 'Email', old: currentDetailPlayer.email, new: newEmail });
+        }
+        if ((currentDetailPlayer.jersey || '') !== newJersey) {
+            changes.push({ field: 'Jersey', old: currentDetailPlayer.jersey || '-', new: newJersey || '-' });
+        }
+        if ((currentDetailPlayer.birthYear || '') !== newBirthYear) {
+            changes.push({ field: 'Birth Year', old: currentDetailPlayer.birthYear || '-', new: newBirthYear || '-' });
+        }
+        if (currentDetailPlayer.division !== newDivision) {
+            changes.push({ field: 'Division', old: currentDetailPlayer.division, new: newDivision });
+        }
+        
+        // Check sports changes
+        const oldSports = currentDetailPlayer.sports.sort().join(', ');
+        const newSports = selectedSports.sort().join(', ');
+        if (oldSports !== newSports) {
+            changes.push({ field: 'Sports', old: oldSports || '(none)', new: newSports || '(none)' });
+        }
+        
         try {
-            const response = await fetch(`/players/${playerId}`, {
+            // Update player basic info
+            const playerResponse = await fetch(`/players/${currentDetailPlayer.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({
+                    full_name: newName,
+                    birth_year: newBirthYear ? parseInt(newBirthYear) : null,
+                    jersey_number: newJersey ? parseInt(newJersey) : null,  // Use null instead of 0
+                    parent_email: newEmail
+                })
             });
-
-            if (response.ok) {
-                showSuccessNotification('✅ Player updated successfully!');
-                await loadPlayers();
-            } else {
-                alert('Failed to update player');
+            
+            if (!playerResponse.ok) {
+                const error = await playerResponse.text();
+                throw new Error(`Failed to update player: ${error}`);
             }
-        } catch (error) {
-            console.error('Error updating player:', error);
-            alert('Error updating player');
-        }
-    }
-
-    async function sendEmail(playerId, btn) {
-        btn.disabled = true;
-        btn.textContent = '⏳ Sending...';
-
-        try {
-            const response = await fetch(`/players/${playerId}/email`, {
-                method: 'POST'
-            });
-
-            if (response.ok) {
-                showSuccessNotification('📧 Email sent successfully!');
-                btn.textContent = '✅ Sent';
-                btn.classList.remove('btn-email');
-                btn.classList.add('btn-email', 'sent');
-                await loadPlayers();
-            } else {
-                alert('Failed to send email');
-                btn.disabled = false;
-                btn.textContent = '📧 Email';
-            }
-        } catch (error) {
-            console.error('Error sending email:', error);
-            alert('Error sending email');
-            btn.disabled = false;
-            btn.textContent = '📧 Email';
-        }
-    }
-
-    async function deletePlayer(playerId) {
-        if (!confirm('Are you sure you want to delete this athlete?')) {
-            return;
-        }
-
-        try {
-            const response = await fetch(`/players/${playerId}`, {
-                method: 'DELETE'
-            });
-
-            if (response.ok) {
-                showSuccessNotification('🗑️ Player deleted successfully!');
-                await loadPlayers();
-            } else {
-                alert('Failed to delete player');
-            }
-        } catch (error) {
-            console.error('Error deleting player:', error);
-            alert('Error deleting player');
-        }
-    }
-
-    async function toggleLock(playerId, isLocked) {
-        try {
-            const response = await fetch(`/players/${playerId}/lock`, {
-                method: 'POST',
+            
+            // Update sports
+            const sportsResponse = await fetch(`/players/${currentDetailPlayer.id}/sports`, {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ is_locked: isLocked })
+                body: JSON.stringify({ sports: selectedSports })
             });
-
-            if (response.ok) {
-                await loadPlayers();
+            
+            if (!sportsResponse.ok) {
+                const error = await sportsResponse.text();
+                throw new Error(`Failed to update sports: ${error}`);
             }
+            
+            // Update division if registration exists
+            if (currentDetailPlayer.regId) {
+                const divisionResponse = await fetch(`/registrations/${currentDetailPlayer.regId}/division`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ division: newDivision })
+                });
+                
+                if (!divisionResponse.ok) {
+                    const error = await divisionResponse.text();
+                    throw new Error(`Failed to update division: ${error}`);
+                }
+            }
+            
+            // Update the display
+            document.getElementById('detail-name').textContent = newName;
+            document.getElementById('detail-email').textContent = newEmail;
+            document.getElementById('detail-jersey').textContent = '#' + (newJersey || '-');
+            document.getElementById('detail-birth-year').textContent = newBirthYear || '-';
+            document.getElementById('detail-division').textContent = newDivision;
+            document.getElementById('detail-sports').textContent = selectedSports.join(', ') || '-';
+            document.getElementById('detail-avatar').textContent = newName.split(' ').map(n => n[0]).join('');
+            
+            // Update the table row
+            if (currentDetailRow) {
+                currentDetailRow.querySelector('.player-name').textContent = newName;
+                currentDetailRow.querySelector('.player-email').textContent = newEmail;
+                currentDetailRow.querySelector('.jersey-badge').textContent = newJersey || '-';
+                currentDetailRow.querySelector('.birth-year').textContent = newBirthYear || '-';
+                currentDetailRow.querySelector('.division').textContent = newDivision;
+                
+                // Update sport tags
+                const sportTagsContainer = currentDetailRow.querySelector('.sport-tags');
+                sportTagsContainer.innerHTML = '';
+                selectedSports.forEach(sport => {
+                    const tag = document.createElement('span');
+                    tag.className = 'sport-tag';
+                    tag.textContent = sport;
+                    sportTagsContainer.appendChild(tag);
+                });
+                
+                // Update data attribute for filtering
+                currentDetailRow.dataset.sports = selectedSports.join(',');
+            }
+            
+            // Update stored data
+            currentDetailPlayer.name = newName;
+            currentDetailPlayer.email = newEmail;
+            currentDetailPlayer.jersey = newJersey;
+            currentDetailPlayer.birthYear = newBirthYear;
+            currentDetailPlayer.division = newDivision;
+            currentDetailPlayer.sports = selectedSports;
+            
+            // Switch back to view mode
+            cancelDetailEdit();
+            
+            // Show success message
+            alert('Player updated successfully!');
+            
+            // Update statistics
+            updateStatistics();
+            
         } catch (error) {
-            console.error('Error toggling lock:', error);
+            console.error('Error saving edits:', error);
+            alert(`Failed to save changes: ${error.message}`);
         }
     }
 
-    function showSuccessNotification(message) {
-        const notification = document.createElement('div');
-        notification.className = 'success-notification';
-        notification.textContent = message;
-        document.body.appendChild(notification);
+    // Year navigation links
+    {% if view == 'birthyear' %}
+    document.querySelectorAll('.nav-year-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const year = link.dataset.year;
+            filterByYear(year);
+        });
+    });
+    {% endif %}
 
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
+    // Division scroll links (keep existing functionality for division view)
+    {% if view == 'division' %}
+    document.querySelectorAll('.nav-scroll-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = link.getAttribute('href').substring(1);
+            const targetElement = document.getElementById(targetId);
+            
+            if (targetElement) {
+                const scrollContainer = document.querySelector('.main-content-scroll');
+                const elementPosition = targetElement.offsetTop;
+                const offsetPosition = elementPosition - 20; // 20px padding from top
+                
+                scrollContainer.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                });
+            }
+        });
+    });
+    
+    // Initialize statistics on page load
+    updateStatistics();
+    {% endif %}
+
+    // Make rows clickable
+    function attachRowEventHandlers() {
+        document.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
+            // Remove existing listeners to avoid duplicates
+            const newRow = row.cloneNode(true);
+            row.parentNode.replaceChild(newRow, row);
+            
+            newRow.addEventListener('click', (e) => {
+                // Don't open detail if clicking on checkbox or action buttons
+                if (e.target.closest('.row-actions') || e.target.closest('.player-checkbox')) {
+                    return;
+                }
+                openDetail(newRow);
+            });
+            
+            // Re-attach row handlers
+            attachRowHandlers(newRow);
+        });
+        
+        // Attach select-all checkbox handlers
+        document.querySelectorAll('.select-all-checkbox').forEach(cb => {
+            cb.addEventListener('change', function() {
+                selectAll(this);
+            });
+        });
     }
 
-    function setupQuickAdd() {
-        document.getElementById('quick-add-btn').addEventListener('click', async function() {
-            const fullName = document.getElementById('quick-name').value.trim();
-            const jerseyNumber = document.getElementById('quick-jersey').value.trim();
-            const birthYear = document.getElementById('quick-birth-year').value.trim();
-            const parentEmail = document.getElementById('quick-email').value.trim();
-            const sport = document.getElementById('quick-sport').value;
-            const division = document.getElementById('quick-division').value.trim();
+    // ESC to close
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && detailSidebar.classList.contains('open')) {
+            closeDetail();
+        }
+    });
 
-            if (!fullName) {
-                alert('Please enter a name');
+    // Edit/Save/Cancel functionality
+    function attachRowHandlers(row) {
+        // Store original values for the row
+        let originalValues = {};
+        
+        row.querySelector('.btn-edit')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            
+            // Store original values before entering edit mode
+            originalValues = {
+                full_name: row.querySelector('.player-name').textContent.trim(),
+                parent_email: row.querySelector('.player-email').textContent.trim(),
+                birth_year: row.querySelector('.birth-year').textContent.trim(),
+                division: row.querySelector('.division').textContent.trim(),
+                jersey_number: row.querySelector('.jersey-badge').textContent.trim()
+            };
+            
+            row.querySelector('.birth-year').classList.add('d-none');
+            row.querySelector('.edit-birth-year').classList.remove('d-none');
+            row.querySelector('.division').classList.add('d-none');
+            row.querySelector('.edit-division').classList.remove('d-none');
+            row.querySelector('.jersey-badge').classList.add('d-none');
+            row.querySelector('.edit-jersey-number').classList.remove('d-none');
+            row.querySelector('.btn-edit').classList.add('d-none');
+            row.querySelector('.btn-save').classList.remove('d-none');
+            row.querySelector('.btn-cancel').classList.remove('d-none');
+            row.classList.add('edit-mode');
+        });
+
+        row.querySelector('.btn-cancel')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            row.querySelector('.birth-year').classList.remove('d-none');
+            row.querySelector('.edit-birth-year').classList.add('d-none');
+            row.querySelector('.division').classList.remove('d-none');
+            row.querySelector('.edit-division').classList.add('d-none');
+            row.querySelector('.jersey-badge').classList.remove('d-none');
+            row.querySelector('.edit-jersey-number').classList.add('d-none');
+            row.querySelector('.btn-edit').classList.remove('d-none');
+            row.querySelector('.btn-save').classList.add('d-none');
+            row.querySelector('.btn-cancel').classList.add('d-none');
+            row.classList.remove('edit-mode');
+            
+            // Clear stored values
+            originalValues = {};
+        });
+
+        row.querySelector('.btn-save')?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const id = row.dataset.playerId;
+            const regId = row.dataset.regId;
+            const birthYear = row.querySelector('.edit-birth-year').value;
+            const division = row.querySelector('.edit-division').value;
+            const jersey = row.querySelector('.edit-jersey-number').value;
+
+            // Validate that we have the required data
+            if (!originalValues.full_name || !originalValues.parent_email) {
+                alert('Error: Missing player data. Please refresh the page and try again.');
                 return;
             }
 
+            try {
+                // Update player
+                const playerResponse = await fetch(`/players/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        full_name: originalValues.full_name,  // Use stored value
+                        birth_year: birthYear ? parseInt(birthYear) : null,
+                        jersey_number: jersey ? parseInt(jersey) : null,  // Use null instead of 0
+                        parent_email: originalValues.parent_email  // Use stored value
+                    })
+                });
+
+                if (!playerResponse.ok) {
+                    throw new Error('Failed to update player');
+                }
+
+                // Update division if needed
+                if (regId && division !== originalValues.division) {
+                    const divisionResponse = await fetch(`/registrations/${regId}/division`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ division })
+                    });
+                    
+                    if (!divisionResponse.ok) {
+                        throw new Error('Failed to update division');
+                    }
+                    
+                    // Get the response data which includes the jersey number
+                    const divisionData = await divisionResponse.json();
+                    if (divisionData.jersey_number !== undefined) {
+                        console.log(`Player jersey number: ${divisionData.jersey_number}`);
+                    }
+                }
+
+                // Show success message before reload
+                if (division !== originalValues.division) {
+                    console.log(`Player moved to ${division} division.`);
+                }
+                
+                location.reload();
+                
+            } catch (error) {
+                console.error('Error saving player:', error);
+                alert('Failed to save changes. Please try again.');
+            }
+        });
+
+        row.querySelector('.btn-delete')?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const id = row.dataset.playerId;
+            const playerName = row.querySelector('.player-name').textContent.trim();
+            
+            if (!confirm(`Delete ${playerName}? This action cannot be undone.`)) return;
+            
+            await fetch(`/players/${id}`, { method: 'DELETE' });
+            logActivity(id, 'delete', 'Athlete deleted', [
+                { action: `${playerName} removed from system` }
+            ]);
+            row.remove();
+            updateStatistics();
+        });
+
+        row.querySelector('.btn-send-email')?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const btn = e.currentTarget;
+            const regId = row.dataset.regId;
+            const playerId = row.dataset.playerId;
+            const playerName = row.querySelector('.player-name').textContent.trim();
+            const playerEmail = row.querySelector('.player-email').textContent.trim();
+            
+            // Disable button to prevent double clicks
+            btn.disabled = true;
+            btn.innerHTML = '<span class="action-icon">⏳</span><span class="action-btn-text">Sending...</span>';
+            
+            try {
+                const response = await fetch(`/registrations/${regId}/send_email`, { method: 'POST' });
+                if (response.ok) {
+                    logActivity(playerId, 'email', 'Confirmation email sent', [
+                        { action: `Email sent to ${playerEmail}` }
+                    ]);
+                    
+                    // Update button to show sent status
+                    btn.classList.add('sent');
+                    btn.innerHTML = '<span class="action-icon">✅</span><span class="action-btn-text">Sent</span>';
+                    btn.title = 'Email already sent';
+                    
+                    // Update status badge
+                    const statusBadge = row.querySelector('.status-badge');
+                    if (statusBadge) {
+                        statusBadge.className = 'status-badge sent';
+                        statusBadge.textContent = '✓ Sent';
+                    }
+                    
+                    // Show success message
+                    const successMessage = document.createElement('div');
+                    successMessage.className = 'action-success-message';
+                    successMessage.textContent = '✅ Email sent successfully!';
+                    successMessage.style.cssText = `
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        background: linear-gradient(135deg, #22c55e, #16a34a);
+                        color: white;
+                        padding: 12px 20px;
+                        border-radius: 8px;
+                        box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+                        z-index: 10000;
+                        animation: slide-in 0.3s ease;
+                    `;
+                    document.body.appendChild(successMessage);
+                    
+                    setTimeout(() => {
+                        successMessage.remove();
+                    }, 3000);
+                } else {
+                    throw new Error('Failed to send email');
+                }
+            } catch (error) {
+                // Reset button on error
+                btn.disabled = false;
+                btn.classList.remove('sent');
+                btn.innerHTML = '<span class="action-icon">📧</span><span class="action-btn-text">Email</span>';
+                btn.title = 'Send confirmation email';
+                
+                alert('Failed to send email. Please try again.');
+            }
+        });
+        
+        // Add checkbox handler
+        row.querySelector('.player-checkbox')?.addEventListener('change', function(e) {
+            e.stopPropagation();
+            togglePlayerSelection(this);
+        });
+    }
+
+    // Attach handlers to all rows initially
+    attachRowEventHandlers();
+
+    // Add player functionality
+    document.querySelectorAll('.btn-show-add-form').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tbody = btn.closest('tbody');
+            tbody.querySelector('.add-row').classList.add('d-none');
+            tbody.querySelector('.add-form-row').classList.remove('d-none');
+        });
+    });
+
+    document.querySelectorAll('.btn-add-cancel').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tbody = btn.closest('tbody');
+            tbody.querySelector('.add-row').classList.remove('d-none');
+            tbody.querySelector('.add-form-row').classList.add('d-none');
+        });
+    });
+
+    document.querySelectorAll('.btn-add-save').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const tbody = btn.closest('tbody');
+            const fullName = tbody.querySelector('.new-full-name').value;
+            const birthYear = tbody.querySelector('.new-birth-year').value;
+            const parentEmail = tbody.querySelector('.new-parent-email').value;
+            const sport = tbody.querySelector('.new-sport').value;
+            const division = tbody.querySelector('.new-division').value;
+            
             const payload = {
                 full_name: fullName,
-                jersey_number: jerseyNumber ? parseInt(jerseyNumber) : null,
                 birth_year: birthYear ? parseInt(birthYear) : null,
                 parent_email: parentEmail,
                 sport: sport,
                 division: division,
                 season: new Date().getFullYear().toString()
             };
-
+            
             const response = await fetch('/players/inline', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-
+            
             if (response.ok) {
-                showSuccessNotification('✅ Athlete added successfully!');
-                document.getElementById('quick-name').value = '';
-                document.getElementById('quick-jersey').value = '';
-                document.getElementById('quick-birth-year').value = '';
-                document.getElementById('quick-email').value = '';
-                document.getElementById('quick-sport').value = '';
-                document.getElementById('quick-division').value = '';
-                await loadPlayers();
+                const data = await response.json();
+                // Log the creation activity
+                logActivity(data.id.toString(), 'create', 'Athlete created', [
+                    { action: `${fullName} added to the system` },
+                    { action: `Division: ${division}, Sport: ${sport}` }
+                ]);
+                location.reload();
             } else {
                 alert('Failed to add player');
             }
         });
-    }
+    });
 </script>
 
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
