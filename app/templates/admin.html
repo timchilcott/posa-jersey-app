@@ -583,8 +583,8 @@
     /* Actions - Always visible for better discoverability */
     .row-actions {
         display: flex;
-        gap: 6px;
-        opacity: 0.85;
+        gap: 4px;
+        opacity: 0.7;
         transition: opacity 0.2s ease;
     }
 
@@ -601,84 +601,90 @@
         background: linear-gradient(90deg, transparent 0%, rgba(248, 250, 252, 0.8) 20%);
     }
     
-    /* ===== OUTLINED GHOST BUTTON STYLES (OPTION 4) ===== */
+    /* ===== SUBTLE DISCREET BUTTON STYLES ===== */
     .action-btn {
         display: inline-flex;
         align-items: center;
-        gap: 6px;
-        padding: 7px 14px;
-        font-size: 13px;
-        font-weight: 600;
-        border: 2px solid;
-        border-radius: 6px;
+        gap: 4px;
+        padding: 5px 10px;
+        font-size: 12px;
+        font-weight: 500;
+        border: 1px solid;
+        border-radius: 4px;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.15s ease;
         white-space: nowrap;
-        min-width: 90px;
+        min-width: 70px;
         justify-content: center;
         background: white;
+        opacity: 0.75;
     }
     
     .action-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        opacity: 1;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
     }
     
     .action-btn:active {
         transform: translateY(0);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.06);
     }
     
-    /* Edit Button */
+    /* Edit Button - Soft Indigo */
     .action-btn.edit {
-        border-color: #6366f1;
+        border-color: #c7d2fe;
         color: #6366f1;
     }
     
     .action-btn.edit:hover {
         background: #6366f1;
         color: white;
+        border-color: #6366f1;
     }
     
-    /* Save Button */
+    /* Save Button - Soft Green */
     .action-btn.save {
-        border-color: #22c55e;
+        border-color: #bbf7d0;
         color: #22c55e;
     }
     
     .action-btn.save:hover {
         background: #22c55e;
         color: white;
+        border-color: #22c55e;
     }
     
-    /* Cancel Button */
+    /* Cancel Button - Soft Gray */
     .action-btn.cancel {
-        border-color: #94a3b8;
-        color: #94a3b8;
+        border-color: #e2e8f0;
+        color: #64748b;
     }
     
     .action-btn.cancel:hover {
         background: #94a3b8;
         color: white;
+        border-color: #94a3b8;
     }
     
-    /* Email Button */
+    /* Email Button - Soft Sky Blue */
     .action-btn.email {
-        border-color: #0ea5e9;
+        border-color: #bae6fd;
         color: #0ea5e9;
     }
     
     .action-btn.email:hover {
         background: #0ea5e9;
         color: white;
+        border-color: #0ea5e9;
     }
     
     .action-btn.email:disabled,
     .action-btn.email.sent {
-        border-color: #94a3b8;
+        border-color: #e2e8f0;
         color: #94a3b8;
         cursor: not-allowed;
-        opacity: 0.6;
+        opacity: 0.4;
     }
     
     .action-btn.email:disabled:hover,
@@ -687,41 +693,37 @@
         box-shadow: none;
         background: white;
         color: #94a3b8;
+        border-color: #e2e8f0;
+        opacity: 0.4;
     }
     
-    /* Delete Button */
+    /* Delete Button - Soft Red */
     .action-btn.delete {
-        border-color: #ef4444;
+        border-color: #fecaca;
         color: #ef4444;
     }
     
     .action-btn.delete:hover {
         background: #ef4444;
         color: white;
-        animation: danger-shake 0.3s ease;
+        border-color: #ef4444;
     }
     
-    @keyframes danger-shake {
-        0%, 100% { transform: translateX(0) translateY(-2px); }
-        25% { transform: translateX(-2px) translateY(-2px); }
-        75% { transform: translateX(2px) translateY(-2px); }
-    }
-    
-    /* Action Icons */
+    /* Action Icons - Smaller and subtle */
     .action-btn .action-icon {
-        font-size: 16px;
+        font-size: 14px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 18px;
-        height: 18px;
+        width: 14px;
+        height: 14px;
     }
     
     .action-btn-text {
-        font-size: 13px;
-        font-weight: 600;
+        font-size: 12px;
+        font-weight: 500;
     }
-    /* ===== END OUTLINED GHOST BUTTON STYLES ===== */
+    /* ===== END SUBTLE DISCREET BUTTON STYLES ===== */
     
     @keyframes subtle-pulse {
         0%, 100% {
@@ -894,7 +896,6 @@
     .bulk-action-btn.danger:hover {
         background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
         box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
-        animation: danger-shake 0.3s ease;
     }
 
     /* Inline Editing */
@@ -1279,7 +1280,6 @@
     .action-item#detail-delete-btn:hover {
         border-color: var(--red-500);
         background: linear-gradient(90deg, rgba(239, 68, 68, 0.1) 0%, transparent 100%);
-        animation: danger-shake 0.3s ease;
     }
     
     /* Sidebar action icons */
@@ -1556,7 +1556,7 @@
                 <th>Division</th>
                 <th>Jersey</th>
                 <th>Email Status</th>
-                <th style="width: 320px;">Actions</th>
+                <th style="width: 300px;">Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -1629,11 +1629,11 @@
                             <span class="action-icon">❌</span>
                             <span class="action-btn-text">Cancel</span>
                         </button>
-                        <button class="action-btn email btn-send-email {% if player.confirmation_sent %}sent{% endif %}" 
-                                title="{% if player.confirmation_sent %}Email already sent{% else %}Send confirmation email{% endif %}"
-                                {% if player.confirmation_sent %}disabled{% endif %}>
-                            <span class="action-icon">{% if player.confirmation_sent %}✅{% else %}📧{% endif %}</span>
-                            <span class="action-btn-text">{% if player.confirmation_sent %}Sent{% else %}Email{% endif %}</span>
+                        <button class="action-btn email btn-send-email" 
+                                title="Send confirmation email"
+                                data-email-sent="{{ player.confirmation_sent|lower }}">
+                            <span class="action-icon">📧</span>
+                            <span class="action-btn-text">Email</span>
                         </button>
                         <button class="action-btn delete btn-delete" title="Delete athlete permanently">
                             <span class="action-icon">⚠️</span>
@@ -2815,6 +2815,13 @@
             const playerName = row.querySelector('.player-name').textContent.trim();
             const playerEmail = row.querySelector('.player-email').textContent.trim();
             
+            // Check if already sent
+            const alreadySent = btn.dataset.emailSent === 'true';
+            if (alreadySent) {
+                alert('Email has already been sent to this athlete.');
+                return;
+            }
+            
             // Disable button to prevent double clicks
             btn.disabled = true;
             btn.innerHTML = '<span class="action-icon">⏳</span><span class="action-btn-text">Sending...</span>';
@@ -2826,9 +2833,11 @@
                         { action: `Email sent to ${playerEmail}` }
                     ]);
                     
-                    // Update button to show sent status
+                    // Update button state
+                    btn.dataset.emailSent = 'true';
                     btn.classList.add('sent');
                     btn.innerHTML = '<span class="action-icon">✅</span><span class="action-btn-text">Sent</span>';
+                    btn.disabled = true;
                     btn.title = 'Email already sent';
                     
                     // Update status badge
@@ -2838,9 +2847,11 @@
                         statusBadge.textContent = '✓ Sent';
                     }
                     
+                    // Update data attribute
+                    row.dataset.confirmationSent = 'true';
+                    
                     // Show success message
                     const successMessage = document.createElement('div');
-                    successMessage.className = 'action-success-message';
                     successMessage.textContent = '✅ Email sent successfully!';
                     successMessage.style.cssText = `
                         position: fixed;
@@ -2865,7 +2876,6 @@
             } catch (error) {
                 // Reset button on error
                 btn.disabled = false;
-                btn.classList.remove('sent');
                 btn.innerHTML = '<span class="action-icon">📧</span><span class="action-btn-text">Email</span>';
                 btn.title = 'Send confirmation email';
                 
