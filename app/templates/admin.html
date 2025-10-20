@@ -2815,15 +2815,9 @@
             const playerName = row.querySelector('.player-name').textContent.trim();
             const playerEmail = row.querySelector('.player-email').textContent.trim();
             
-            // Check if already sent
-            const alreadySent = btn.dataset.emailSent === 'true';
-            if (alreadySent) {
-                alert('Email has already been sent to this athlete.');
-                return;
-            }
-            
-            // Disable button to prevent double clicks
+            // Disable button to prevent double clicks during sending
             btn.disabled = true;
+            const originalHTML = btn.innerHTML;
             btn.innerHTML = '<span class="action-icon">⏳</span><span class="action-btn-text">Sending...</span>';
             
             try {
@@ -2833,12 +2827,19 @@
                         { action: `Email sent to ${playerEmail}` }
                     ]);
                     
-                    // Update button state
+                    // Update button state temporarily
                     btn.dataset.emailSent = 'true';
                     btn.classList.add('sent');
                     btn.innerHTML = '<span class="action-icon">✅</span><span class="action-btn-text">Sent</span>';
-                    btn.disabled = true;
-                    btn.title = 'Email already sent';
+                    btn.title = 'Email sent successfully';
+                    
+                    // Re-enable button after 2 seconds so it can be clicked again
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.classList.remove('sent');
+                        btn.innerHTML = originalHTML;
+                        btn.title = 'Send confirmation email';
+                    }, 2000);
                     
                     // Update status badge
                     const statusBadge = row.querySelector('.status-badge');
@@ -2876,7 +2877,7 @@
             } catch (error) {
                 // Reset button on error
                 btn.disabled = false;
-                btn.innerHTML = '<span class="action-icon">📧</span><span class="action-btn-text">Email</span>';
+                btn.innerHTML = originalHTML;
                 btn.title = 'Send confirmation email';
                 
                 alert('Failed to send email. Please try again.');
