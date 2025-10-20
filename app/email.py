@@ -332,13 +332,13 @@ def process_inbound_email(email_body: str, db):
         # Try to isolate Order Details section
         order_section = None
         
-        # Method 1: Find "Order Details:" and extract next section
-        match = re.search(r'Order Details:(.{50,1000}?)(?:Total:|Program Info:|Division Price:|$)', full_text, re.IGNORECASE | re.DOTALL)
+        # Find "Order Details:" and extract until Payment History or Program Info
+        match = re.search(r'Order Details:(.{50,3000}?)(?:Payment History:|Program Info:|$)', full_text, re.IGNORECASE | re.DOTALL)
         if match:
             order_section = match.group(1).strip()
             print("✓ Found Order Details section:")
             print("-" * 80)
-            print(order_section[:500])
+            print(order_section[:800])  # Show more characters
             print("-" * 80 + "\n")
         else:
             logger.warning("⚠ Could not find Order Details section, using full text")
