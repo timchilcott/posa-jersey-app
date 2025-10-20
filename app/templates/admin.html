@@ -1751,9 +1751,91 @@
         }
     }
     
+    // Filter by division function
+    function filterByDivision(divisionName) {
+        currentYear = 'division-' + divisionName;
+        
+        document.querySelectorAll('.nav-scroll-link').forEach(link => {
+            link.classList.remove('active');
+        });
+        
+        document.querySelectorAll('.nav-year-link').forEach(link => {
+            link.classList.remove('active');
+        });
+        
+        const activeLink = Array.from(document.querySelectorAll('.nav-scroll-link')).find(link => {
+            const linkDivision = link.getAttribute('title') || link.querySelector('span:nth-child(2)').textContent.trim();
+            return linkDivision === divisionName;
+        });
+        
+        if (activeLink) {
+            activeLink.classList.add('active');
+        }
+        
+        const currentSection = document.querySelector('.year-section.active');
+        if (!currentSection) return;
+        
+        const tables = currentSection.querySelectorAll('.data-table');
+        
+        tables.forEach(table => {
+            let heading = table.previousElementSibling;
+            while (heading && heading.tagName !== 'H3') {
+                heading = heading.previousElementSibling;
+            }
+            
+            if (heading) {
+                const tableDivision = heading.textContent.trim();
+                
+                if (tableDivision === divisionName) {
+                    heading.style.display = '';
+                    table.style.display = '';
+                } else {
+                    heading.style.display = 'none';
+                    table.style.display = 'none';
+                }
+            }
+        });
+        
+        document.querySelector('.main-content-scroll').scrollTop = 0;
+        updateStatistics();
+    }
+    
+    // Show all divisions
+    function showAllDivisions() {
+        currentYear = 'all';
+        
+        document.querySelectorAll('.nav-scroll-link').forEach(link => {
+            link.classList.remove('active');
+        });
+        
+        document.querySelectorAll('.nav-year-link').forEach(link => {
+            link.classList.remove('active');
+            if (link.dataset.year === 'all') {
+                link.classList.add('active');
+            }
+        });
+        
+        const currentSection = document.querySelector('.year-section.active');
+        if (!currentSection) return;
+        
+        currentSection.querySelectorAll('h3, .data-table').forEach(element => {
+            element.style.display = '';
+        });
+        
+        document.querySelector('.main-content-scroll').scrollTop = 0;
+        updateStatistics();
+    }
+    
     // Clear all filters
     function clearAllFilters() {
-        filterByYear('all');
+        const isDivisionView = document.querySelector('.nav-item[href="/admin?view=division"].active') !== null;
+        
+        if (isDivisionView) {
+            showAllDivisions();
+        } else {
+            filterByYear('all');
+        }
+        
         document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
         document.querySelector('.filter-pill[data-sport="all"]').classList.add('active');
         activeSportFilter = 'all';
@@ -1772,7 +1854,11 @@
         const birthYears = new Set();
         
         visiblePlayers.forEach(row => {
-            if (row.style.display !== 'none') {
+            const isVisible = row.style.display !== 'none';
+            const table = row.closest('table');
+            const tableVisible = !table || table.style.display !== 'none';
+            
+            if (isVisible && tableVisible) {
                 totalCount++;
                 
                 if (row.classList.contains('waiting-room')) {
@@ -1803,6 +1889,10 @@
         } else if (currentYear === 'waiting') {
             totalLabel.textContent = 'Waiting Room Athletes';
             totalCard.style.background = '#fff3cd';
+            isFiltered = true;
+        } else if (currentYear.startsWith('division-')) {
+            totalLabel.textContent = 'Filtered Athletes';
+            totalCard.style.background = '#e0f2fe';
             isFiltered = true;
         } else {
             totalLabel.textContent = `Year ${currentYear} Athletes`;
@@ -1839,27 +1929,6 @@
         
         updateStatistics();
     }
-
-    // Search
-    document.getElementById('athlete-search').addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase();
-        const currentSection = document.querySelector('.year-section.active');
-        if (!currentSection) return;
-        
-        currentSection.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
-            const name = row.querySelector('.player-name').textContent.toLowerCase();
-            const email = row.querySelector('.player-email').textContent.toLowerCase();
-            const jersey = row.querySelector('.jersey-badge').textContent;
-            
-            if (name.includes(query) || email.includes(query) || jersey.includes(query)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-        
-        updateStatistics();
-    });
     
     // Detail Sidebar
     let currentDetailPlayer = null;
@@ -2073,7 +2142,7 @@
         }
     }
 
-    // Event listener setup - Initialize on page load
+    // Event listener setup
     document.addEventListener('DOMContentLoaded', () => {
         
         // Birth year / Division navigation links
@@ -2081,7 +2150,23 @@
             link.addEventListener('click', (e) => {
                 e.preventDefault();
                 const year = link.dataset.year;
-                filterByYear(year);
+                
+                const isDivisionView = document.querySelector('.nav-item[href="/admin?view=division"].active') !== null;
+                
+                if (isDivisionView && year === 'all') {
+                    showAllDivisions();
+                } else {
+                    filterByYear(year);
+                }
+            });
+        });
+
+        // Division navigation links
+        document.querySelectorAll('.nav-scroll-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const divisionName = link.getAttribute('title') || link.querySelector('span:nth-child(2)').textContent.trim();
+                filterByDivision(divisionName);
             });
         });
 
@@ -2095,6 +2180,27 @@
                 activeSportFilter = sport;
                 applySportFilter();
             });
+        });
+
+        // Search
+        document.getElementById('athlete-search').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const currentSection = document.querySelector('.year-section.active');
+            if (!currentSection) return;
+            
+            currentSection.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
+                const name = row.querySelector('.player-name').textContent.toLowerCase();
+                const email = row.querySelector('.player-email').textContent.toLowerCase();
+                const jersey = row.querySelector('.jersey-badge').textContent;
+                
+                if (name.includes(query) || email.includes(query) || jersey.includes(query)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            
+            updateStatistics();
         });
 
         // Row click to open detail sidebar
