@@ -615,15 +615,15 @@ def send_registration_email(reg_id: int, request: Request, db: Session = Depends
             .join(Player)
             .filter(Player.parent_email == parent_email)
             .filter(Registration.order_number == reg.order_number)
-            .filter(Registration.confirmation_sent == False)
+            # REMOVED: .filter(Registration.confirmation_sent == False)
             .all()
         )
     else:
-        # No order number means this was manually added, only send this one
-        all_regs = [reg] if not reg.confirmation_sent else []
+        # No order number means this was manually added, always send it
+        all_regs = [reg]
     
     if not all_regs:
-        return {"status": "no unsent registrations"}
+        return {"status": "no registrations found"}
     
     # Group by division type (Pines HS vs others)
     pines_regs = []
