@@ -358,10 +358,8 @@ def process_inbound_email(email_body: str, db):
         print("\n")
         
         # NOW TRY PARSING - Multi-line format handling
-        player_name = None
-        year = None
-        sport = None
-        grade = None
+        # Store all found players
+        all_players = []
         
         # Patterns for "1 Sophia Roop 2025 Pines Volleyball - 3rd/4th Grade"
         patterns = [
@@ -418,58 +416,96 @@ def process_inbound_email(email_body: str, db):
                     logger.info(f"    ✗ Rejected (invalid year format)")
                     continue
                 
-                logger.info(f"    ✓ VALID! Using this match")
-                player_name = name
-                year = yr
-                sport = sp
-                grade = gr
-                break
+                logger.info(f"    ✓ VALID! Adding to list")
+                all_players.append({
+                    'name': name,
+                    'year': yr,
+                    'sport': sp,
+                    'grade': gr
+                })
             
-            if player_name:
+            # If we found players with this pattern, stop trying other patterns
+            if all_players:
                 break
             else:
                 print(f"  No valid matches from this pattern\n")
         
-        # RESULT
-        if player_name and year and sport:
+        # RESULT - Process all found players
+        if all_players:
             print("\n" + "=" * 80)
-            print("✓✓✓ SUCCESSFULLY PARSED ✓✓✓")
-            print(f"  Player: {player_name}")
-            print(f"  Year: {year}")
-            print(f"  Sport: {sport}")
-            if grade:
-                print(f"  Grade: {grade}")
+            print(f"✓✓✓ SUCCESSFULLY PARSED {len(all_players)} PLAYER(S) ✓✓✓")
+            for idx, player_data in enumerate(all_players, 1):
+                print(f"  Player {idx}: {player_data['name']}")
+                print(f"    Year: {player_data['year']}")
+                print(f"    Sport: {player_data['sport']}")
+                if player_data['grade']:
+                    print(f"    Grade: {player_data['grade']}")
             print("=" * 80 + "\n")
             
             # Always put new players in Waiting Room
             division = "Waiting Room"
-            if grade:
-                print(f"✓ Grade info captured: {grade} (player will be in Waiting Room)")
             
-            # Create/update player
-            existing_player = db.query(Player).filter(Player.full_name == player_name).first()
-            
-            if existing_player:
-                existing_reg = db.query(Registration).filter(
-                    Registration.player_id == existing_player.id,
-                    Registration.sport == sport,
-                    Registration.season == year
-                ).first()
+            # Create/update each player
+            for player_data in all_players:
+                player_name = player_data['name']
+                year = player_data['year']
+                sport = player_data['sport']
+                grade = player_data['grade']
                 
-                if existing_reg:
-                    logger.info(f"Registration already exists for {player_name}")
-                    if not existing_reg.order_number and order_number:
-                        existing_reg.order_number = order_number
-                        existing_reg.order_date = order_date
+                if grade:
+                    print(f"✓ Grade info captured for {player_name}: {grade} (player will be in Waiting Room)")
+                
+                # Create/update player
+                existing_player = db.query(Player).filter(Player.full_name == player_name).first()
+                
+                if existing_player:
+                    existing_reg = db.query(Registration).filter(
+                        Registration.player_id == existing_player.id,
+                        Registration.sport == sport,
+                        Registration.season == year
+                    ).first()
+                    
+                    if existing_reg:
+                        logger.info(f"Registration already exists for {player_name}")
+                        if not existing_reg.order_number and order_number:
+                            existing_reg.order_number = order_number
+                            existing_reg.order_date = order_date
+                            db.commit()
+                            logger.info("✓ Updated order info")
+                    else:
+                        program_name = f"{year} Pines {sport.title()}"
+                        if grade:
+                            program_name += f" - {grade}"
+                        
+                        new_reg = Registration(
+                            player_id=existing_player.id,
+                            program=program_name,
+                            division=division,
+                            sport=sport,
+                            season=year,
+                            order_number=order_number,
+                            order_date=order_date,
+                            confirmation_sent=False
+                        )
+                        db.add(new_reg)
                         db.commit()
-                        logger.info("✓ Updated order info")
+                        logger.info(f"✓ Added registration for {player_name}")
                 else:
+                    new_player = Player(
+                        full_name=player_name,
+                        parent_email=parent_email or "unknown@example.com",
+                        jersey_number=None,
+                        birth_year=None
+                    )
+                    db.add(new_player)
+                    db.flush()
+                    
                     program_name = f"{year} Pines {sport.title()}"
                     if grade:
                         program_name += f" - {grade}"
                     
                     new_reg = Registration(
-                        player_id=existing_player.id,
+                        player_id=new_player.id,
                         program=program_name,
                         division=division,
                         sport=sport,
@@ -480,36 +516,9 @@ def process_inbound_email(email_body: str, db):
                     )
                     db.add(new_reg)
                     db.commit()
-                    logger.info(f"✓ Added registration for {player_name}")
-            else:
-                new_player = Player(
-                    full_name=player_name,
-                    parent_email=parent_email or "unknown@example.com",
-                    jersey_number=None,
-                    birth_year=None
-                )
-                db.add(new_player)
-                db.flush()
-                
-                program_name = f"{year} Pines {sport.title()}"
-                if grade:
-                    program_name += f" - {grade}"
-                
-                new_reg = Registration(
-                    player_id=new_player.id,
-                    program=program_name,
-                    division=division,
-                    sport=sport,
-                    season=year,
-                    order_number=order_number,
-                    order_date=order_date,
-                    confirmation_sent=False
-                )
-                db.add(new_reg)
-                db.commit()
-                logger.info(f"✓ Created new player {player_name}")
+                    logger.info(f"✓ Created new player {player_name}")
             
-            logger.info("SUCCESS - Email processed")
+            logger.info(f"SUCCESS - Processed {len(all_players)} player(s) from email")
         else:
             logger.error("\n" + "=" * 80)
             logger.error("✗✗✗ PARSING FAILED ✗✗✗")
