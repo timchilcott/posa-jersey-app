@@ -348,6 +348,11 @@ def process_inbound_email(email_body: str, db):
         order_section = re.sub(r'\s*\n\s*', ' ', order_section)
         order_section = re.sub(r'\s+', ' ', order_section)
         
+        # Remove email forwarding artifacts (>, =09, =20, etc.)
+        order_section = re.sub(r'=\d+', '', order_section)  # Remove =09, =20
+        order_section = re.sub(r'>\s*', '', order_section)  # Remove >
+        order_section = re.sub(r'\s+', ' ', order_section)  # Clean up extra spaces again
+        
         print("CLEANED ORDER SECTION:")
         print(order_section[:500])
         print("\n")
