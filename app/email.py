@@ -252,7 +252,7 @@ def process_inbound_email(email_body: str, db):
             if body_email_match:
                 potential_email = body_email_match.group(0)
                 # Exclude common system emails
-                if not any(x in potential_email.lower() for x in ['noreply', 'donotreply', 'system', 'admin']):
+                if not any(x in potential_email.lower() for x in ['noreply', 'donotreply', 'system', 'admin', 'posasports.org']):
                     parent_email = potential_email
                     logger.info(f"Found parent email from body: {parent_email}")
         
@@ -300,7 +300,32 @@ def process_inbound_email(email_body: str, db):
                     pass
         
         # Get text with some spacing preservation
-        text_content = soup.get_text(separator=' ', strip=True)
+        full_text = soup.get_text(separator=' ', strip=True)
+        
+        # CRITICAL FIX: Extract only the Order Details section
+        # This prevents matching promotional text like "Thank you for signing up"
+        order_details_section = None
+        order_details_match = re.search(
+            r'Order Details:.*?(?:Total:|Program Info:|$)',
+            full_text,
+            re.IGNORECASE | re.DOTALL
+        )
+        if order_details_match:
+            order_details_section = order_details_match.group(0)
+            logger.info(f"Extracted Order Details section: {order_details_section[:200]}")
+        else:
+            # Fallback: try to find any section with player registration info
+            order_details_match = re.search(
+                r'(?:Amount|Balance).*?(?:Total:|Program Info:|$)',
+                full_text,
+                re.IGNORECASE | re.DOTALL
+            )
+            if order_details_match:
+                order_details_section = order_details_match.group(0)
+                logger.info(f"Extracted fallback section: {order_details_section[:200]}")
+        
+        # If we found an order details section, use it; otherwise use full text
+        text_to_parse = order_details_section if order_details_section else full_text
         
         # Try multiple patterns to extract player information
         player_found = False
@@ -308,39 +333,53 @@ def process_inbound_email(email_body: str, db):
         year = None
         sport = None
         
-        # Pattern 1: Handle "1Sophia Roop2025 Pines Volleyball" (NO SPACE between name and year)
+        # Invalid name patterns to filter out
+        invalid_names = [
+            'thank you', 'signing up', 'order details', 'program info',
+            'order date', 'order total', 'open balance', 'view order',
+            'amount balance', 'division price', 'non-volunteer'
+        ]
+        
+        def is_valid_name(name):
+            """Check if extracted name is actually a person's name."""
+            name_lower = name.lower()
+            # Must be 2-4 words
+            words = name.split()
+            if len(words) < 2 or len(words) > 4:
+                return False
+            # Each word should be reasonable length
+            if any(len(w) < 2 or len(w) > 20 for w in words):
+                return False
+            # Should not contain invalid phrases
+            if any(invalid in name_lower for invalid in invalid_names):
+                return False
+            # Should start with capital letter
+            if not name[0].isupper():
+                return False
+            return True
+        
+        # Patterns specifically for Order Details section
         patterns = [
-            # Most specific: optional digit, name, year with no space, Pines, sport
-            r'(?:\d+\s*)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+?)\s*(\d{4})\s+pines\s+(\w+)',
-            # With more flexible spacing
-            r'\d*\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s*(\d{4})\s*pines\s*(\w+)',
-            # Look after "Order Details" specifically
-            r'order\s+details:.*?(?:\d+\s*)?([A-Z][a-z]+\s+[A-Z][a-z]+)\s*(\d{4})\s*pines\s*(\w+)',
-            # Alternative: name then year on potentially separate lines
-            r'([A-Z][a-z]+\s+[A-Z][a-z]+).*?(\d{4})\s*pines\s*(\w+)',
+            # Pattern 1: Digit followed by name, year, Pines, sport
+            r'(?:\d+\s*)([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*(\d{4})\s+pines\s+(\w+)',
+            # Pattern 2: Name year pines sport (more flexible spacing)
+            r'([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*(\d{4})\s*pines\s*(\w+)',
+            # Pattern 3: Look for name followed by year and explicit sports
+            r'([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*(\d{4}).*?(volleyball|soccer|basketball|baseball|softball|flag)',
         ]
         
         for i, pattern in enumerate(patterns, 1):
-            match = re.search(pattern, text_content, re.IGNORECASE | re.DOTALL)
-            if match:
-                player_name = match.group(1).strip()
-                year = match.group(2)
-                sport = match.group(3).strip().lower()
-                logger.info(f"Pattern {i} matched - Player: {player_name}, sport: {sport}, year: {year}")
+            matches = re.finditer(pattern, text_to_parse, re.IGNORECASE)
+            for match in matches:
+                potential_name = match.group(1).strip()
+                if is_valid_name(potential_name):
+                    player_name = potential_name
+                    year = match.group(2)
+                    sport = match.group(3).strip().lower()
+                    logger.info(f"Pattern {i} matched - Player: {player_name}, sport: {sport}, year: {year}")
+                    break
+            if player_name:
                 break
-        
-        if not player_name:
-            # Final attempt: be very lenient and look for any name followed by year and sport
-            lenient_match = re.search(
-                r'([A-Z][a-z]{2,}\s+[A-Z][a-z]{2,}).*?(\d{4}).*?(volleyball|soccer|basketball|baseball|softball|flag)',
-                text_content,
-                re.IGNORECASE | re.DOTALL
-            )
-            if lenient_match:
-                player_name = lenient_match.group(1).strip()
-                year = lenient_match.group(2)
-                sport = lenient_match.group(3).strip().lower()
-                logger.info(f"Lenient pattern matched - Player: {player_name}, sport: {sport}, year: {year}")
         
         if player_name and year and sport:
             logger.info(f"Successfully parsed - Player: {player_name}, sport: {sport}, year: {year}")
@@ -354,7 +393,7 @@ def process_inbound_email(email_body: str, db):
                 r'(kindergarten)',
             ]
             for grade_pattern in grade_patterns:
-                division_match = re.search(grade_pattern, text_content, re.IGNORECASE)
+                division_match = re.search(grade_pattern, text_to_parse, re.IGNORECASE)
                 if division_match:
                     division_info = division_match.group(1)
                     logger.info(f"Found grade/division info: {division_info}")
@@ -435,8 +474,8 @@ def process_inbound_email(email_body: str, db):
         
         if not player_found:
             logger.warning("Could not parse player information from email")
-            logger.debug(f"Email text preview (first 1000 chars):\n{text_content[:1000]}")
-            logger.debug(f"Full text length: {len(text_content)}")
+            logger.debug(f"Order Details section (first 500 chars):\n{text_to_parse[:500] if text_to_parse else 'N/A'}")
+            logger.debug(f"Full email preview (first 1000 chars):\n{full_text[:1000]}")
             
     except Exception as e:
         logger.error(f"Error processing inbound email: {e}", exc_info=True)
