@@ -1840,17 +1840,6 @@
         updateStatistics();
     }
 
-    document.querySelectorAll('.filter-pill').forEach(pill => {
-        pill.addEventListener('click', () => {
-            document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
-            pill.classList.add('active');
-            
-            const sport = pill.dataset.sport;
-            activeSportFilter = sport;
-            applySportFilter();
-        });
-    });
-
     // Search
     document.getElementById('athlete-search').addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase();
@@ -2034,10 +2023,8 @@
                     throw new Error(`Failed to update division: ${error}`);
                 }
                 
-                // Get the updated jersey number from the response
                 const divisionData = await divisionResponse.json();
                 if (divisionData.jersey_number !== undefined) {
-                    // Update the display with the newly assigned jersey
                     document.getElementById('detail-jersey').textContent = '#' + (divisionData.jersey_number || '-');
                     if (currentDetailRow) {
                         currentDetailRow.querySelector('.jersey-badge').textContent = divisionData.jersey_number || '-';
@@ -2081,4 +2068,210 @@
             updateStatistics();
             
         } catch (error) {
-            console.error('Error saving edits:', er
+            console.error('Error saving edits:', error);
+            alert('Failed to save changes: ' + error.message);
+        }
+    }
+
+    // Event listener setup - Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        // Birth year / Division navigation links
+        document.querySelectorAll('.nav-year-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const year = link.dataset.year;
+                filterByYear(year);
+            });
+        });
+
+        // Sport filter pills
+        document.querySelectorAll('.filter-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                
+                const sport = pill.dataset.sport;
+                activeSportFilter = sport;
+                applySportFilter();
+            });
+        });
+
+        // Row click to open detail sidebar
+        document.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
+            row.addEventListener('click', (e) => {
+                if (e.target.closest('button, input, select, a')) return;
+                openDetail(row);
+            });
+        });
+
+        // Select all checkboxes
+        document.querySelectorAll('.select-all-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                selectAll(e.target);
+            });
+        });
+
+        // Individual player checkboxes
+        document.querySelectorAll('.player-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                e.stopPropagation();
+                togglePlayerSelection(e.target);
+            });
+        });
+
+        // Edit button
+        document.querySelectorAll('.btn-edit').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const row = btn.closest('tr');
+                openDetail(row);
+                setTimeout(() => enableDetailEdit(), 100);
+            });
+        });
+
+        // Send email button
+        document.querySelectorAll('.btn-send-email').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const row = btn.closest('tr');
+                const regId = row.dataset.regId;
+                
+                if (btn.classList.contains('sent') || btn.disabled) {
+                    return;
+                }
+                
+                if (!confirm('Send confirmation email to this athlete?')) return;
+                
+                try {
+                    const response = await fetch(`/registrations/${regId}/send_email`, { 
+                        method: 'POST' 
+                    });
+                    
+                    if (response.ok) {
+                        alert('Email sent successfully!');
+                        const statusBadge = row.querySelector('.status-badge');
+                        if (statusBadge) {
+                            statusBadge.className = 'status-badge sent';
+                            statusBadge.textContent = '✓ Sent';
+                        }
+                        btn.disabled = true;
+                        btn.classList.add('sent');
+                    } else {
+                        alert('Failed to send email');
+                    }
+                } catch (error) {
+                    alert('Error sending email: ' + error.message);
+                }
+            });
+        });
+
+        // Delete button
+        document.querySelectorAll('.btn-delete').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const row = btn.closest('tr');
+                const playerId = row.dataset.playerId;
+                const playerName = row.querySelector('.player-name').textContent;
+                
+                if (!confirm(`Delete ${playerName}? This cannot be undone!`)) return;
+                
+                try {
+                    const response = await fetch(`/players/${playerId}`, { 
+                        method: 'DELETE' 
+                    });
+                    
+                    if (response.ok) {
+                        row.remove();
+                        updateStatistics();
+                        alert('Player deleted successfully');
+                    } else {
+                        alert('Failed to delete player');
+                    }
+                } catch (error) {
+                    alert('Error deleting player: ' + error.message);
+                }
+            });
+        });
+
+        // Add player form buttons
+        document.querySelectorAll('.btn-show-add-form').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const row = btn.closest('tr');
+                const formRow = row.nextElementSibling;
+                if (formRow && formRow.classList.contains('add-form-row')) {
+                    formRow.classList.remove('d-none');
+                    row.style.display = 'none';
+                }
+            });
+        });
+
+        document.querySelectorAll('.btn-add-cancel').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const formRow = btn.closest('tr');
+                const addRow = formRow.previousElementSibling;
+                formRow.classList.add('d-none');
+                if (addRow) addRow.style.display = '';
+                formRow.querySelectorAll('input, select').forEach(input => {
+                    if (input.tagName === 'SELECT') {
+                        input.selectedIndex = 0;
+                    } else {
+                        input.value = '';
+                    }
+                });
+            });
+        });
+
+        document.querySelectorAll('.btn-add-save').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const formRow = btn.closest('tr');
+                const fullName = formRow.querySelector('.new-full-name').value;
+                const birthYear = formRow.querySelector('.new-birth-year').value;
+                const sport = formRow.querySelector('.new-sport').value;
+                const division = formRow.querySelector('.new-division').value;
+                const parentEmail = formRow.querySelector('.new-parent-email').value;
+                
+                if (!fullName || !parentEmail) {
+                    alert('Name and email are required');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/players/inline', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            full_name: fullName,
+                            birth_year: birthYear ? parseInt(birthYear) : null,
+                            parent_email: parentEmail,
+                            sport: sport,
+                            division: division,
+                            season: '2025'
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        const error = await response.json();
+                        alert('Failed to add player: ' + (error.detail || 'Unknown error'));
+                    }
+                } catch (error) {
+                    alert('Error adding player: ' + error.message);
+                }
+            });
+        });
+        
+        // Initialize the first view
+        updateStatistics();
+    });
+</script>
+
+    </main>
+</div>
+
+</body>
+</html>
