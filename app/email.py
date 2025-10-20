@@ -258,7 +258,7 @@ def parse_division_from_grade(grade: str) -> str:
     return grade_to_division.get(highest_grade, "Waiting Room")
 
 def process_inbound_email(email_body: str, db):
-    """Parse inbound email and create player/registration records in Waiting Room."""
+    """Parse inbound email and create player/registration records."""
     logger.info("=" * 80)
     logger.info("PROCESSING INBOUND EMAIL - START")
     logger.info("=" * 80)
@@ -332,34 +332,49 @@ def process_inbound_email(email_body: str, db):
         # Try to isolate Order Details section
         order_section = None
         
-        # Method 1: Find "Order Details:" and extract next 500 chars
+        # Method 1: Find "Order Details:" and extract next section
         match = re.search(r'Order Details:(.{50,1000}?)(?:Total:|Program Info:|Division Price:|$)', full_text, re.IGNORECASE | re.DOTALL)
         if match:
             order_section = match.group(1).strip()
             logger.info("✓ Found Order Details section:")
             logger.info("-" * 80)
-            logger.info(order_section)
+            logger.info(order_section[:500])
             logger.info("-" * 80 + "\n")
         else:
             logger.warning("⚠ Could not find Order Details section, using full text")
             order_section = full_text
         
-        # NOW TRY PARSING - IMPROVED PATTERNS
+        # CLEAN UP WHITESPACE - Convert line breaks to spaces
+        order_section = re.sub(r'\s*\n\s*', ' ', order_section)
+        order_section = re.sub(r'\s+', ' ', order_section)
+        
+        logger.info("CLEANED ORDER SECTION:")
+        logger.info(order_section[:500])
+        logger.info("\n")
+        
+        # NOW TRY PARSING - Multi-line format handling
         player_name = None
         year = None
         sport = None
         grade = None
         
-        # Test each pattern individually and log results
+        # Patterns for "1 Sophia Roop 2025 Pines Volleyball - 3rd/4th Grade"
         patterns = [
-            # Pattern 1: With grade info (NEW)
-            (r'\d+([A-Z][a-z]+\s+[A-Z][a-z]+)\s*(\d{4})\s+Pines\s+(\w+)\s*-\s*([^$]+?)(?=\$|$)', "Pattern 1: digit+name+year+pines+sport+grade"),
+            # Pattern 1: With grade (most specific)
+            (r'\d+\s+([A-Z][a-z]+\s+[A-Z][a-z]+)\s+(\d{4})\s+Pines\s+([A-Za-z]+)\s+-\s+([^$]+?)(?=\$|\d+\s+[A-Z]|Division|Total|Non-Volunteer|$)',
+             "Pattern 1: Number Name Year Pines Sport - Grade"),
+            
             # Pattern 2: Without grade
-            (r'\d+([A-Z][a-z]+\s+[A-Z][a-z]+)\s*(\d{4})\s+Pines\s+(\w+)', "Pattern 2: digit+name+year+pines+sport"),
-            # Pattern 3: Case insensitive
-            (r'([A-Z][a-z]{2,}\s+[A-Z][a-z]{2,})\s+(\d{4})\s+Pines\s+(volleyball|soccer|basketball|baseball|softball|flag)', "Pattern 3: name+year+pines+sport (case-insensitive)"),
-            # Pattern 4: Lenient
-            (r'([A-Z][a-z]{2,}\s+[A-Z][a-z]{2,})\s*(\d{4}).*?(volleyball|soccer|basketball|baseball|softball)', "Pattern 4: lenient name year sport"),
+            (r'\d+\s+([A-Z][a-z]+\s+[A-Z][a-z]+)\s+(\d{4})\s+Pines\s+([A-Za-z]+)',
+             "Pattern 2: Number Name Year Pines Sport"),
+            
+            # Pattern 3: Without leading number but with grade
+            (r'([A-Z][a-z]+\s+[A-Z][a-z]+)\s+(\d{4})\s+Pines\s+([A-Za-z]+)\s+-\s+([^$]+?)(?=\$|Division|Total|$)',
+             "Pattern 3: Name Year Pines Sport - Grade"),
+            
+            # Pattern 4: Lenient - just name, year, sport
+            (r'([A-Z][a-z]{2,}\s+[A-Z][a-z]{2,})\s+(\d{4}).*?(volleyball|soccer|basketball|baseball|softball|flag)',
+             "Pattern 4: Lenient name year sport"),
         ]
         
         for pattern, description in patterns:
@@ -368,19 +383,17 @@ def process_inbound_email(email_body: str, db):
             logger.info(f"  Found {len(matches)} potential matches")
             
             for i, match in enumerate(matches, 1):
-                name = match.group(1).strip()
-                yr = match.group(2)
-                sp = match.group(3).strip().lower()
-                
-                # Extract grade if available (Pattern 1)
-                gr = None
-                if len(match.groups()) > 3:
-                    gr = match.group(4).strip()
+                groups = match.groups()
+                name = groups[0].strip()
+                yr = groups[1]
+                sp = groups[2].strip().lower()
+                gr = groups[3].strip() if len(groups) > 3 else None
                 
                 logger.info(f"  Match {i}: '{name}' | {yr} | {sp} | {gr or 'no grade'}")
                 
-                # Validate
-                invalid = ['thank', 'signing', 'order', 'total', 'balance', 'amount', 'division', 'price', 'volunteer', 'fee']
+                # Validate name
+                invalid = ['thank', 'signing', 'order', 'total', 'balance', 'amount', 
+                          'division', 'price', 'volunteer', 'fee', 'details']
                 if any(kw in name.lower() for kw in invalid):
                     logger.info(f"    ✗ Rejected (contains invalid keyword)")
                     continue
@@ -423,12 +436,10 @@ def process_inbound_email(email_body: str, db):
                 logger.info(f"  Grade: {grade}")
             logger.info("=" * 80 + "\n")
             
-            # Determine division from grade or default to Waiting Room
+            # Always put new players in Waiting Room
+            division = "Waiting Room"
             if grade:
-                division = parse_division_from_grade(grade)
-                logger.info(f"✓ Parsed division from grade: {division}")
-            else:
-                division = "Waiting Room"
+                logger.info(f"✓ Grade info captured: {grade} (player will be in Waiting Room)")
             
             # Create/update player
             existing_player = db.query(Player).filter(Player.full_name == player_name).first()
