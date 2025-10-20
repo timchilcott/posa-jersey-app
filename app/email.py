@@ -222,44 +222,28 @@ def save_inbound_email(email_body: str, filename: str | None = None) -> None:
 
 def process_inbound_email(email_body: str, db):
     """Parse inbound email and create player/registration records in Waiting Room."""
-    logger.info("=" * 60)
-    logger.info("Processing inbound email - START")
-    logger.info("=" * 60)
+    logger.info("=" * 80)
+    logger.info("PROCESSING INBOUND EMAIL - START")
+    logger.info("=" * 80)
     
     try:
         # Parse the email
         msg = email.message_from_string(email_body)
         
-        # Get parent email - try multiple methods
+        # Get parent email
         parent_email = None
-        
-        # Method 1: Look for forwarded "To:" field in the body
         forwarded_to_match = re.search(r'>\s*To:\s*([\w\.-]+@[\w\.-]+\.\w+)', email_body)
         if forwarded_to_match:
             parent_email = forwarded_to_match.group(1)
-            logger.info(f"✓ Found parent email from forwarded message: {parent_email}")
+            logger.info(f"✓ Parent email: {parent_email}")
         
-        # Method 2: Check To: header
         if not parent_email:
             to_header = msg.get('To', '')
             if to_header:
                 email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', to_header)
                 if email_match:
                     parent_email = email_match.group(0)
-                    logger.info(f"✓ Found parent email from To header: {parent_email}")
-        
-        # Method 3: Look in the body for an email address
-        if not parent_email:
-            body_email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', email_body)
-            if body_email_match:
-                potential_email = body_email_match.group(0)
-                # Exclude common system emails
-                if not any(x in potential_email.lower() for x in ['noreply', 'donotreply', 'system', 'admin', 'posasports.org']):
-                    parent_email = potential_email
-                    logger.info(f"✓ Found parent email from body: {parent_email}")
-        
-        if not parent_email:
-            logger.warning("⚠ No parent email found - will use unknown@example.com")
+                    logger.info(f"✓ Parent email from header: {parent_email}")
         
         # Get HTML content
         html_content = None
@@ -276,205 +260,114 @@ def process_inbound_email(email_body: str, db):
         
         if not html_content:
             html_content = email_body
-            logger.info("Using plain text email body")
-        else:
-            logger.info("✓ Extracted HTML content")
         
-        # Parse HTML with BeautifulSoup
         soup = BeautifulSoup(html_content, 'html.parser')
         
-        # Extract order number
+        # Extract order info
         order_number = None
         order_no_match = re.search(r'Order\s*No:?\s*(\d+)', soup.get_text(), re.IGNORECASE)
         if order_no_match:
             order_number = order_no_match.group(1)
-            logger.info(f"✓ Found order number: {order_number}")
-        else:
-            logger.warning("⚠ No order number found")
+            logger.info(f"✓ Order number: {order_number}")
         
-        # Extract order date
         order_date = None
-        date_patterns = [
-            (r'Order Date.*?(\w{3}\s+\d{1,2},\s+\d{4})', '%b %d, %Y'),
-            (r'(\w{3}\s+\d{1,2},\s+\d{4}\s+\d{2}:\d{2}\s+[AP]M)', '%b %d, %Y %I:%M %p'),
-        ]
-        for pattern, date_format in date_patterns:
-            order_date_match = re.search(pattern, soup.get_text())
-            if order_date_match:
-                try:
-                    order_date = datetime.strptime(order_date_match.group(1), date_format)
-                    logger.info(f"✓ Found order date: {order_date}")
-                    break
-                except:
-                    pass
+        date_match = re.search(r'(\w{3}\s+\d{1,2},\s+\d{4})', soup.get_text())
+        if date_match:
+            try:
+                order_date = datetime.strptime(date_match.group(1), '%b %d, %Y')
+                logger.info(f"✓ Order date: {order_date}")
+            except:
+                pass
         
-        if not order_date:
-            logger.warning("⚠ No order date found")
-        
-        # METHOD 1: Try to parse HTML table structure directly
-        logger.info("\n--- METHOD 1: Parsing HTML table structure ---")
-        player_from_table = None
-        
-        # Look for tables that might contain order details
-        tables = soup.find_all('table')
-        logger.info(f"Found {len(tables)} tables in email")
-        
-        for i, table in enumerate(tables):
-            rows = table.find_all('tr')
-            logger.info(f"  Table {i+1}: {len(rows)} rows")
-            
-            for row in rows:
-                cells = row.find_all(['td', 'th'])
-                if len(cells) >= 2:
-                    # Get text from all cells
-                    cell_texts = [cell.get_text(strip=True) for cell in cells]
-                    combined = ' '.join(cell_texts)
-                    
-                    # Look for player pattern in this row
-                    match = re.search(
-                        r'(?:\d+)?\s*([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*(\d{4})\s*[Pp]ines\s*(\w+)',
-                        combined,
-                        re.IGNORECASE
-                    )
-                    
-                    if match:
-                        name = match.group(1).strip()
-                        year = match.group(2)
-                        sport = match.group(3).strip().lower()
-                        
-                        # Validate it's not promotional text
-                        if not any(x in name.lower() for x in ['thank', 'signing', 'order', 'total']):
-                            logger.info(f"  ✓ Found in table row: {name} - {year} - {sport}")
-                            player_from_table = (name, year, sport, combined)
-                            break
-            
-            if player_from_table:
-                break
-        
-        # METHOD 2: Extract text and parse with patterns
-        logger.info("\n--- METHOD 2: Text extraction and pattern matching ---")
-        
-        # Get full text with spacing
+        # Get full text
         full_text = soup.get_text(separator=' ', strip=True)
-        logger.info(f"Full text length: {len(full_text)} characters")
         
-        # Try to find Order Details section
+        # LOG EVERYTHING TO CONSOLE
+        logger.info("\n" + "=" * 80)
+        logger.info("FULL EXTRACTED TEXT (first 2000 characters)")
+        logger.info("=" * 80)
+        logger.info(full_text[:2000])
+        logger.info("...")
+        logger.info("=" * 80)
+        logger.info(f"Total length: {len(full_text)} characters")
+        logger.info("=" * 80 + "\n")
+        
+        # Try to isolate Order Details section
         order_section = None
-        section_patterns = [
-            r'Order Details:.*?(?:Total:|Program Info:|Division Price|$)',
-            r'Order Details.*?(?:\$\d+\.\d+.*?\$\d+\.\d+)',
-            r'(?:Amount.*?Balance).*?(?:Total:|$)',
-        ]
         
-        for i, pattern in enumerate(section_patterns, 1):
-            match = re.search(pattern, full_text, re.IGNORECASE | re.DOTALL)
-            if match:
-                order_section = match.group(0)
-                logger.info(f"✓ Found order section using pattern {i}")
-                logger.info(f"  Section preview: {order_section[:200]}...")
-                break
-        
-        if not order_section:
-            logger.warning("⚠ Could not isolate Order Details section, using full text")
+        # Method 1: Find "Order Details:" and extract next 500 chars
+        match = re.search(r'Order Details:(.{50,800}?)(?:Total:|Program Info:|Division|Note:|$)', full_text, re.IGNORECASE | re.DOTALL)
+        if match:
+            order_section = match.group(1).strip()
+            logger.info("✓ Found Order Details section:")
+            logger.info("-" * 80)
+            logger.info(order_section)
+            logger.info("-" * 80 + "\n")
+        else:
+            logger.warning("⚠ Could not find Order Details section, using full text")
             order_section = full_text
         
-        # Save debug info
-        debug_file = f"debug_email_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-        try:
-            root_dir = os.path.dirname(os.path.dirname(__file__))
-            with open(os.path.join(root_dir, debug_file), 'w') as f:
-                f.write("="*60 + "\n")
-                f.write("FULL TEXT\n")
-                f.write("="*60 + "\n")
-                f.write(full_text)
-                f.write("\n\n")
-                f.write("="*60 + "\n")
-                f.write("ORDER SECTION\n")
-                f.write("="*60 + "\n")
-                f.write(order_section if order_section else "NOT FOUND")
-                f.write("\n\n")
-                if player_from_table:
-                    f.write("="*60 + "\n")
-                    f.write("FOUND IN TABLE\n")
-                    f.write("="*60 + "\n")
-                    f.write(f"Name: {player_from_table[0]}\n")
-                    f.write(f"Year: {player_from_table[1]}\n")
-                    f.write(f"Sport: {player_from_table[2]}\n")
-                    f.write(f"Row text: {player_from_table[3]}\n")
-            logger.info(f"✓ Saved debug info to {debug_file}")
-        except Exception as e:
-            logger.error(f"Failed to save debug file: {e}")
+        # NOW TRY PARSING
+        player_name = None
+        year = None
+        sport = None
         
-        # Try patterns on order section
-        player_from_text = None
-        
-        # Very specific patterns for the exact format we're seeing
+        # Test each pattern individually and log results
         patterns = [
-            # Pattern 1: "1Sophia Roop2025 Pines Volleyball"
-            r'\d+([A-Z][a-z]+\s+[A-Z][a-z]+)(\d{4})\s*[Pp]ines\s+(\w+)',
-            # Pattern 2: With spaces "1 Sophia Roop 2025 Pines Volleyball"
-            r'\d+\s+([A-Z][a-z]+\s+[A-Z][a-z]+)\s+(\d{4})\s+[Pp]ines\s+(\w+)',
-            # Pattern 3: No number prefix
-            r'([A-Z][a-z]+\s+[A-Z][a-z]+)\s*(\d{4})\s*[Pp]ines\s*(\w+)',
-            # Pattern 4: Very lenient
-            r'([A-Z][a-z]{2,}\s+[A-Z][a-z]{2,})\s*(\d{4}).*?[Pp]ines.*?(volleyball|soccer|basketball|baseball|softball)',
+            (r'\d+([A-Z][a-z]+\s+[A-Z][a-z]+)(\d{4})\s*[Pp]ines\s+(\w+)', "Pattern 1: digit+name+year+pines+sport"),
+            (r'\d+\s+([A-Z][a-z]+\s+[A-Z][a-z]+)\s+(\d{4})\s+[Pp]ines\s+(\w+)', "Pattern 2: digit name year pines sport"),
+            (r'([A-Z][a-z]+\s+[A-Z][a-z]+)\s*(\d{4})\s*[Pp]ines\s*(\w+)', "Pattern 3: name+year+pines+sport"),
+            (r'([A-Z][a-z]{2,}\s+[A-Z][a-z]{2,})\s*(\d{4}).*?(volleyball|soccer|basketball|baseball|softball)', "Pattern 4: lenient name year sport"),
         ]
         
-        for i, pattern in enumerate(patterns, 1):
+        for pattern, description in patterns:
+            logger.info(f"Testing: {description}")
             matches = list(re.finditer(pattern, order_section, re.IGNORECASE))
-            logger.info(f"  Pattern {i}: Found {len(matches)} potential matches")
+            logger.info(f"  Found {len(matches)} potential matches")
             
-            for match in matches:
+            for i, match in enumerate(matches, 1):
                 name = match.group(1).strip()
-                year = match.group(2)
-                sport = match.group(3).strip().lower()
+                yr = match.group(2)
+                sp = match.group(3).strip().lower()
                 
-                # Validate name
-                invalid_keywords = ['thank', 'signing', 'order', 'total', 'balance', 'amount', 'details', 'date']
-                if any(keyword in name.lower() for keyword in invalid_keywords):
-                    logger.info(f"    ✗ Rejected '{name}' (contains invalid keyword)")
+                logger.info(f"  Match {i}: '{name}' | {yr} | {sp}")
+                
+                # Validate
+                invalid = ['thank', 'signing', 'order', 'total', 'balance', 'amount']
+                if any(kw in name.lower() for kw in invalid):
+                    logger.info(f"    ✗ Rejected (contains invalid keyword)")
                     continue
                 
                 if len(name.split()) < 2:
-                    logger.info(f"    ✗ Rejected '{name}' (less than 2 words)")
+                    logger.info(f"    ✗ Rejected (less than 2 words)")
                     continue
                 
-                logger.info(f"  ✓ Valid match: {name} - {year} - {sport}")
-                player_from_text = (name, year, sport)
+                logger.info(f"    ✓ VALID! Using this match")
+                player_name = name
+                year = yr
+                sport = sp
                 break
             
-            if player_from_text:
+            if player_name:
                 break
+            else:
+                logger.info(f"  No valid matches from this pattern\n")
         
-        # Use whichever method found a player
-        player_info = player_from_table or player_from_text
-        
-        if player_info:
-            player_name = player_info[0]
-            year = player_info[1]
-            sport = player_info[2]
-            
-            logger.info("\n" + "="*60)
-            logger.info(f"✓✓✓ SUCCESSFULLY PARSED ✓✓✓")
+        # RESULT
+        if player_name and year and sport:
+            logger.info("\n" + "=" * 80)
+            logger.info("✓✓✓ SUCCESSFULLY PARSED ✓✓✓")
             logger.info(f"  Player: {player_name}")
             logger.info(f"  Year: {year}")
             logger.info(f"  Sport: {sport}")
-            logger.info("="*60 + "\n")
+            logger.info("=" * 80 + "\n")
             
             # Extract grade info
             division_info = None
-            grade_patterns = [
-                r'(\d+(?:st|nd|rd|th)/\d+(?:st|nd|rd|th)\s+[Gg]rade)',
-                r'([Gg]rade\s+\d+)',
-                r'(K-\d+)',
-                r'([Kk]indergarten)',
-            ]
-            for grade_pattern in grade_patterns:
-                division_match = re.search(grade_pattern, full_text, re.IGNORECASE)
-                if division_match:
-                    division_info = division_match.group(1)
-                    logger.info(f"✓ Found grade info: {division_info}")
-                    break
+            grade_match = re.search(r'(\d+(?:st|nd|rd|th)/\d+(?:st|nd|rd|th)\s+[Gg]rade)', full_text, re.IGNORECASE)
+            if grade_match:
+                division_info = grade_match.group(1)
+                logger.info(f"✓ Grade info: {division_info}")
             
             # Create/update player
             division = "Waiting Room"
@@ -511,7 +404,7 @@ def process_inbound_email(email_body: str, db):
                     )
                     db.add(new_reg)
                     db.commit()
-                    logger.info(f"✓ Added new registration for {player_name}")
+                    logger.info(f"✓ Added registration for {player_name}")
             else:
                 new_player = Player(
                     full_name=player_name,
@@ -540,19 +433,17 @@ def process_inbound_email(email_body: str, db):
                 db.commit()
                 logger.info(f"✓ Created new player {player_name}")
             
-            logger.info("="*60)
-            logger.info("Processing inbound email - SUCCESS")
-            logger.info("="*60)
+            logger.info("SUCCESS - Email processed")
         else:
-            logger.error("\n" + "="*60)
+            logger.error("\n" + "=" * 80)
             logger.error("✗✗✗ PARSING FAILED ✗✗✗")
-            logger.error("Could not extract player information")
-            logger.error(f"Check debug file: {debug_file}")
-            logger.error("="*60 + "\n")
+            logger.error("Could not extract valid player information")
+            logger.error("Review the extracted text and patterns above")
+            logger.error("=" * 80)
             
     except Exception as e:
-        logger.error("="*60)
-        logger.error(f"✗✗✗ ERROR PROCESSING EMAIL ✗✗✗")
-        logger.error(f"Exception: {e}", exc_info=True)
-        logger.error("="*60)
+        logger.error("=" * 80)
+        logger.error(f"✗✗✗ EXCEPTION ✗✗✗")
+        logger.error(f"Error: {e}", exc_info=True)
+        logger.error("=" * 80)
         db.rollback()
