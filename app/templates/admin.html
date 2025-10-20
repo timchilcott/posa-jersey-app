@@ -600,103 +600,74 @@
         background: linear-gradient(90deg, transparent 0%, rgba(248, 250, 252, 0.8) 20%);
     }
     
-    /* Action Button Styles */
-    .action-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 5px 10px;
-        font-size: 12px;
-        font-weight: 500;
-        border: 1px solid;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: all 0.15s ease;
-        white-space: nowrap;
-        min-width: 70px;
-        justify-content: center;
-        background: white;
-        opacity: 0.75;
-    }
-    
-    .action-btn:hover {
-        opacity: 1;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-    }
-    
-    .action-btn:active {
-        transform: translateY(0);
-        box-shadow: 0 1px 2px rgba(0,0,0,0.06);
-    }
-    
-    /* Edit Button - Soft Indigo */
-    .action-btn.edit {
-        border-color: #e0e7ff;
-        color: #6366f1;
-    }
-    
-    .action-btn.edit:hover {
-        background: #6366f1;
-        color: white;
-        border-color: #6366f1;
-    }
-    
-    /* Email Button - Soft Sky Blue */
-    .action-btn.email {
-        border-color: #bae6fd;
-        color: #0ea5e9;
-    }
-    
-    .action-btn.email:hover {
-        background: #0ea5e9;
-        color: white;
-        border-color: #0ea5e9;
-    }
-    
-    .action-btn.email:disabled,
-    .action-btn.email.sent {
-        border-color: #e2e8f0;
-        color: #94a3b8;
-        cursor: not-allowed;
-        opacity: 0.4;
-    }
-    
-    .action-btn.email:disabled:hover,
-    .action-btn.email.sent:hover {
-        transform: none;
-        box-shadow: none;
-        background: white;
-        color: #94a3b8;
-        border-color: #e2e8f0;
-        opacity: 0.4;
-    }
-    
-    /* Delete Button - Soft Red */
-    .action-btn.delete {
-        border-color: #fecaca;
-        color: #ef4444;
-    }
-    
-    .action-btn.delete:hover {
-        background: #ef4444;
-        color: white;
-        border-color: #ef4444;
-    }
-    
-    .action-btn .action-icon {
-        font-size: 14px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 14px;
-        height: 14px;
-    }
-    
-    .action-btn-text {
-        font-size: 12px;
-        font-weight: 500;
-    }
+  /* Action Button Styles */
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid var(--gray-300);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    min-width: 70px;
+    justify-content: center;
+    background: white;
+    color: var(--gray-700);
+}
+
+.action-btn:hover {
+    background: var(--gray-100);
+    border-color: var(--gray-400);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+
+.action-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+/* Email button when already sent */
+.action-btn.email:disabled,
+.action-btn.email.sent {
+    border-color: var(--gray-200);
+    color: var(--gray-400);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.action-btn.email:disabled:hover,
+.action-btn.email.sent:hover {
+    transform: none;
+    box-shadow: none;
+    background: white;
+    border-color: var(--gray-200);
+}
+
+/* Delete button - only different on hover */
+.action-btn.delete:hover {
+    background: var(--red-500);
+    color: white;
+    border-color: var(--red-500);
+}
+
+.action-btn .action-icon {
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+}
+
+.action-btn-text {
+    font-size: 12px;
+    font-weight: 500;
+}
 
     /* Checkbox Styles */
     .player-checkbox, .select-all-checkbox {
