@@ -10,6 +10,7 @@ from typing import List
 import os
 import csv
 import io
+import logging
 
 from .database import Base, engine, SessionLocal
 from .models import Player, Registration, User, EmailTemplate
@@ -22,6 +23,8 @@ from .email import (
     normalize_division,
     DIVISION_ORDER,
 )
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------
 # Global Config
@@ -578,13 +581,22 @@ def update_registration_division(reg_id: int, payload: DivisionUpdate, request: 
     reg.division = new_division
     
     # ONLY assign a jersey number if moving OUT of Waiting Room AND player doesn't have one
-    # Jersey numbers should remain constant unless manually changed
     if old_division == "Waiting Room" and new_division != "Waiting Room":
-        if not reg.player.jersey_number and reg.player.birth_year:
-            new_jersey = assign_jersey_number(db, reg.player.birth_year)
+        if not reg.player.jersey_number:
+            # Try to assign based on birth year first, if available
+            if reg.player.birth_year:
+                new_jersey = assign_jersey_number(db, reg.player.birth_year)
+                logger.info(f"Assigned jersey #{new_jersey} to {reg.player.full_name} based on birth year {reg.player.birth_year}")
+            else:
+                # No birth year? Just assign the next available number across all players
+                all_players = db.query(Player).all()
+                taken = {p.jersey_number for p in all_players if p.jersey_number}
+                new_jersey = 1
+                while new_jersey in taken:
+                    new_jersey += 1
+                logger.info(f"Assigned jersey #{new_jersey} to {reg.player.full_name} (no birth year available)")
+            
             reg.player.jersey_number = new_jersey
-    # DO NOT reassign jersey numbers when moving between regular divisions
-    # Jersey numbers should be constant once assigned
     
     db.commit()
     db.refresh(reg)
