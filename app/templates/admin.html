@@ -630,6 +630,18 @@
         box-shadow: 0 1px 2px rgba(0,0,0,0.06);
     }
     
+    /* Edit Button - Soft Indigo */
+    .action-btn.edit {
+        border-color: #e0e7ff;
+        color: #6366f1;
+    }
+    
+    .action-btn.edit:hover {
+        background: #6366f1;
+        color: white;
+        border-color: #6366f1;
+    }
+    
     /* Email Button - Soft Sky Blue */
     .action-btn.email {
         border-color: #bae6fd;
@@ -1296,7 +1308,7 @@
                 <th>Division</th>
                 <th>Jersey</th>
                 <th>Email Status</th>
-                <th style="width: 200px;">Actions</th>
+                <th style="width: 240px;">Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -1340,6 +1352,10 @@
                 </td>
                 <td>
                     <div class="row-actions">
+                        <button class="action-btn edit btn-edit" title="Edit athlete information">
+                            <span class="action-icon">✏️</span>
+                            <span class="action-btn-text">Edit</span>
+                        </button>
                         <button class="action-btn email btn-send-email" 
                                 title="Send confirmation email"
                                 data-email-sent="{{ player.confirmation_sent|lower }}">
@@ -2094,213 +2110,4 @@
             updateStatistics();
             
         } catch (error) {
-            console.error('Error saving edits:', error);
-            alert(`Failed to save changes: ${error.message}`);
-        }
-    }
-
-    // Year navigation links
-    {% if view == 'birthyear' %}
-    document.querySelectorAll('.nav-year-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const year = link.dataset.year;
-            filterByYear(year);
-        });
-    });
-    {% endif %}
-
-    {% if view == 'division' %}
-    document.querySelectorAll('.nav-scroll-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const targetId = link.getAttribute('href').substring(1);
-            const targetElement = document.getElementById(targetId);
-            
-            if (targetElement) {
-                const scrollContainer = document.querySelector('.main-content-scroll');
-                const elementPosition = targetElement.offsetTop;
-                const offsetPosition = elementPosition - 20;
-                
-                scrollContainer.scrollTo({
-                    top: offsetPosition,
-                    behavior: 'smooth'
-                });
-            }
-        });
-    });
-    
-    updateStatistics();
-    {% endif %}
-
-    // Make rows clickable
-    function attachRowEventHandlers() {
-        document.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
-            const newRow = row.cloneNode(true);
-            row.parentNode.replaceChild(newRow, row);
-            
-            newRow.addEventListener('click', (e) => {
-                if (e.target.closest('.row-actions') || e.target.closest('.player-checkbox')) {
-                    return;
-                }
-                openDetail(newRow);
-            });
-            
-            attachRowHandlers(newRow);
-        });
-        
-        document.querySelectorAll('.select-all-checkbox').forEach(cb => {
-            cb.addEventListener('change', function() {
-                selectAll(this);
-            });
-        });
-    }
-
-    // ESC to close
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && detailSidebar.classList.contains('open')) {
-            closeDetail();
-        }
-    });
-
-    // Row handlers (simplified - no inline editing)
-    function attachRowHandlers(row) {
-        row.querySelector('.btn-delete')?.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const id = row.dataset.playerId;
-            const playerName = row.querySelector('.player-name').textContent.trim();
-            
-            if (!confirm(`Delete ${playerName}? This action cannot be undone.`)) return;
-            
-            await fetch(`/players/${id}`, { method: 'DELETE' });
-            row.remove();
-            updateStatistics();
-        });
-
-        row.querySelector('.btn-send-email')?.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const btn = e.currentTarget;
-            const regId = row.dataset.regId;
-            
-            btn.disabled = true;
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = '<span class="action-icon">⏳</span><span class="action-btn-text">Sending...</span>';
-            
-            try {
-                const response = await fetch(`/registrations/${regId}/send_email`, { method: 'POST' });
-                if (response.ok) {
-                    btn.dataset.emailSent = 'true';
-                    btn.classList.add('sent');
-                    btn.innerHTML = '<span class="action-icon">✅</span><span class="action-btn-text">Sent</span>';
-                    btn.title = 'Email sent successfully';
-                    
-                    setTimeout(() => {
-                        btn.disabled = false;
-                        btn.classList.remove('sent');
-                        btn.innerHTML = originalHTML;
-                        btn.title = 'Send confirmation email';
-                    }, 2000);
-                    
-                    const statusBadge = row.querySelector('.status-badge');
-                    if (statusBadge) {
-                        statusBadge.className = 'status-badge sent';
-                        statusBadge.textContent = '✓ Sent';
-                    }
-                    
-                    row.dataset.confirmationSent = 'true';
-                    
-                    const successMessage = document.createElement('div');
-                    successMessage.textContent = '✅ Email sent successfully!';
-                    successMessage.style.cssText = `
-                        position: fixed;
-                        top: 20px;
-                        right: 20px;
-                        background: linear-gradient(135deg, #22c55e, #16a34a);
-                        color: white;
-                        padding: 12px 20px;
-                        border-radius: 8px;
-                        box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
-                        z-index: 10000;
-                    `;
-                    document.body.appendChild(successMessage);
-                    
-                    setTimeout(() => {
-                        successMessage.remove();
-                    }, 3000);
-                } else {
-                    throw new Error('Failed to send email');
-                }
-            } catch (error) {
-                btn.disabled = false;
-                btn.innerHTML = originalHTML;
-                btn.title = 'Send confirmation email';
-                
-                alert('Failed to send email. Please try again.');
-            }
-        });
-        
-        row.querySelector('.player-checkbox')?.addEventListener('change', function(e) {
-            e.stopPropagation();
-            togglePlayerSelection(this);
-        });
-    }
-
-    // Attach handlers to all rows initially
-    attachRowEventHandlers();
-
-    // Add player functionality
-    document.querySelectorAll('.btn-show-add-form').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tbody = btn.closest('tbody');
-            tbody.querySelector('.add-row').classList.add('d-none');
-            tbody.querySelector('.add-form-row').classList.remove('d-none');
-        });
-    });
-
-    document.querySelectorAll('.btn-add-cancel').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tbody = btn.closest('tbody');
-            tbody.querySelector('.add-row').classList.remove('d-none');
-            tbody.querySelector('.add-form-row').classList.add('d-none');
-        });
-    });
-
-    document.querySelectorAll('.btn-add-save').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const tbody = btn.closest('tbody');
-            const fullName = tbody.querySelector('.new-full-name').value;
-            const birthYear = tbody.querySelector('.new-birth-year').value;
-            const parentEmail = tbody.querySelector('.new-parent-email').value;
-            const sport = tbody.querySelector('.new-sport').value;
-            const division = tbody.querySelector('.new-division').value;
-            
-            const payload = {
-                full_name: fullName,
-                birth_year: birthYear ? parseInt(birthYear) : null,
-                parent_email: parentEmail,
-                sport: sport,
-                division: division,
-                season: new Date().getFullYear().toString()
-            };
-            
-            const response = await fetch('/players/inline', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            
-            if (response.ok) {
-                location.reload();
-            } else {
-                alert('Failed to add player');
-            }
-        });
-    });
-</script>
-
-    </main>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+            console.error('Error saving edits:', er
