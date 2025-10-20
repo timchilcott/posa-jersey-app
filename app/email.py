@@ -320,14 +320,14 @@ def process_inbound_email(email_body: str, db):
         full_text = soup.get_text(separator=' ', strip=True)
         
         # LOG EVERYTHING TO CONSOLE
-        logger.info("\n" + "=" * 80)
-        logger.info("FULL EXTRACTED TEXT (first 2000 characters)")
-        logger.info("=" * 80)
-        logger.info(full_text[:2000])
-        logger.info("...")
-        logger.info("=" * 80)
-        logger.info(f"Total length: {len(full_text)} characters")
-        logger.info("=" * 80 + "\n")
+        print("\n" + "=" * 80)
+        print("FULL EXTRACTED TEXT (first 2000 characters)")
+        print("=" * 80)
+        print(full_text[:2000])
+        print("...")
+        print("=" * 80)
+        print(f"Total length: {len(full_text)} characters")
+        print("=" * 80 + "\n")
         
         # Try to isolate Order Details section
         order_section = None
@@ -336,10 +336,10 @@ def process_inbound_email(email_body: str, db):
         match = re.search(r'Order Details:(.{50,1000}?)(?:Total:|Program Info:|Division Price:|$)', full_text, re.IGNORECASE | re.DOTALL)
         if match:
             order_section = match.group(1).strip()
-            logger.info("✓ Found Order Details section:")
-            logger.info("-" * 80)
-            logger.info(order_section[:500])
-            logger.info("-" * 80 + "\n")
+            print("✓ Found Order Details section:")
+            print("-" * 80)
+            print(order_section[:500])
+            print("-" * 80 + "\n")
         else:
             logger.warning("⚠ Could not find Order Details section, using full text")
             order_section = full_text
@@ -348,9 +348,9 @@ def process_inbound_email(email_body: str, db):
         order_section = re.sub(r'\s*\n\s*', ' ', order_section)
         order_section = re.sub(r'\s+', ' ', order_section)
         
-        logger.info("CLEANED ORDER SECTION:")
-        logger.info(order_section[:500])
-        logger.info("\n")
+        print("CLEANED ORDER SECTION:")
+        print(order_section[:500])
+        print("\n")
         
         # NOW TRY PARSING - Multi-line format handling
         player_name = None
@@ -378,9 +378,9 @@ def process_inbound_email(email_body: str, db):
         ]
         
         for pattern, description in patterns:
-            logger.info(f"Testing: {description}")
+            print(f"Testing: {description}")
             matches = list(re.finditer(pattern, order_section, re.IGNORECASE))
-            logger.info(f"  Found {len(matches)} potential matches")
+            print(f"  Found {len(matches)} potential matches")
             
             for i, match in enumerate(matches, 1):
                 groups = match.groups()
@@ -389,7 +389,7 @@ def process_inbound_email(email_body: str, db):
                 sp = groups[2].strip().lower()
                 gr = groups[3].strip() if len(groups) > 3 else None
                 
-                logger.info(f"  Match {i}: '{name}' | {yr} | {sp} | {gr or 'no grade'}")
+                print(f"  Match {i}: '{name}' | {yr} | {sp} | {gr or 'no grade'}")
                 
                 # Validate name
                 invalid = ['thank', 'signing', 'order', 'total', 'balance', 'amount', 
@@ -423,23 +423,23 @@ def process_inbound_email(email_body: str, db):
             if player_name:
                 break
             else:
-                logger.info(f"  No valid matches from this pattern\n")
+                print(f"  No valid matches from this pattern\n")
         
         # RESULT
         if player_name and year and sport:
-            logger.info("\n" + "=" * 80)
-            logger.info("✓✓✓ SUCCESSFULLY PARSED ✓✓✓")
-            logger.info(f"  Player: {player_name}")
-            logger.info(f"  Year: {year}")
-            logger.info(f"  Sport: {sport}")
+            print("\n" + "=" * 80)
+            print("✓✓✓ SUCCESSFULLY PARSED ✓✓✓")
+            print(f"  Player: {player_name}")
+            print(f"  Year: {year}")
+            print(f"  Sport: {sport}")
             if grade:
-                logger.info(f"  Grade: {grade}")
-            logger.info("=" * 80 + "\n")
+                print(f"  Grade: {grade}")
+            print("=" * 80 + "\n")
             
             # Always put new players in Waiting Room
             division = "Waiting Room"
             if grade:
-                logger.info(f"✓ Grade info captured: {grade} (player will be in Waiting Room)")
+                print(f"✓ Grade info captured: {grade} (player will be in Waiting Room)")
             
             # Create/update player
             existing_player = db.query(Player).filter(Player.full_name == player_name).first()
