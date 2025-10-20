@@ -245,6 +245,14 @@ def process_inbound_email(email_body: str, db):
                     parent_email = email_match.group(0)
                     logger.info(f"Found parent email from To header: {parent_email}")
         
+        # Also try to extract from the email body (sometimes it's the recipient name)
+        if not parent_email:
+            # Look for a name at the top of the email that might be associated with an email
+            name_match = re.search(r'^([A-Z][a-z]+\s+[A-Z][a-z]+)', email_body, re.MULTILINE)
+            if name_match:
+                # This is just a fallback - we'll use unknown@example.com
+                logger.info(f"Found potential parent name: {name_match.group(1)}")
+        
         # Get HTML content
         html_content = None
         if msg.is_multipart():
@@ -269,6 +277,7 @@ def process_inbound_email(email_body: str, db):
         order_no_match = re.search(r'Order No:\s*(\d+)', soup.get_text())
         if order_no_match:
             order_number = order_no_match.group(1)
+            logger.info(f"Found order number: {order_number}")
         
         # Extract order date
         order_date = None
@@ -276,25 +285,66 @@ def process_inbound_email(email_body: str, db):
         if order_date_match:
             try:
                 order_date = datetime.strptime(order_date_match.group(1), '%b %d, %Y')
+                logger.info(f"Found order date: {order_date}")
             except:
                 pass
         
         text_content = soup.get_text()
         
-        # More flexible pattern - matches name on separate line from number
-        # Looks for: digits, then name (with hyphens/apostrophes), then year, then "Pines", then sport
+        # Try multiple patterns to extract player information
+        player_found = False
+        
+        # Pattern 1: Handle format like "1Sophia Roop2025 Pines Volleyball"
+        # Look for: optional digit(s), player name (First Last), year, "Pines", sport
         pattern1 = re.search(
-            r'(\d+)\s+([A-Z][a-z]+(?:[-\s][A-Z][a-z]+)*(?:-[A-Z][a-z]+)*)\s+(\d{4})\s+Pines\s+(\w+)', 
-            text_content, 
-            re.MULTILINE | re.DOTALL
+            r'(?:\d+\s*)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+?)\s*(\d{4})\s+Pines\s+(\w+)',
+            text_content,
+            re.MULTILINE
         )
         
+        # Pattern 2: More flexible - allow for variable spacing
+        if not pattern1:
+            pattern1 = re.search(
+                r'\d*\s*([A-Z][a-z]+\s+[A-Z][a-z]+)\s*(\d{4})\s*Pines\s*(\w+)',
+                text_content,
+                re.MULTILINE | re.IGNORECASE
+            )
+        
+        # Pattern 3: Look in Order Details section more carefully
+        if not pattern1:
+            # Find text after "Order Details:" and before any price/balance info
+            order_section = re.search(
+                r'Order Details:.*?((?:\d+\s*)?[A-Z][a-z]+\s+[A-Z][a-z]+\s*\d{4}\s+Pines\s+\w+)',
+                text_content,
+                re.DOTALL | re.IGNORECASE
+            )
+            if order_section:
+                # Now parse the extracted section
+                pattern1 = re.search(
+                    r'(?:\d+\s*)?([A-Z][a-z]+\s+[A-Z][a-z]+)\s*(\d{4})\s+Pines\s+(\w+)',
+                    order_section.group(1)
+                )
+        
         if pattern1:
-            player_name = pattern1.group(2).strip()
-            year = pattern1.group(3)
-            sport = pattern1.group(4).strip().lower()
+            player_name = pattern1.group(1).strip()
+            year = pattern1.group(2)
+            sport = pattern1.group(3).strip().lower()
             
             logger.info(f"Found player: {player_name}, sport: {sport}, year: {year}")
+            
+            # Extract division/grade info if present (like "3rd/4th Grade")
+            division_info = None
+            division_match = re.search(
+                r'(\d+(?:st|nd|rd|th)/\d+(?:st|nd|rd|th)\s+Grade)',
+                text_content,
+                re.IGNORECASE
+            )
+            if division_match:
+                division_info = division_match.group(1)
+                logger.info(f"Found grade info: {division_info}")
+            
+            # Always start in Waiting Room - admin will assign proper division
+            division = "Waiting Room"
             
             # Check if player already exists
             existing_player = db.query(Player).filter(Player.full_name == player_name).first()
@@ -311,10 +361,14 @@ def process_inbound_email(email_body: str, db):
                     logger.info(f"Registration already exists for {player_name} in {sport} {year}")
                 else:
                     # Add new registration to Waiting Room
+                    program_name = f"{year} Pines {sport.title()}"
+                    if division_info:
+                        program_name += f" - {division_info}"
+                    
                     new_reg = Registration(
                         player_id=existing_player.id,
-                        program=f"{year} Pines {sport.title()}",
-                        division="Waiting Room",
+                        program=program_name,
+                        division=division,
                         sport=sport,
                         season=year,
                         order_number=order_number,
@@ -335,10 +389,14 @@ def process_inbound_email(email_body: str, db):
                 db.flush()
                 
                 # Create registration in Waiting Room
+                program_name = f"{year} Pines {sport.title()}"
+                if division_info:
+                    program_name += f" - {division_info}"
+                
                 new_reg = Registration(
                     player_id=new_player.id,
-                    program=f"{year} Pines {sport.title()}",
-                    division="Waiting Room",
+                    program=program_name,
+                    division=division,
                     sport=sport,
                     season=year,
                     order_number=order_number,
@@ -350,8 +408,11 @@ def process_inbound_email(email_body: str, db):
             
             db.commit()
             logger.info("Email processed successfully - player in Waiting Room")
-        else:
+            player_found = True
+        
+        if not player_found:
             logger.warning("Could not parse player information from email")
+            logger.debug(f"Email text preview: {text_content[:500]}")
             
     except Exception as e:
         logger.error(f"Error processing inbound email: {e}", exc_info=True)
