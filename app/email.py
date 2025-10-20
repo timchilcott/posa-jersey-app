@@ -442,9 +442,6 @@ def process_inbound_email(email_body: str, db):
                     print(f"    Grade: {player_data['grade']}")
             print("=" * 80 + "\n")
             
-            # Always put new players in Waiting Room
-            division = "Waiting Room"
-            
             # Create/update each player
             for player_data in all_players:
                 player_name = player_data['name']
@@ -453,7 +450,7 @@ def process_inbound_email(email_body: str, db):
                 grade = player_data['grade']
                 
                 if grade:
-                    print(f"✓ Grade info captured for {player_name}: {grade} (player will be in Waiting Room)")
+                    print(f"✓ Grade info captured for {player_name}: {grade}")
                 
                 # Create/update player
                 existing_player = db.query(Player).filter(Player.full_name == player_name).first()
@@ -473,6 +470,19 @@ def process_inbound_email(email_body: str, db):
                             db.commit()
                             logger.info("✓ Updated order info")
                     else:
+                        # Existing player, new registration for different sport/season
+                        # Use their existing division from any other registration
+                        other_reg = db.query(Registration).filter(
+                            Registration.player_id == existing_player.id
+                        ).first()
+                        
+                        if other_reg and other_reg.division and other_reg.division != "Waiting Room":
+                            division = other_reg.division
+                            logger.info(f"✓ Using existing division '{division}' for {player_name}")
+                        else:
+                            division = "Waiting Room"
+                            logger.info(f"✓ No existing division found, placing {player_name} in Waiting Room")
+                        
                         program_name = f"{year} Pines {sport.title()}"
                         if grade:
                             program_name += f" - {grade}"
@@ -489,8 +499,12 @@ def process_inbound_email(email_body: str, db):
                         )
                         db.add(new_reg)
                         db.commit()
-                        logger.info(f"✓ Added registration for {player_name}")
+                        logger.info(f"✓ Added registration for {player_name} in {division}")
                 else:
+                    # New player - put in Waiting Room
+                    division = "Waiting Room"
+                    logger.info(f"✓ New player {player_name} will be placed in Waiting Room")
+                    
                     new_player = Player(
                         full_name=player_name,
                         parent_email=parent_email or "unknown@example.com",
@@ -516,7 +530,7 @@ def process_inbound_email(email_body: str, db):
                     )
                     db.add(new_reg)
                     db.commit()
-                    logger.info(f"✓ Created new player {player_name}")
+                    logger.info(f"✓ Created new player {player_name} in Waiting Room")
             
             logger.info(f"SUCCESS - Processed {len(all_players)} player(s) from email")
         else:
