@@ -574,19 +574,22 @@ def update_registration_division(reg_id: int, payload: DivisionUpdate, request: 
     if not reg:
         raise HTTPException(status_code=404, detail="Registration not found")
     
+    player = reg.player
     old_division = reg.division
-    new_division = normalize_division(payload.division, reg.player.birth_year)
+    new_division = normalize_division(payload.division, player.birth_year)
     
-    # Update division
-    reg.division = new_division
+    # Update ALL registrations for this player to the same division
+    all_player_regs = db.query(Registration).filter(Registration.player_id == player.id).all()
+    for r in all_player_regs:
+        r.division = new_division
     
     # ONLY assign a jersey number if moving OUT of Waiting Room AND player doesn't have one
     if old_division == "Waiting Room" and new_division != "Waiting Room":
-        if not reg.player.jersey_number:
+        if not player.jersey_number:
             # Try to assign based on birth year first, if available
-            if reg.player.birth_year:
-                new_jersey = assign_jersey_number(db, reg.player.birth_year)
-                logger.info(f"Assigned jersey #{new_jersey} to {reg.player.full_name} based on birth year {reg.player.birth_year}")
+            if player.birth_year:
+                new_jersey = assign_jersey_number(db, player.birth_year)
+                logger.info(f"Assigned jersey #{new_jersey} to {player.full_name} based on birth year {player.birth_year}")
             else:
                 # No birth year? Just assign the next available number across all players
                 all_players = db.query(Player).all()
@@ -594,15 +597,15 @@ def update_registration_division(reg_id: int, payload: DivisionUpdate, request: 
                 new_jersey = 1
                 while new_jersey in taken:
                     new_jersey += 1
-                logger.info(f"Assigned jersey #{new_jersey} to {reg.player.full_name} (no birth year available)")
+                logger.info(f"Assigned jersey #{new_jersey} to {player.full_name} (no birth year available)")
             
-            reg.player.jersey_number = new_jersey
+            player.jersey_number = new_jersey
     
     db.commit()
     db.refresh(reg)
     return {
         "division": reg.division,
-        "jersey_number": reg.player.jersey_number
+        "jersey_number": player.jersey_number
     }
 
 @app.post("/registrations/{reg_id}/send_email")
