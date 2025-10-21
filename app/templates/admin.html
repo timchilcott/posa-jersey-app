@@ -61,11 +61,15 @@
         font-size: 18px;
         font-weight: 700;
         color: var(--posa-navy);
+        display: flex;
+        align-items: center;
+        gap: 10px;
     }
 
-    .logo::before {
-        content: "🌲 ";
-        font-size: 1.3rem;
+    .logo-img {
+        height: 32px;
+        width: auto;
+        display: block;
     }
 
     .sidebar-nav {
@@ -1113,7 +1117,12 @@
     <!-- Left Sidebar -->
     <aside class="sidebar">
         <div class="sidebar-header">
-            <div class="logo">POSA Sports</div>
+            <div class="logo">
+                <img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" 
+                     alt="POSA Pines Logo" 
+                     class="logo-img">
+                <span>POSA Sports</span>
+            </div>
         </div>
         
         <nav class="sidebar-nav">
