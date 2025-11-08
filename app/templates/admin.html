@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>POSA Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
@@ -34,12 +34,19 @@
     body {
         background: var(--gray-50);
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
     }
 
     .app-container {
         display: flex;
         height: 100vh;
         overflow: hidden;
+    }
+
+    /* Mobile Header - Hidden on Desktop */
+    .mobile-header {
+        display: none;
     }
 
     /* Left Sidebar */
@@ -1104,9 +1111,451 @@
         display: none !important;
     }
 
-    @media (max-width: 768px) {
+    /* Mobile Cards - Hidden on Desktop */
+    .mobile-cards {
+        display: none;
+    }
+
+    /* ============================================
+       MOBILE RESPONSIVE STYLES
+       ============================================ */
+    @media (max-width: 968px) {
+        /* Mobile Header */
+        .mobile-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: white;
+            border-bottom: 1px solid var(--gray-200);
+            position: sticky;
+            top: 0;
+            z-index: 1001;
+        }
+
+        .mobile-logo {
+            height: 28px;
+        }
+
+        .hamburger {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            transition: background 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .hamburger:active {
+            background: var(--gray-100);
+        }
+
+        .hamburger span {
+            width: 24px;
+            height: 3px;
+            background: var(--gray-900);
+            margin: 2.5px 0;
+            transition: 0.3s;
+            border-radius: 2px;
+        }
+
+        .hamburger.active span:nth-child(1) {
+            transform: rotate(-45deg) translate(-6px, 6px);
+        }
+
+        .hamburger.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger.active span:nth-child(3) {
+            transform: rotate(45deg) translate(-6px, -6px);
+        }
+
+        /* Sidebar Mobile */
         .sidebar {
+            position: fixed;
+            left: -280px;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            z-index: 1002;
+            transition: left 0.3s ease;
+            box-shadow: 4px 0 12px rgba(0,0,0,0.1);
+        }
+
+        .sidebar.mobile-open {
+            left: 0;
+        }
+
+        .mobile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1001;
             display: none;
+        }
+
+        .mobile-overlay.active {
+            display: block;
+        }
+
+        /* Main Content Mobile */
+        .main-content {
+            width: 100%;
+        }
+
+        .page-header {
+            padding: 12px 16px;
+        }
+
+        .page-title {
+            font-size: 20px;
+        }
+
+        .header-top {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .header-actions {
+            width: 100%;
+            justify-content: flex-start;
+        }
+
+        .view-toggle {
+            width: 100%;
+        }
+
+        .view-btn {
+            flex: 1;
+            text-align: center;
+            justify-content: center;
+            padding: 10px 12px;
+            min-height: 44px;
+        }
+
+        /* Toolbar Mobile */
+        .toolbar {
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .search-box {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .search-input {
+            min-height: 44px;
+        }
+
+        /* Stats Bar Mobile */
+        .stats-bar {
+            padding: 12px 16px;
+            gap: 12px;
+        }
+
+        .stat-card {
+            min-width: 0;
+            flex: 1 1 calc(50% - 6px);
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .stat-value {
+            font-size: 24px;
+        }
+
+        /* Filter Pills Mobile */
+        .filter-group {
+            padding: 12px 16px;
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .filter-group::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .filter-group::-webkit-scrollbar-thumb {
+            background: var(--gray-400);
+            border-radius: 2px;
+        }
+
+        .filter-pill {
+            white-space: nowrap;
+            flex-shrink: 0;
+            min-height: 36px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Table Container Mobile */
+        .table-container {
+            padding: 12px 16px 24px;
+        }
+
+        /* Hide Desktop Tables on Mobile */
+        .data-table {
+            display: none;
+        }
+
+        /* Show Mobile Cards */
+        .mobile-cards {
+            display: block;
+        }
+
+        .player-card {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .player-card:active {
+            transform: scale(0.98);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .player-card.selected, .player-card.row-selected {
+            border-color: var(--pines-green);
+            border-width: 2px;
+            padding: 15px;
+            background: #f0fdf4;
+        }
+
+        .player-card.waiting-room {
+            background: #fffbeb;
+            border-color: #fde047;
+        }
+
+        .player-card.duplicate-jersey {
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .card-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .card-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 4px;
+        }
+
+        .card-email {
+            font-size: 13px;
+            color: var(--gray-600);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .card-checkbox {
+            width: 24px;
+            height: 24px;
+            margin-left: 12px;
+            flex-shrink: 0;
+            accent-color: var(--pines-green);
+            cursor: pointer;
+        }
+
+        .card-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .card-detail {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .card-detail-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: var(--gray-500);
+            letter-spacing: 0.5px;
+        }
+
+        .card-detail-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .card-jersey {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 32px;
+            padding: 4px 8px;
+            background: var(--gray-100);
+            border: 2px solid var(--gray-300);
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .card-sports {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 8px;
+            padding-top: 16px;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .card-actions .action-btn {
+            flex: 1;
+            min-width: 0;
+            padding: 12px 8px;
+            font-size: 13px;
+            min-height: 44px;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .card-actions .action-icon {
+            font-size: 18px;
+            width: auto;
+            height: auto;
+        }
+
+        .card-actions .action-btn-text {
+            font-size: 11px;
+        }
+
+        /* Bulk Actions Mobile */
+        .bulk-actions-bar {
+            flex-direction: column;
+            padding: 12px 16px;
+            gap: 12px;
+        }
+
+        .bulk-actions-info {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .bulk-actions-buttons {
+            width: 100%;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .bulk-action-btn {
+            flex: 1 1 calc(50% - 4px);
+            min-width: 0;
+            justify-content: center;
+            font-size: 12px;
+            min-height: 44px;
+        }
+
+        /* Detail Sidebar Mobile */
+        .detail-sidebar {
+            left: 0;
+            right: auto;
+            width: 100%;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            border-radius: 16px 16px 0 0;
+            max-height: 90vh;
+        }
+
+        .detail-sidebar.open {
+            right: auto;
+            transform: translateY(0);
+        }
+
+        .detail-overlay {
+            z-index: 999;
+        }
+
+        /* Section Headers Mobile */
+        .year-section h3 {
+            font-size: 15px;
+            margin: 16px 0 12px 0 !important;
+            font-weight: 700;
+        }
+
+        /* Improve touch targets */
+        .btn {
+            min-height: 44px;
+            padding: 12px 16px;
+        }
+
+        .btn-sm {
+            min-height: 40px;
+            padding: 10px 14px;
+        }
+
+        .nav-item {
+            min-height: 44px;
+            padding: 12px 12px;
+        }
+
+        /* Hide desktop-only elements */
+        .select-all-checkbox {
+            display: none;
+        }
+
+        .add-row, .add-form-row {
+            display: none;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .stat-card {
+            flex: 1 1 100%;
+        }
+
+        .card-details {
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .bulk-action-btn {
+            flex: 1 1 100%;
+        }
+
+        .card-actions {
+            flex-wrap: wrap;
+        }
+
+        .card-actions .action-btn {
+            flex: 1 1 calc(50% - 4px);
         }
     }
 </style>
@@ -1114,8 +1563,23 @@
 <body>
 
 <div class="app-container">
+    <!-- Mobile Header (Hidden on Desktop) -->
+    <div class="mobile-header">
+        <img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" 
+             alt="POSA Pines Logo" 
+             class="mobile-logo">
+        <button class="hamburger" id="hamburger-btn" aria-label="Menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </div>
+
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay" id="mobile-overlay"></div>
+
     <!-- Left Sidebar -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="logo">
                 <img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" 
@@ -1233,12 +1697,12 @@
 <div class="bulk-actions-bar" id="bulk-actions-bar">
     <div class="bulk-actions-info">
         <span id="selected-count">0 selected</span>
-        <button class="bulk-action-btn" onclick="clearSelection()">Clear Selection</button>
+        <button class="bulk-action-btn" onclick="clearSelection()">Clear</button>
     </div>
     <div class="bulk-actions-buttons">
         <button class="bulk-action-btn" onclick="bulkSendEmails()">📧 Send Emails</button>
         <button class="bulk-action-btn" onclick="bulkUpdateDivision()">📊 Update Division</button>
-        <button class="bulk-action-btn danger" onclick="bulkDelete()">🗑️ Delete Selected</button>
+        <button class="bulk-action-btn danger" onclick="bulkDelete()">🗑️ Delete</button>
     </div>
 </div>
 
@@ -1248,7 +1712,7 @@
         <div class="stat-value" id="stat-total">{{ total_players }}</div>
         <div class="stat-label" id="stat-total-label">Total Athletes</div>
     </div>
-    <div class="stat-card {% if waiting_room_players %}alert{% endif %}" style="cursor: pointer;" onclick="filterByYear('waiting')">
+    <div class="stat-card {% if waiting_room_players %}alert{% endif %}" onclick="filterByYear('waiting')">
         <div class="stat-value" id="stat-waiting">{{ waiting_room_players|length if waiting_room_players else 0 }}</div>
         <div class="stat-label" id="stat-waiting-label">Waiting Room</div>
     </div>
@@ -1256,8 +1720,8 @@
         <div class="stat-value" id="stat-years">{{ birth_year_counts|length }}</div>
         <div class="stat-label" id="stat-years-label">Birth Years</div>
     </div>
-    <div class="stat-card" id="clear-filters-card" style="display: none; cursor: pointer; background: var(--pines-green); color: white;" onclick="clearAllFilters()">
-        <div class="stat-value" style="font-size: 18px;">✖</div>
+    <div class="stat-card" id="clear-filters-card" style="display: none; background: var(--pines-green); color: white;" onclick="clearAllFilters()">
+        <div class="stat-value" style="font-size: 18px; color: white;">✖</div>
         <div class="stat-label" style="color: white;">Clear Filters</div>
     </div>
 </div>
@@ -1273,9 +1737,10 @@
     <div class="filter-pill" data-sport="flag">🏈 Flag Football</div>
 </div>
 
-<!-- Table -->
+<!-- Table / Cards -->
 <div class="table-container">
-    {% macro player_table(players) %}
+    {% macro player_content(players) %}
+    <!-- Desktop Table -->
     <table class="data-table">
         <thead>
             <tr>
@@ -1398,34 +1863,101 @@
             </tr>
         </tbody>
     </table>
+
+    <!-- Mobile Cards -->
+    <div class="mobile-cards">
+        {% for player in players %}
+        <div class="player-card {% if player.is_duplicate %}duplicate-jersey{% endif %} {% if player.division == 'Waiting Room' %}waiting-room{% endif %}"
+             data-player-id="{{ player.id }}"
+             data-reg-id="{{ player.registration_id }}"
+             data-sports="{{ player.sports|join(',') }}"
+             data-confirmation-sent="{{ player.confirmation_sent|lower }}">
+            <div class="card-header">
+                <div class="card-info">
+                    <div class="card-name">{{ player.full_name }}</div>
+                    <div class="card-email">{{ player.parent_email }}</div>
+                </div>
+                <input type="checkbox" class="card-checkbox player-checkbox" 
+                       data-player-id="{{ player.id }}" 
+                       data-reg-id="{{ player.registration_id }}">
+            </div>
+            <div class="card-details">
+                <div class="card-detail">
+                    <div class="card-detail-label">Birth Year</div>
+                    <div class="card-detail-value birth-year">{{ player.birth_year or '-' }}</div>
+                </div>
+                <div class="card-detail">
+                    <div class="card-detail-label">Jersey</div>
+                    <div class="card-detail-value">
+                        <span class="card-jersey jersey-badge">{{ player.jersey_number if player.jersey_number else '-' }}</span>
+                    </div>
+                </div>
+                <div class="card-detail">
+                    <div class="card-detail-label">Division</div>
+                    <div class="card-detail-value division">{{ player.division }}</div>
+                </div>
+                <div class="card-detail">
+                    <div class="card-detail-label">Status</div>
+                    <div class="card-detail-value">
+                        {% if player.confirmation_sent %}
+                        <span class="status-badge sent">✓ Sent</span>
+                        {% else %}
+                        <span class="status-badge pending">⏳ Pending</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-detail" style="grid-column: 1 / -1;">
+                    <div class="card-detail-label">Sports</div>
+                    <div class="card-sports view-sports">
+                        {% for sport in player.sports %}
+                        <span class="sport-tag">{{ sport }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <div class="card-actions">
+                <button class="action-btn edit btn-edit" title="Edit">
+                    <span class="action-icon">✏️</span>
+                    <span class="action-btn-text">Edit</span>
+                </button>
+                <button class="action-btn email btn-send-email"
+                        data-email-sent="{{ player.confirmation_sent|lower }}"
+                        title="Email">
+                    <span class="action-icon">📧</span>
+                    <span class="action-btn-text">Email</span>
+                </button>
+                <button class="action-btn delete btn-delete" title="Delete">
+                    <span class="action-icon">⚠️</span>
+                    <span class="action-btn-text">Delete</span>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
     {% endmacro %}
 
     <!-- All Athletes Section -->
     <div class="year-section active" id="section-all">
         {% if view == 'birthyear' %}
             {% for group in group_list %}
-            <h3 style="margin: 20px 0 12px 0; color: var(--gray-900); font-size: 16px; font-weight: 700;">
-                {{ birth_year_labels[group] if birth_year_labels else group }}
-            </h3>
-            {{ player_table(players_by_group[group]) }}
+            <h3>{{ birth_year_labels[group] if birth_year_labels else group }}</h3>
+            {{ player_content(players_by_group[group]) }}
             {% endfor %}
         {% else %}
             {% for group in group_list %}
-            <h3 style="margin: 20px 0 12px 0; color: var(--gray-900); font-size: 16px; font-weight: 700;">
-                {{ group }}
-            </h3>
-            {{ player_table(players_by_group[group]) }}
+            <h3>{{ group }}</h3>
+            {{ player_content(players_by_group[group]) }}
             {% endfor %}
         {% endif %}
     </div>
 
     <!-- Waiting Room Section -->
     <div class="year-section" id="section-waiting">
-        <h3 style="margin: 20px 0 12px 0; color: var(--red-500); font-size: 16px; font-weight: 700;">
+        <h3 style="color: var(--red-500);">
             ⏳ Waiting Room {% if waiting_room_players %}({{ waiting_room_players|length }}){% else %}(0){% endif %}
         </h3>
         {% if waiting_room_players %}
-        {{ player_table(waiting_room_players) }}
+        {{ player_content(waiting_room_players) }}
         {% else %}
         <div style="background: white; border: 1px solid var(--gray-200); border-radius: 8px; padding: 40px; text-align: center;">
             <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
@@ -1438,10 +1970,8 @@
     {% if view == 'birthyear' %}
         {% for group in group_list %}
         <div class="year-section" id="section-{{ group }}">
-            <h3 style="margin: 20px 0 12px 0; color: var(--gray-900); font-size: 16px; font-weight: 700;">
-                {{ birth_year_labels[group] if birth_year_labels else group }}
-            </h3>
-            {{ player_table(players_by_group[group]) }}
+            <h3>{{ birth_year_labels[group] if birth_year_labels else group }}</h3>
+            {{ player_content(players_by_group[group]) }}
         </div>
         {% endfor %}
     {% endif %}
@@ -1560,6 +2090,34 @@
     const detailOverlay = document.getElementById('detail-overlay');
     let selectedPlayers = new Set();
     
+    // Mobile menu handling
+    const hamburger = document.getElementById('hamburger-btn');
+    const sidebar = document.getElementById('sidebar');
+    const mobileOverlay = document.getElementById('mobile-overlay');
+    
+    if (hamburger) {
+        hamburger.addEventListener('click', () => {
+            hamburger.classList.toggle('active');
+            sidebar.classList.toggle('mobile-open');
+            mobileOverlay.classList.toggle('active');
+        });
+        
+        mobileOverlay.addEventListener('click', () => {
+            hamburger.classList.remove('active');
+            sidebar.classList.remove('mobile-open');
+            mobileOverlay.classList.remove('active');
+        });
+        
+        // Close mobile menu when clicking a nav link
+        document.querySelectorAll('.nav-item').forEach(link => {
+            link.addEventListener('click', () => {
+                hamburger.classList.remove('active');
+                sidebar.classList.remove('mobile-open');
+                mobileOverlay.classList.remove('active');
+            });
+        });
+    }
+    
     // Multi-select functionality
     function updateBulkActionsBar() {
         const bar = document.getElementById('bulk-actions-bar');
@@ -1577,7 +2135,8 @@
         selectedPlayers.clear();
         document.querySelectorAll('.player-checkbox').forEach(cb => {
             cb.checked = false;
-            cb.closest('tr').classList.remove('row-selected');
+            const row = cb.closest('tr, .player-card');
+            if (row) row.classList.remove('row-selected', 'selected');
         });
         document.querySelectorAll('.select-all-checkbox').forEach(cb => cb.checked = false);
         updateBulkActionsBar();
@@ -1614,26 +2173,28 @@
     }
     
     function togglePlayerSelection(checkbox) {
-        const row = checkbox.closest('tr');
+        const row = checkbox.closest('tr, .player-card');
         const playerId = checkbox.dataset.playerId;
         const regId = checkbox.dataset.regId;
         const key = `${playerId}:${regId}`;
         
         if (checkbox.checked) {
             selectedPlayers.add(key);
-            row.classList.add('row-selected');
+            row.classList.add('row-selected', 'selected');
         } else {
             selectedPlayers.delete(key);
-            row.classList.remove('row-selected');
+            row.classList.remove('row-selected', 'selected');
         }
         
         const table = checkbox.closest('table');
-        const allCheckboxes = table.querySelectorAll('.player-checkbox');
-        const checkedBoxes = table.querySelectorAll('.player-checkbox:checked');
-        const selectAllCb = table.querySelector('.select-all-checkbox');
-        
-        if (selectAllCb) {
-            selectAllCb.checked = allCheckboxes.length > 0 && allCheckboxes.length === checkedBoxes.length;
+        if (table) {
+            const allCheckboxes = table.querySelectorAll('.player-checkbox');
+            const checkedBoxes = table.querySelectorAll('.player-checkbox:checked');
+            const selectAllCb = table.querySelector('.select-all-checkbox');
+            
+            if (selectAllCb) {
+                selectAllCb.checked = allCheckboxes.length > 0 && allCheckboxes.length === checkedBoxes.length;
+            }
         }
         
         updateBulkActionsBar();
@@ -1785,8 +2346,9 @@
         if (!currentSection) return;
         
         const tables = currentSection.querySelectorAll('.data-table');
+        const mobileCards = currentSection.querySelectorAll('.mobile-cards');
         
-        tables.forEach(table => {
+        tables.forEach((table, idx) => {
             let heading = table.previousElementSibling;
             while (heading && heading.tagName !== 'H3') {
                 heading = heading.previousElementSibling;
@@ -1798,9 +2360,11 @@
                 if (tableDivision === divisionName) {
                     heading.style.display = '';
                     table.style.display = '';
+                    if (mobileCards[idx]) mobileCards[idx].style.display = '';
                 } else {
                     heading.style.display = 'none';
                     table.style.display = 'none';
+                    if (mobileCards[idx]) mobileCards[idx].style.display = 'none';
                 }
             }
         });
@@ -1827,7 +2391,7 @@
         const currentSection = document.querySelector('.year-section.active');
         if (!currentSection) return;
         
-        currentSection.querySelectorAll('h3, .data-table').forEach(element => {
+        currentSection.querySelectorAll('h3, .data-table, .mobile-cards').forEach(element => {
             element.style.display = '';
         });
         
@@ -1857,24 +2421,30 @@
         const currentSection = document.querySelector('.year-section.active');
         if (!currentSection) return;
         
-        const visiblePlayers = currentSection.querySelectorAll('tbody tr[data-player-id]');
+        // Count from both table rows and mobile cards
+        const visibleTablePlayers = currentSection.querySelectorAll('tbody tr[data-player-id]');
+        const visibleCardPlayers = currentSection.querySelectorAll('.player-card');
+        
         let totalCount = 0;
         let waitingRoomCount = 0;
         const birthYears = new Set();
         
-        visiblePlayers.forEach(row => {
-            const isVisible = row.style.display !== 'none';
-            const table = row.closest('table');
-            const tableVisible = !table || table.style.display !== 'none';
+        // Use card count on mobile, table count on desktop
+        const playersToCount = window.innerWidth <= 968 ? visibleCardPlayers : visibleTablePlayers;
+        
+        playersToCount.forEach(player => {
+            const isVisible = player.style.display !== 'none';
+            const container = player.closest('.data-table, .mobile-cards');
+            const containerVisible = !container || container.style.display !== 'none';
             
-            if (isVisible && tableVisible) {
+            if (isVisible && containerVisible) {
                 totalCount++;
                 
-                if (row.classList.contains('waiting-room')) {
+                if (player.classList.contains('waiting-room')) {
                     waitingRoomCount++;
                 }
                 
-                const birthYear = row.querySelector('.birth-year')?.textContent?.trim();
+                const birthYear = player.querySelector('.birth-year')?.textContent?.trim();
                 if (birthYear && birthYear !== '-') {
                     birthYears.add(birthYear);
                 }
@@ -1927,12 +2497,13 @@
         const currentSection = document.querySelector('.year-section.active');
         if (!currentSection) return;
         
-        currentSection.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
-            const playerSports = (row.dataset.sports || '').toLowerCase();
+        // Filter both table rows and mobile cards
+        currentSection.querySelectorAll('tbody tr[data-player-id], .player-card').forEach(player => {
+            const playerSports = (player.dataset.sports || '').toLowerCase();
             if (activeSportFilter === 'all' || playerSports.includes(activeSportFilter.toLowerCase())) {
-                row.style.display = '';
+                player.style.display = '';
             } else {
-                row.style.display = 'none';
+                player.style.display = 'none';
             }
         });
         
@@ -1943,23 +2514,26 @@
     let currentDetailPlayer = null;
     let currentDetailRow = null;
     
-    function openDetail(row) {
+    function openDetail(element) {
         if (currentSelectedRow) {
             currentSelectedRow.classList.remove('selected');
         }
         
-        currentSelectedRow = row;
-        currentDetailRow = row;
-        row.classList.add('selected');
+        currentSelectedRow = element;
+        currentDetailRow = element;
+        element.classList.add('selected');
         
-        const playerId = row.dataset.playerId;
-        const regId = row.dataset.regId;
-        const name = row.querySelector('.player-name').textContent.trim();
-        const email = row.querySelector('.player-email').textContent.trim();
-        const jersey = row.querySelector('.jersey-badge').textContent.trim();
-        const birthYear = row.querySelector('.birth-year').textContent.trim();
-        const division = row.querySelector('.division').textContent.trim();
-        const sports = Array.from(row.querySelectorAll('.sport-tag')).map(t => t.textContent.trim());
+        const playerId = element.dataset.playerId;
+        const regId = element.dataset.regId;
+        
+        // Get data from element (works for both table rows and cards)
+        const name = element.querySelector('.player-name, .card-name').textContent.trim();
+        const email = element.querySelector('.player-email, .card-email').textContent.trim();
+        const jersey = element.querySelector('.jersey-badge, .card-jersey').textContent.trim();
+        const birthYear = element.querySelector('.birth-year').textContent.trim();
+        const division = element.querySelector('.division').textContent.trim();
+        const sportTags = element.querySelectorAll('.sport-tag');
+        const sports = Array.from(sportTags).map(t => t.textContent.trim());
         const initials = name.split(' ').map(n => n[0]).join('');
         
         currentDetailPlayer = {
@@ -1995,7 +2569,7 @@
             const response = await fetch(`/registrations/${regId}/send_email`, { method: 'POST' });
             if (response.ok) {
                 alert('Email sent!');
-                const statusBadge = row.querySelector('.status-badge');
+                const statusBadge = element.querySelector('.status-badge');
                 if (statusBadge) {
                     statusBadge.className = 'status-badge sent';
                     statusBadge.textContent = '✓ Sent';
@@ -2007,7 +2581,7 @@
             if (!confirm(`Delete ${name}?`)) return;
             await fetch(`/players/${playerId}`, { method: 'DELETE' });
             closeDetail();
-            row.remove();
+            element.remove();
             updateStatistics();
         };
         
@@ -2105,7 +2679,7 @@
                 if (divisionData.jersey_number !== undefined) {
                     document.getElementById('detail-jersey').textContent = '#' + (divisionData.jersey_number || '-');
                     if (currentDetailRow) {
-                        currentDetailRow.querySelector('.jersey-badge').textContent = divisionData.jersey_number || '-';
+                        currentDetailRow.querySelector('.jersey-badge, .card-jersey').textContent = divisionData.jersey_number || '-';
                     }
                 }
             }
@@ -2118,12 +2692,12 @@
             document.getElementById('detail-avatar').textContent = newName.split(' ').map(n => n[0]).join('');
             
             if (currentDetailRow) {
-                currentDetailRow.querySelector('.player-name').textContent = newName;
-                currentDetailRow.querySelector('.player-email').textContent = newEmail;
+                currentDetailRow.querySelector('.player-name, .card-name').textContent = newName;
+                currentDetailRow.querySelector('.player-email, .card-email').textContent = newEmail;
                 currentDetailRow.querySelector('.birth-year').textContent = newBirthYear || '-';
                 currentDetailRow.querySelector('.division').textContent = newDivision;
                 
-                const sportTagsContainer = currentDetailRow.querySelector('.sport-tags');
+                const sportTagsContainer = currentDetailRow.querySelector('.sport-tags, .card-sports');
                 sportTagsContainer.innerHTML = '';
                 selectedSports.forEach(sport => {
                     const tag = document.createElement('span');
@@ -2197,26 +2771,27 @@
             const currentSection = document.querySelector('.year-section.active');
             if (!currentSection) return;
             
-            currentSection.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
-                const name = row.querySelector('.player-name').textContent.toLowerCase();
-                const email = row.querySelector('.player-email').textContent.toLowerCase();
-                const jersey = row.querySelector('.jersey-badge').textContent;
+            // Search both table rows and mobile cards
+            currentSection.querySelectorAll('tbody tr[data-player-id], .player-card').forEach(player => {
+                const name = player.querySelector('.player-name, .card-name').textContent.toLowerCase();
+                const email = player.querySelector('.player-email, .card-email').textContent.toLowerCase();
+                const jersey = player.querySelector('.jersey-badge, .card-jersey').textContent;
                 
                 if (name.includes(query) || email.includes(query) || jersey.includes(query)) {
-                    row.style.display = '';
+                    player.style.display = '';
                 } else {
-                    row.style.display = 'none';
+                    player.style.display = 'none';
                 }
             });
             
             updateStatistics();
         });
 
-        // Row click to open detail sidebar
-        document.querySelectorAll('tbody tr[data-player-id]').forEach(row => {
-            row.addEventListener('click', (e) => {
+        // Row/Card click to open detail sidebar
+        document.querySelectorAll('tbody tr[data-player-id], .player-card').forEach(element => {
+            element.addEventListener('click', (e) => {
                 if (e.target.closest('button, input, select, a')) return;
-                openDetail(row);
+                openDetail(element);
             });
         });
 
@@ -2239,8 +2814,8 @@
         document.querySelectorAll('.btn-edit').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const row = btn.closest('tr');
-                openDetail(row);
+                const container = btn.closest('tr, .player-card');
+                openDetail(container);
                 setTimeout(() => enableDetailEdit(), 100);
             });
         });
@@ -2249,8 +2824,8 @@
         document.querySelectorAll('.btn-send-email').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                const row = btn.closest('tr');
-                const regId = row.dataset.regId;
+                const container = btn.closest('tr, .player-card');
+                const regId = container.dataset.regId;
                 
                 if (btn.classList.contains('sent') || btn.disabled) {
                     return;
@@ -2265,7 +2840,7 @@
                     
                     if (response.ok) {
                         alert('Email sent successfully!');
-                        const statusBadge = row.querySelector('.status-badge');
+                        const statusBadge = container.querySelector('.status-badge');
                         if (statusBadge) {
                             statusBadge.className = 'status-badge sent';
                             statusBadge.textContent = '✓ Sent';
@@ -2285,9 +2860,9 @@
         document.querySelectorAll('.btn-delete').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                const row = btn.closest('tr');
-                const playerId = row.dataset.playerId;
-                const playerName = row.querySelector('.player-name').textContent;
+                const container = btn.closest('tr, .player-card');
+                const playerId = container.dataset.playerId;
+                const playerName = container.querySelector('.player-name, .card-name').textContent;
                 
                 if (!confirm(`Delete ${playerName}? This cannot be undone!`)) return;
                 
@@ -2297,7 +2872,7 @@
                     });
                     
                     if (response.ok) {
-                        row.remove();
+                        container.remove();
                         updateStatistics();
                         alert('Player deleted successfully');
                     } else {
@@ -2382,6 +2957,15 @@
         
         // Initialize the first view
         updateStatistics();
+        
+        // Handle window resize
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                updateStatistics();
+            }, 250);
+        });
     });
 </script>
 
