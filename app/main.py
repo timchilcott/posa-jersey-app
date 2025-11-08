@@ -31,8 +31,25 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------
 CURRENT_SEASON = os.getenv("CURRENT_SEASON", "2025")
 
+# Validate SECRET_KEY
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY environment variable must be set")
+if SECRET_KEY == "secret-key":
+    logger.warning("Using default SECRET_KEY - this is insecure for production!")
+
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "secret-key"))
+
+# Enhanced session middleware configuration for better mobile compatibility
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SECRET_KEY,
+    session_cookie="posa_session",
+    max_age=3600 * 24,  # 24 hours
+    same_site="lax",
+    https_only=False  # Set to True if using HTTPS in production
+)
+
 templates = Jinja2Templates(directory="app/templates")
 Base.metadata.create_all(bind=engine)
 
@@ -102,6 +119,9 @@ def ensure_admin_user() -> None:
             email = os.getenv("ADMIN_EMAIL", "admin@example.com")
             password = os.getenv("ADMIN_PASSWORD", "admin")
             create_user(db, email, password)
+            logger.info(f"Created initial admin user: {email}")
+    except Exception as e:
+        logger.error(f"Error creating admin user: {e}")
     finally:
         db.close()
 
@@ -126,20 +146,41 @@ def login(
     password: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    user = authenticate_user(db, email, password)
-    if not user:
+    try:
+        logger.info(f"Login attempt for email: {email}")
+        
+        user = authenticate_user(db, email, password)
+        if not user:
+            logger.warning(f"Failed login attempt for: {email}")
+            return templates.TemplateResponse(
+                "login.html",
+                {"request": request, "error": "Invalid credentials"},
+                status_code=400
+            )
+        
+        # Set session
+        request.session["user_id"] = user.id
+        logger.info(f"User {email} logged in successfully")
+        
+        # Use 303 status code for better mobile browser compatibility
+        return RedirectResponse("/admin", status_code=303)
+        
+    except Exception as e:
+        logger.error(f"Login error for {email}: {str(e)}", exc_info=True)
         return templates.TemplateResponse(
             "login.html",
-            {"request": request, "error": "Invalid credentials"},
-            status_code=400
+            {"request": request, "error": "Server error. Please try again."},
+            status_code=500
         )
-    request.session["user_id"] = user.id
-    return RedirectResponse("/admin", status_code=302)
 
 @app.get("/logout")
 def logout(request: Request):
-    request.session.clear()
-    return RedirectResponse("/login", status_code=302)
+    try:
+        request.session.clear()
+        logger.info("User logged out successfully")
+    except Exception as e:
+        logger.error(f"Logout error: {e}")
+    return RedirectResponse("/login", status_code=303)
 
 # ---------------------------------------------------------------------
 # Invite
@@ -171,7 +212,8 @@ def invite_user(
             status_code=400
         )
     create_user(db, email, password)
-    return RedirectResponse("/admin", status_code=302)
+    logger.info(f"New user created: {email}")
+    return RedirectResponse("/admin", status_code=303)
 
 # ---------------------------------------------------------------------
 # Admin Dashboard
@@ -734,14 +776,18 @@ def save_email_template(payload: EmailTemplateUpdate, request: Request, db: Sess
 @app.post("/email/receive")
 async def receive_email(request: Request, db: Session = Depends(get_db)):
     """Receive inbound emails from SendGrid or similar service."""
-    body = await request.body()
-    email_text = body.decode('utf-8')
-    
-    # Save for debugging in development
-    if os.getenv("ENV") != "production":
-        save_inbound_email(email_text)
-    
-    # Process the email
-    process_inbound_email(email_text, db)
-    
-    return {"status": "received"}
+    try:
+        body = await request.body()
+        email_text = body.decode('utf-8')
+        
+        # Save for debugging in development
+        if os.getenv("ENV") != "production":
+            save_inbound_email(email_text)
+        
+        # Process the email
+        process_inbound_email(email_text, db)
+        
+        return {"status": "received"}
+    except Exception as e:
+        logger.error(f"Error processing inbound email: {e}", exc_info=True)
+        return {"status": "error", "message": str(e)}
