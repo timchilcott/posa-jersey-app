@@ -112,7 +112,7 @@ def get_all_registrations() -> list:
     
     # SportsEngine uses a different query structure
     query = """
-    query GetOrganization($orgId: ID!) {
+    query GetOrganization($orgId: Int!) {
         organization(id: $orgId) {
             id
             name
@@ -133,7 +133,7 @@ def get_all_registrations() -> list:
     }
     """
     
-    data = graphql_query(query, {"orgId": org_id})
+    data = graphql_query(query, {"orgId": int(org_id)})
     org = data.get("organization", {})
     registrations = org.get("registrations", {}).get("results", [])
     
