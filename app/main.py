@@ -87,6 +87,9 @@ class BulkPlayerIds(BaseModel):
 class BulkRegistrationIds(BaseModel):
     registration_ids: List[int]
 
+class SportsEngineSyncRequest(BaseModel):
+    registration_id: str | None = None  # If None, sync all registrations
+
 # ---------------------------------------------------------------------
 # Utility
 # ---------------------------------------------------------------------
@@ -771,7 +774,7 @@ def save_email_template(payload: EmailTemplateUpdate, request: Request, db: Sess
     return {"status": "saved"}
 
 # ---------------------------------------------------------------------
-# Email Webhook
+# Email Webhook (Legacy - for Blue Sombrero compatibility)
 # ---------------------------------------------------------------------
 @app.post("/email/receive")
 async def receive_email(request: Request, db: Session = Depends(get_db)):
@@ -791,3 +794,142 @@ async def receive_email(request: Request, db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error processing inbound email: {e}", exc_info=True)
         return {"status": "error", "message": str(e)}
+
+# ---------------------------------------------------------------------
+# SportsEngine Integration
+# ---------------------------------------------------------------------
+@app.post("/sportsengine/sync")
+def sportsengine_sync(
+    payload: SportsEngineSyncRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Sync registrations from SportsEngine.
+    
+    If registration_id is provided, sync only that registration.
+    Otherwise, sync all registrations with results.
+    """
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        raise exc
+    
+    try:
+        from .services.sportsengine import sync_registration, sync_all_registrations
+        
+        if payload.registration_id:
+            result = sync_registration(payload.registration_id, db)
+            logger.info(f"SportsEngine sync completed: {result}")
+            return {
+                "status": "success",
+                "registration_id": payload.registration_id,
+                **result
+            }
+        else:
+            result = sync_all_registrations(db)
+            logger.info(f"SportsEngine full sync completed: {result}")
+            return {
+                "status": "success",
+                **result
+            }
+    except Exception as e:
+        logger.error(f"SportsEngine sync error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/sportsengine/registrations")
+def sportsengine_list_registrations(request: Request, db: Session = Depends(get_db)):
+    """
+    List all registrations from SportsEngine.
+    Returns registration IDs, names, and result counts.
+    """
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        raise exc
+    
+    try:
+        from .services.sportsengine import get_all_registrations
+        
+        registrations = get_all_registrations()
+        return {
+            "status": "success",
+            "registrations": registrations
+        }
+    except Exception as e:
+        logger.error(f"SportsEngine list error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/sportsengine/webhook")
+async def sportsengine_webhook(request: Request, db: Session = Depends(get_db)):
+    """
+    Receive webhook notifications from SportsEngine.
+    
+    Webhook payload format:
+    {
+        "organizationId": 12345,
+        "resourceOperation": "create" | "update" | "delete",
+        "resourceId": "uuid",
+        "resourceType": "event" | "registration" | "profile" | etc.
+    }
+    """
+    try:
+        payload = await request.json()
+        logger.info(f"Received SportsEngine webhook: {payload}")
+        
+        from .services.sportsengine import process_webhook
+        result = process_webhook(payload, db)
+        
+        return {"status": "received", **result}
+    except Exception as e:
+        logger.error(f"SportsEngine webhook error: {e}", exc_info=True)
+        # Return 200 to prevent SportsEngine from disabling webhooks
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/sportsengine", response_class=HTMLResponse)
+def sportsengine_settings_page(request: Request, db: Session = Depends(get_db)):
+    """SportsEngine integration settings page."""
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        return RedirectResponse(exc.headers["Location"], status_code=exc.status_code)
+    
+    return templates.TemplateResponse("sportsengine.html", {"request": request})
+
+
+@app.get("/sportsengine/status")
+def sportsengine_status(request: Request):
+    """Check SportsEngine integration status and configuration."""
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        raise exc
+    
+    client_id = os.getenv("SPORTSENGINE_CLIENT_ID")
+    client_secret = os.getenv("SPORTSENGINE_CLIENT_SECRET")
+    org_id = os.getenv("SPORTSENGINE_ORG_ID")
+    
+    configured = bool(client_id and client_secret and org_id)
+    
+    status = {
+        "configured": configured,
+        "client_id_set": bool(client_id),
+        "client_secret_set": bool(client_secret),
+        "org_id_set": bool(org_id),
+        "org_id": org_id if org_id else None
+    }
+    
+    # Try to authenticate if configured
+    if configured:
+        try:
+            from .services.sportsengine import get_access_token
+            get_access_token()
+            status["authenticated"] = True
+        except Exception as e:
+            status["authenticated"] = False
+            status["auth_error"] = str(e)
+    
+    return status
