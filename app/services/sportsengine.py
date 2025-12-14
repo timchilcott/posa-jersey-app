@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 # Configuration
 # ---------------------------------------------------------------------
 SPORTSENGINE_AUTH_URL = "https://user.sportngin.com/oauth/token"
-SPORTSENGINE_GRAPHQL_URL = "https://api.sportngin.com/graphql"
+SPORTSENGINE_GRAPHQL_URL = "https://api.sportsengine.com/graphql"
 
 # Cache for access token
 _token_cache = {
@@ -89,7 +89,7 @@ def graphql_query(query: str, variables: dict = None) -> dict:
     )
     
     if response.status_code != 200:
-        logger.error(f"GraphQL query failed: {response.status_code} - {response.text}")
+        logger.error(f"GraphQL query failed: {response.status_code} - {response.text[:500]}")
         raise Exception(f"GraphQL query failed: {response.status_code}")
     
     result = response.json()
@@ -110,15 +110,23 @@ def get_all_registrations() -> list:
     if not org_id:
         raise ValueError("SPORTSENGINE_ORG_ID must be set")
     
+    # SportsEngine uses a different query structure
     query = """
-    query GetRegistrations($orgId: ID!) {
+    query GetOrganization($orgId: ID!) {
         organization(id: $orgId) {
-            registrationForms(first: 100) {
-                nodes {
+            id
+            name
+            registrations(perPage: 100, page: 1) {
+                pageInformation {
+                    pages
+                    count
+                    page
+                    perPage
+                }
+                results {
                     id
                     name
                     status
-                    registrationCount
                 }
             }
         }
@@ -126,16 +134,17 @@ def get_all_registrations() -> list:
     """
     
     data = graphql_query(query, {"orgId": org_id})
-    forms = data.get("organization", {}).get("registrationForms", {}).get("nodes", [])
+    org = data.get("organization", {})
+    registrations = org.get("registrations", {}).get("results", [])
     
     return [
         {
-            "id": form["id"],
-            "name": form["name"],
-            "status": form["status"],
-            "count": form.get("registrationCount", 0)
+            "id": reg["id"],
+            "name": reg["name"],
+            "status": reg.get("status", "UNKNOWN"),
+            "count": 0  # Registration count not available in this query
         }
-        for form in forms
+        for reg in registrations
     ]
 
 
