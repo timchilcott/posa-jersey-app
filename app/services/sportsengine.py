@@ -163,11 +163,11 @@ def get_registration_results(registration_id: str, cursor: str = None) -> dict:
         profiles(
             organizationId: $orgId
             filter: {
-                key: registration_submitted
+                key: REGISTRATION_SUBMITTED
                 value: "true"
-                source: registration
+                source: REGISTRATIONS
                 sourceId: $regId
-                operator: equal
+                operator: EQUAL
             }
             page: $page
             perPage: 50
