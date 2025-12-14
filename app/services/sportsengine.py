@@ -151,43 +151,59 @@ def get_all_registrations() -> list:
 def get_registration_results(registration_id: str, cursor: str = None) -> dict:
     """
     Get all registration results (athletes) for a specific registration form.
-    Handles pagination via cursor.
+    SportsEngine requires querying profiles filtered by registration, then getting their answers.
     """
+    org_id = os.getenv("SPORTSENGINE_ORG_ID")
+    
+    # First, get profiles who submitted this registration
+    page = 1 if not cursor else int(cursor)
+    
     query = """
-    query GetRegistrationResults($registrationId: ID!, $after: String) {
-        registrationForm(id: $registrationId) {
-            id
-            name
-            registrations(first: 100, after: $after) {
-                pageInfo {
-                    hasNextPage
-                    endCursor
-                }
-                nodes {
-                    id
-                    createdAt
-                    updatedAt
-                    status
-                    orderNumber
-                    registrant {
+    query GetRegistrationProfiles($orgId: Int!, $regId: String!, $page: Int!) {
+        profiles(
+            organizationId: $orgId
+            filter: {
+                key: registration_submitted
+                value: "true"
+                source: registration
+                sourceId: $regId
+                operator: equal
+            }
+            page: $page
+            perPage: 50
+        ) {
+            pageInformation {
+                pages
+                count
+                page
+                perPage
+            }
+            results {
+                id
+                firstName
+                lastName
+                dateOfBirth
+                email
+                registrationResults(perPage: 100) {
+                    results {
                         id
-                        firstName
-                        lastName
-                        dateOfBirth
-                        email
-                    }
-                    guardian {
-                        id
-                        firstName
-                        lastName
-                        email
-                    }
-                    answers {
-                        question {
-                            id
-                            label
+                        registrationId
+                        registrationName
+                        created
+                        updated
+                        answers {
+                            name
+                            format
+                            ...on StringRegistrationResultAnswer {
+                                stringValue: value
+                            }
+                            ...on ArrayRegistrationResultAnswer {
+                                arrayValue: value
+                            }
+                            ...on NumberRegistrationResultAnswer {
+                                numberValue: value
+                            }
                         }
-                        value
                     }
                 }
             }
@@ -195,11 +211,71 @@ def get_registration_results(registration_id: str, cursor: str = None) -> dict:
     }
     """
     
-    variables = {"registrationId": registration_id}
-    if cursor:
-        variables["after"] = cursor
+    variables = {
+        "orgId": int(org_id),
+        "regId": str(registration_id),
+        "page": page
+    }
     
-    return graphql_query(query, variables)
+    data = graphql_query(query, variables)
+    
+    # Transform to expected format
+    profiles_data = data.get("profiles", {})
+    page_info = profiles_data.get("pageInformation", {})
+    profiles = profiles_data.get("results", [])
+    
+    # Build results in a normalized format
+    results = []
+    for profile in profiles:
+        # Find the registration result that matches this registration_id
+        reg_results = profile.get("registrationResults", {}).get("results", [])
+        matching_result = None
+        for rr in reg_results:
+            if str(rr.get("registrationId")) == str(registration_id):
+                matching_result = rr
+                break
+        
+        # Build answers dict
+        answers = []
+        if matching_result:
+            for ans in matching_result.get("answers", []):
+                # Get the value from whichever type it is
+                value = ans.get("stringValue") or ans.get("arrayValue") or ans.get("numberValue") or ""
+                if isinstance(value, list):
+                    value = ", ".join(str(v) for v in value)
+                answers.append({
+                    "question": {"label": ans.get("name", "")},
+                    "value": str(value)
+                })
+        
+        results.append({
+            "id": profile.get("id"),
+            "registrant": {
+                "id": profile.get("id"),
+                "firstName": profile.get("firstName"),
+                "lastName": profile.get("lastName"),
+                "dateOfBirth": profile.get("dateOfBirth"),
+                "email": profile.get("email")
+            },
+            "answers": answers,
+            "createdAt": matching_result.get("created") if matching_result else None,
+            "updatedAt": matching_result.get("updated") if matching_result else None
+        })
+    
+    # Return in expected format with pagination info
+    has_next = page < page_info.get("pages", 1)
+    return {
+        "registrationForm": {
+            "id": registration_id,
+            "registrations": {
+                "pageInfo": {
+                    "hasNextPage": has_next,
+                    "endCursor": str(page + 1) if has_next else None
+                },
+                "nodes": results
+            }
+        }
+    }
 
 
 # ---------------------------------------------------------------------
