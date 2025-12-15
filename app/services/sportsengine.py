@@ -157,6 +157,26 @@ def get_registration_results(registration_id: str, cursor: str = None) -> dict:
     
     page = 1 if not cursor else int(cursor)
     
+    # First, get the registration name
+    reg_name_query = """
+    query GetRegistration($regId: Int!) {
+        registration(id: $regId) {
+            id
+            name
+        }
+    }
+    """
+    
+    registration_name = "Unknown"
+    try:
+        logger.info(f"Fetching registration name for ID: {registration_id}")
+        reg_data = graphql_query(reg_name_query, {"regId": int(registration_id)})
+        logger.info(f"Registration query response: {reg_data}")
+        registration_name = reg_data.get("registration", {}).get("name", "Unknown")
+        logger.info(f"Extracted registration name: {registration_name}")
+    except Exception as e:
+        logger.warning(f"Could not fetch registration name for {registration_id}: {e}")
+    
     # Step 1: Get list of profiles who submitted this registration
     list_query = """
     query GetRegistrationProfiles($orgId: Int!, $regId: String!, $page: Int!) {
@@ -305,6 +325,7 @@ def get_registration_results(registration_id: str, cursor: str = None) -> dict:
     return {
         "registrationForm": {
             "id": registration_id,
+            "name": registration_name,
             "registrations": {
                 "pageInfo": {
                     "hasNextPage": has_next,
@@ -664,19 +685,39 @@ def process_webhook(payload: dict, db: Session) -> dict:
         "organizationId": 12345,
         "resourceOperation": "create" | "update" | "delete",
         "resourceId": "uuid",
-        "resourceType": "registration" | "event" | etc.
+        "resourceType": "registration" | "registrationResult" | "profile" | etc.
     }
     """
     resource_type = payload.get("resourceType")
     operation = payload.get("resourceOperation")
     resource_id = payload.get("resourceId")
+    org_id = payload.get("organizationId")
     
-    logger.info(f"Processing webhook: {operation} {resource_type} {resource_id}")
+    logger.info(f"Webhook received: {operation} {resource_type} {resource_id} (org: {org_id})")
+    logger.info(f"Full webhook payload: {payload}")
     
-    if resource_type == "registration" and operation in ["create", "update"]:
-        # For now, we'd need to fetch the specific registration
-        # This would require additional API calls to get the registration details
-        # For simplicity, we can trigger a full sync or handle individually
-        return {"action": "registration_webhook_received", "resource_id": resource_id}
+    # Handle registration result webhooks (new signups)
+    if resource_type in ["registration", "registrationResult", "profile"] and operation in ["create", "update"]:
+        try:
+            # Get list of all registrations and sync them
+            # This is a simple approach - sync all active registrations
+            registrations = get_all_registrations()
+            
+            results = []
+            for reg in registrations:
+                # Only sync active registrations (status 1)
+                if reg.get("status") == 1:
+                    try:
+                        result = sync_registration(str(reg["id"]), db)
+                        results.append({"registration": reg["name"], "result": result})
+                    except Exception as e:
+                        logger.error(f"Webhook sync error for {reg['name']}: {e}")
+                        results.append({"registration": reg["name"], "error": str(e)})
+            
+            return {"action": "synced", "results": results}
+            
+        except Exception as e:
+            logger.error(f"Webhook processing error: {e}")
+            return {"action": "error", "message": str(e)}
     
     return {"action": "ignored", "reason": f"Unhandled: {operation} {resource_type}"}
