@@ -159,8 +159,8 @@ def get_registration_results(registration_id: str, cursor: str = None) -> dict:
     
     # First, get the registration name
     reg_name_query = """
-    query GetRegistration($regId: Int!) {
-        registration(id: $regId) {
+    query GetRegistration($regId: ID!, $orgId: Int!) {
+        registration(id: $regId, organizationId: $orgId) {
             id
             name
         }
@@ -170,7 +170,7 @@ def get_registration_results(registration_id: str, cursor: str = None) -> dict:
     registration_name = "Unknown"
     try:
         logger.info(f"Fetching registration name for ID: {registration_id}")
-        reg_data = graphql_query(reg_name_query, {"regId": int(registration_id)})
+        reg_data = graphql_query(reg_name_query, {"regId": str(registration_id), "orgId": int(org_id)})
         logger.info(f"Registration query response: {reg_data}")
         registration_name = reg_data.get("registration", {}).get("name", "Unknown")
         logger.info(f"Extracted registration name: {registration_name}")
