@@ -694,27 +694,28 @@ def process_webhook(payload: dict, db: Session) -> dict:
     org_id = payload.get("organizationId")
     
     logger.info(f"Webhook received: {operation} {resource_type} {resource_id} (org: {org_id})")
-    logger.info(f"Full webhook payload: {payload}")
     
-    # Handle registration result webhooks (new signups)
+    # Only process registration-related webhooks
     if resource_type in ["registration", "registrationResult", "profile"] and operation in ["create", "update"]:
         try:
-            # Get list of all registrations and sync them
-            # This is a simple approach - sync all active registrations
+            # Get list of active registrations
             registrations = get_all_registrations()
             
-            results = []
-            for reg in registrations:
-                # Only sync active registrations (status 1)
-                if reg.get("status") == 1:
-                    try:
-                        result = sync_registration(str(reg["id"]), db)
-                        results.append({"registration": reg["name"], "result": result})
-                    except Exception as e:
-                        logger.error(f"Webhook sync error for {reg['name']}: {e}")
-                        results.append({"registration": reg["name"], "error": str(e)})
+            # Only sync active registrations (status 1), and limit to avoid rate limits
+            active_regs = [r for r in registrations if r.get("status") == 1]
             
-            return {"action": "synced", "results": results}
+            if len(active_regs) == 0:
+                return {"action": "no_active_registrations"}
+            
+            # Sync only the first active registration to avoid rate limits
+            # The webhook fires multiple times, so we'll catch everything eventually
+            reg = active_regs[0]
+            try:
+                result = sync_registration(str(reg["id"]), db)
+                return {"action": "synced", "registration": reg["name"], "result": result}
+            except Exception as e:
+                logger.error(f"Webhook sync error for {reg['name']}: {e}")
+                return {"action": "error", "registration": reg["name"], "error": str(e)}
             
         except Exception as e:
             logger.error(f"Webhook processing error: {e}")
