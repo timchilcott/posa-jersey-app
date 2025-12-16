@@ -27,6 +27,14 @@ _token_cache = {
 }
 
 
+def is_configured() -> bool:
+    """Check if SportsEngine integration is configured with all required env vars."""
+    client_id = os.getenv("SPORTSENGINE_CLIENT_ID")
+    client_secret = os.getenv("SPORTSENGINE_CLIENT_SECRET")
+    org_id = os.getenv("SPORTSENGINE_ORG_ID")
+    return bool(client_id and client_secret and org_id)
+
+
 # ---------------------------------------------------------------------
 # OAuth Authentication
 # ---------------------------------------------------------------------
