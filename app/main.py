@@ -58,10 +58,11 @@ app.add_middleware(
 scheduler = AsyncIOScheduler()
 
 def scheduled_sportsengine_sync():
-    """Background job to sync SportsEngine registrations every 30 minutes."""
+    """Daily backup sync - catches anything webhooks missed."""
     try:
         # Import here to avoid circular imports
         from .services.sportsengine import get_all_registrations, sync_registration, is_configured
+        import time
         
         if not is_configured():
             logger.debug("SportsEngine not configured, skipping scheduled sync")
@@ -71,12 +72,18 @@ def scheduled_sportsengine_sync():
         db = SessionLocal()
         try:
             registrations = get_all_registrations()
+            active_count = 0
             for reg in registrations:
                 # Only sync active registrations (status 1)
                 if reg.get("status") == 1:
+                    # Add delay between registrations to avoid rate limits
+                    if active_count > 0:
+                        time.sleep(5)  # 5 seconds between registrations
+                    
                     try:
                         result = sync_registration(str(reg["id"]), db)
                         logger.info(f"Scheduled sync {reg['name']}: {result}")
+                        active_count += 1
                     except Exception as e:
                         logger.error(f"Scheduled sync error for {reg['name']}: {e}")
         finally:
@@ -88,10 +95,10 @@ def scheduled_sportsengine_sync():
 @app.on_event("startup")
 async def start_scheduler():
     """Start the background scheduler when the app starts."""
-    # Run every 30 minutes
-    scheduler.add_job(scheduled_sportsengine_sync, "interval", minutes=30, id="sportsengine_sync")
+    # Run once daily as backup (webhooks handle real-time)
+    scheduler.add_job(scheduled_sportsengine_sync, "interval", hours=24, id="sportsengine_sync")
     scheduler.start()
-    logger.info("Background scheduler started - SportsEngine sync every 30 minutes")
+    logger.info("Background scheduler started - SportsEngine backup sync every 24 hours")
 
 @app.on_event("shutdown")
 async def stop_scheduler():
