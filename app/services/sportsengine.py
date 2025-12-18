@@ -714,14 +714,20 @@ def process_webhook(payload: dict, db: Session) -> dict:
     resource_id = payload.get("resourceId")
     org_id = payload.get("organizationId")
     
-    logger.info(f"Webhook: {operation} {resource_type} {resource_id}")
+    # Log full payload so we can debug
+    logger.info(f"Webhook FULL payload: {payload}")
+    logger.info(f"Webhook parsed: operation={operation}, type={resource_type}, id={resource_id}")
     
     # Only process new registrations
     if operation != "create":
+        logger.info(f"Webhook SKIPPED: operation is '{operation}', not 'create'")
         return {"action": "ignored", "reason": f"Not a create: {operation}"}
     
-    if resource_type not in ["registrationResult", "profile"]:
+    if resource_type not in ["registrationResult", "profile", "registration_result"]:
+        logger.info(f"Webhook SKIPPED: type is '{resource_type}', not registrationResult/profile")
         return {"action": "ignored", "reason": f"Not a registration: {resource_type}"}
+    
+    logger.info(f"Webhook PROCESSING: {operation} {resource_type} {resource_id}")
     
     try:
         from app.models import Player, Registration
@@ -729,8 +735,10 @@ def process_webhook(payload: dict, db: Session) -> dict:
         
         env_org_id = os.getenv("SPORTSENGINE_ORG_ID")
         
-        # If it's a profile webhook, fetch that specific profile
-        if resource_type == "profile":
+        # Handle both profile and registrationResult webhooks
+        if resource_type in ["profile", "registrationResult", "registration_result"]:
+            # For registrationResult, we need to fetch profile info differently
+            # First try to get the profile directly
             profile_query = """
             query GetProfile($profileId: ID!, $orgId: Int!) {
                 profile(id: $profileId, organizationId: $orgId) {
@@ -760,18 +768,26 @@ def process_webhook(payload: dict, db: Session) -> dict:
             }
             """
             
+            logger.info(f"Querying profile with ID: {resource_id}, org: {env_org_id}")
+            
             data = graphql_query(profile_query, {
                 "profileId": str(resource_id),
                 "orgId": int(env_org_id)
             })
             
+            logger.info(f"Profile query response: {data}")
+            
             profile = data.get("profile")
             if not profile:
+                logger.warning(f"Profile not found for ID {resource_id}")
                 return {"action": "error", "message": "Profile not found"}
             
             # Get the most recent registration result
             reg_results = profile.get("registrationResults", {}).get("results", [])
+            logger.info(f"Found {len(reg_results)} registration results for profile")
+            
             if not reg_results:
+                logger.warning(f"No registration results for profile {resource_id}")
                 return {"action": "ignored", "reason": "No registration results"}
             
             latest_reg = reg_results[0]
@@ -858,8 +874,6 @@ def process_webhook(payload: dict, db: Session) -> dict:
                 logger.info(f"Webhook added new player: {player_name}, jersey #{jersey}")
                 return {"action": "created", "player": player_name, "jersey": jersey, "sport": sport}
         
-        return {"action": "ignored", "reason": f"Unhandled type: {resource_type}"}
-        
     except Exception as e:
-        logger.error(f"Webhook processing error: {e}")
+        logger.error(f"Webhook processing error: {e}", exc_info=True)
         return {"action": "error", "message": str(e)}
