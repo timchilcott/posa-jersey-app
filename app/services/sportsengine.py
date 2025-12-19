@@ -577,14 +577,62 @@ def process_single_registration(
         except:
             pass
     
-    # Check if player already exists (by name)
-    existing_player = db.query(Player).filter(Player.full_name == player_name).first()
+    # Normalize player name for matching (lowercase, single spaces)
+    normalized_name = " ".join(player_name.lower().split())
+    
+    # Import func for case-insensitive queries
+    from sqlalchemy import func
+    
+    # Check if player already exists - try multiple matching strategies
+    existing_player = None
+    match_method = None
+    
+    # Strategy 1: Match by email FIRST (most reliable)
+    if parent_email and parent_email != "unknown@example.com":
+        existing_player = db.query(Player).filter(
+            func.lower(Player.parent_email) == parent_email.lower()
+        ).first()
+        if existing_player:
+            match_method = "email"
+            logger.info(f"SYNC: Matched by EMAIL: {parent_email} -> {existing_player.full_name}")
+    
+    # Strategy 2: Exact name match
+    if not existing_player:
+        existing_player = db.query(Player).filter(Player.full_name == player_name).first()
+        if existing_player:
+            match_method = "exact_name"
+    
+    # Strategy 3: Case-insensitive name match
+    if not existing_player:
+        existing_player = db.query(Player).filter(
+            func.lower(Player.full_name) == normalized_name
+        ).first()
+        if existing_player:
+            match_method = "case_insensitive_name"
+    
+    # Strategy 4: First name + last name initial match (handles typos)
+    if not existing_player and len(player_name.split()) >= 2:
+        parts = player_name.split()
+        first_name = parts[0].lower()
+        last_initial = parts[-1][0].lower() if parts[-1] else ""
+        
+        potential_matches = db.query(Player).filter(
+            func.lower(Player.full_name).like(f"{first_name}%{last_initial}%")
+        ).all()
+        
+        # If only one match with same email, use it
+        for pm in potential_matches:
+            if pm.parent_email and parent_email and pm.parent_email.lower() == parent_email.lower():
+                existing_player = pm
+                match_method = "fuzzy_name_email"
+                logger.info(f"SYNC: Fuzzy matched: {player_name} -> {existing_player.full_name}")
+                break
     
     if existing_player:
+        logger.info(f"SYNC: Found existing player via {match_method}: {existing_player.full_name} (ID: {existing_player.id}, incoming: {player_name})")
         # EXISTING PLAYER
         results["existing_players"] += 1
         player = existing_player
-        logger.info(f"SYNC: Found existing player: {player_name} (ID: {player.id})")
         
         # Update birth year if we now have it and they don't
         if birth_year and not player.birth_year:
@@ -603,46 +651,51 @@ def process_single_registration(
             # Sport already exists - update division to the most current
             existing_reg = db.query(Registration).filter(
                 Registration.player_id == player.id,
-                Registration.sport == sport
+                func.lower(Registration.sport) == sport.lower()
             ).first()
             
             if existing_reg and division != "Waiting Room":
                 if existing_reg.division != division:
-                    logger.info(f"SYNC: Updating division for {player_name} ({sport}): '{existing_reg.division}' -> '{division}'")
+                    logger.info(f"SYNC: Updating division for {player.full_name} ({sport}): '{existing_reg.division}' -> '{division}'")
                     existing_reg.division = division
                     results["updated_registrations"] += 1
                 else:
-                    logger.info(f"SYNC: {player_name} ({sport}) division already current: '{division}'")
+                    logger.info(f"SYNC: {player.full_name} ({sport}) division already current: '{division}'")
             else:
-                logger.info(f"SYNC: {player_name} already has {sport}, no division update needed")
+                logger.info(f"SYNC: {player.full_name} already has {sport}, no division update needed")
         else:
             # New sport for this player - add it
             new_reg = Registration(
                 player_id=player.id,
                 program=program_name,
                 division=division,
-                sport=sport,
+                sport=sport.lower(),  # Normalize sport name
                 season=season,
                 order_number=order_number,
                 order_date=order_date,
                 confirmation_sent=True  # Existing player, no email needed
             )
             db.add(new_reg)
-            logger.info(f"SYNC: Added {sport} for existing player: {player_name} with division '{division}'")
+            logger.info(f"SYNC: Added {sport} for existing player: {player.full_name} with division '{division}'")
             results["new_registrations"] += 1
     
     else:
-        # NEW PLAYER
+        # NEW PLAYER - all matching strategies failed, this is truly a new person
         results["new_players"] += 1
+        
+        # Normalize the name to Title Case for consistency
+        normalized_player_name = " ".join(word.capitalize() for word in player_name.split())
         
         # Assign jersey number based on birth year
         jersey_number = None
         if birth_year:
             jersey_number = assign_jersey_number(db, birth_year)
         
+        logger.info(f"SYNC: Creating NEW player: {normalized_player_name} (email: {parent_email})")
+        
         # Create new player
         player = Player(
-            full_name=player_name,
+            full_name=normalized_player_name,
             birth_year=birth_year,
             jersey_number=jersey_number,
             parent_email=parent_email
@@ -655,7 +708,7 @@ def process_single_registration(
             player_id=player.id,
             program=program_name,
             division=division,
-            sport=sport,
+            sport=sport.lower(),  # Normalize sport name
             season=season,
             order_number=order_number,
             order_date=order_date,
@@ -664,7 +717,7 @@ def process_single_registration(
         db.add(new_reg)
         results["new_registrations"] += 1
         
-        logger.info(f"Created new player: {player_name} (jersey #{jersey_number}, division: {division})")
+        logger.info(f"SYNC: Created new player: {normalized_player_name} (jersey #{jersey_number}, division: {division}, sport: {sport})")
 
 
 def sync_all_registrations(db: Session) -> dict:
