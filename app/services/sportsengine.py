@@ -563,6 +563,11 @@ def process_single_registration(
     division = extract_division(reg.get("answers", []))
     order_number = reg.get("orderNumber")
     
+    # Log extracted data for debugging
+    logger.info(f"SYNC: Processing {player_name} for {sport}/{season}")
+    logger.info(f"SYNC: Division extracted: '{division}'")
+    logger.info(f"SYNC: Answers received: {reg.get('answers', [])}")
+    
     # Parse created_at for order_date
     order_date = None
     created_at = reg.get("createdAt")
@@ -579,6 +584,7 @@ def process_single_registration(
         # EXISTING PLAYER
         results["existing_players"] += 1
         player = existing_player
+        logger.info(f"SYNC: Found existing player: {player_name} (ID: {player.id})")
         
         # Update birth year if we now have it and they don't
         if birth_year and not player.birth_year:
@@ -588,30 +594,29 @@ def process_single_registration(
         if parent_email != "unknown@example.com" and player.parent_email == "unknown@example.com":
             player.parent_email = parent_email
         
-        # Check if registration for this sport/season already exists
-        existing_reg = db.query(Registration).filter(
-            Registration.player_id == player.id,
-            Registration.sport == sport,
-            Registration.season == season
-        ).first()
+        # Get all current registrations for this player
+        current_regs = db.query(Registration).filter(Registration.player_id == player.id).all()
+        current_sports = {reg.sport.lower() for reg in current_regs if reg.sport}
         
-        if existing_reg:
-            # Update existing registration - but DON'T overwrite manually-set divisions
-            # Only update division if:
-            # 1. Current division is "Waiting Room" (needs assignment), AND
-            # 2. New division is NOT "Waiting Room" (we have actual data)
-            if existing_reg.division == "Waiting Room" and division != "Waiting Room":
-                existing_reg.division = division
-                logger.info(f"Updated division for {player_name}: {division}")
+        # Check if they already have this sport
+        if sport.lower() in current_sports:
+            # Sport already exists - update division to the most current
+            existing_reg = db.query(Registration).filter(
+                Registration.player_id == player.id,
+                Registration.sport == sport
+            ).first()
             
-            existing_reg.order_number = order_number
-            existing_reg.order_date = order_date
-            # Keep confirmation_sent as-is for existing registrations
-            results["updated_registrations"] += 1
-            logger.debug(f"Updated registration for existing player: {player_name}")
+            if existing_reg and division != "Waiting Room":
+                if existing_reg.division != division:
+                    logger.info(f"SYNC: Updating division for {player_name} ({sport}): '{existing_reg.division}' -> '{division}'")
+                    existing_reg.division = division
+                    results["updated_registrations"] += 1
+                else:
+                    logger.info(f"SYNC: {player_name} ({sport}) division already current: '{division}'")
+            else:
+                logger.info(f"SYNC: {player_name} already has {sport}, no division update needed")
         else:
-            # New registration for existing player
-            # Set confirmation_sent=True because they already have a jersey
+            # New sport for this player - add it
             new_reg = Registration(
                 player_id=player.id,
                 program=program_name,
@@ -623,8 +628,8 @@ def process_single_registration(
                 confirmation_sent=True  # Existing player, no email needed
             )
             db.add(new_reg)
+            logger.info(f"SYNC: Added {sport} for existing player: {player_name} with division '{division}'")
             results["new_registrations"] += 1
-            logger.info(f"Added new sport registration for existing player: {player_name} ({sport})")
     
     else:
         # NEW PLAYER
