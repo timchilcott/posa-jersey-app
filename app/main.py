@@ -95,10 +95,10 @@ def scheduled_sportsengine_sync():
 @app.on_event("startup")
 async def start_scheduler():
     """Start the background scheduler when the app starts."""
-    # Run once daily as backup (webhooks handle real-time)
-    scheduler.add_job(scheduled_sportsengine_sync, "interval", hours=24, id="sportsengine_sync")
+    # Run every 30 minutes for reliable syncing
+    scheduler.add_job(scheduled_sportsengine_sync, "interval", minutes=30, id="sportsengine_sync")
     scheduler.start()
-    logger.info("Background scheduler started - SportsEngine backup sync every 24 hours")
+    logger.info("Background scheduler started - SportsEngine sync every 30 minutes")
 
 @app.on_event("shutdown")
 async def stop_scheduler():
