@@ -740,7 +740,7 @@ def process_webhook(payload: dict, db: Session) -> dict:
             # For registrationResult, we need to fetch profile info differently
             # First try to get the profile directly
             profile_query = """
-            query GetProfile($profileId: ID!, $orgId: Int!) {
+            query GetProfile($profileId: Int!, $orgId: Int!) {
                 profile(id: $profileId, organizationId: $orgId) {
                     id
                     firstName
@@ -770,8 +770,24 @@ def process_webhook(payload: dict, db: Session) -> dict:
             
             logger.info(f"Querying profile with ID: {resource_id}, org: {env_org_id}")
             
+            # resourceId from webhook might be UUID or int - try to convert
+            try:
+                profile_id_int = int(resource_id)
+            except (ValueError, TypeError):
+                logger.warning(f"Resource ID '{resource_id}' is not an integer, falling back to full sync")
+                # Fall back to syncing all active registrations
+                registrations = get_all_registrations()
+                for reg in registrations:
+                    if reg.get("status") == 1:
+                        try:
+                            result = sync_registration(str(reg["id"]), db)
+                            logger.info(f"Fallback sync {reg['name']}: {result}")
+                        except Exception as e:
+                            logger.error(f"Fallback sync error: {e}")
+                return {"action": "fallback_sync", "reason": "non-integer resource_id"}
+            
             data = graphql_query(profile_query, {
-                "profileId": str(resource_id),
+                "profileId": profile_id_int,
                 "orgId": int(env_org_id)
             })
             
