@@ -757,35 +757,30 @@ def process_webhook(payload: dict, db: Session) -> dict:
     """
     Process a webhook notification from SportsEngine.
     
-    Only fetches and adds the NEW person, not everyone.
+    When we receive a registrationResult webhook, we query for recently
+    created registration results and only process those (not everyone).
     
     Webhook payload format:
     {
         "organizationId": 12345,
         "resourceOperation": "create" | "update" | "delete",
-        "resourceId": "uuid",
-        "resourceType": "registration" | "registrationResult" | "profile" | etc.
+        "resourceId": "uuid-string",
+        "resourceType": "registrationResult" | "event" | etc.
     }
     """
     resource_type = payload.get("resourceType")
     operation = payload.get("resourceOperation")
     resource_id = payload.get("resourceId")
-    org_id = payload.get("organizationId")
+    webhook_org_id = payload.get("organizationId")
     
-    # Log full payload so we can debug
-    logger.info(f"Webhook FULL payload: {payload}")
-    logger.info(f"Webhook parsed: operation={operation}, type={resource_type}, id={resource_id}")
+    logger.info(f"Webhook received: {operation} {resource_type} (id: {resource_id}, org: {webhook_org_id})")
     
-    # Only process new registrations
-    if operation != "create":
-        logger.info(f"Webhook SKIPPED: operation is '{operation}', not 'create'")
-        return {"action": "ignored", "reason": f"Not a create: {operation}"}
+    # Only process registrationResult create/update
+    if resource_type != "registrationResult":
+        return {"action": "ignored", "reason": f"Not registrationResult: {resource_type}"}
     
-    if resource_type not in ["registrationResult", "profile", "registration_result"]:
-        logger.info(f"Webhook SKIPPED: type is '{resource_type}', not registrationResult/profile")
-        return {"action": "ignored", "reason": f"Not a registration: {resource_type}"}
-    
-    logger.info(f"Webhook PROCESSING: {operation} {resource_type} {resource_id}")
+    if operation not in ["create", "update"]:
+        return {"action": "ignored", "reason": f"Not create/update: {operation}"}
     
     try:
         from app.models import Player, Registration
@@ -793,31 +788,55 @@ def process_webhook(payload: dict, db: Session) -> dict:
         
         env_org_id = os.getenv("SPORTSENGINE_ORG_ID")
         
-        # Handle both profile and registrationResult webhooks
-        if resource_type in ["profile", "registrationResult", "registration_result"]:
-            # For registrationResult, we need to fetch profile info differently
-            # First try to get the profile directly
-            profile_query = """
-            query GetProfile($profileId: Int!, $orgId: Int!) {
-                profile(id: $profileId, organizationId: $orgId) {
-                    id
-                    firstName
-                    lastName
-                    dateOfBirth
-                    email
-                    registrationResults(perPage: 10) {
-                        results {
-                            registrationId
-                            registrationName
-                            created
-                            answers {
-                                name
-                                format
-                                ...on StringRegistrationResultAnswer {
-                                    stringValue: value
-                                }
-                                ...on ArrayRegistrationResultAnswer {
-                                    arrayValue: value
+        # Get active registrations
+        registrations = get_all_registrations()
+        active_regs = [r for r in registrations if r.get("status") == 1]
+        
+        if not active_regs:
+            return {"action": "ignored", "reason": "No active registrations"}
+        
+        processed = []
+        
+        for reg in active_regs:
+            reg_id = reg["id"]
+            reg_name = reg["name"]
+            
+            # Query profiles for this registration, sorted by most recent first
+            # We only want profiles who registered in the last 10 minutes
+            query = """
+            query GetRecentProfiles($orgId: Int!, $regId: String!) {
+                profiles(
+                    organizationId: $orgId
+                    filter: {
+                        key: registration_submitted
+                        value: "true"
+                        source: registration
+                        sourceId: $regId
+                        operator: equal
+                    }
+                    perPage: 10
+                ) {
+                    results {
+                        id
+                        firstName
+                        lastName
+                        dateOfBirth
+                        email
+                        registrationResults(perPage: 5) {
+                            results {
+                                id
+                                registrationId
+                                registrationName
+                                created
+                                answers {
+                                    name
+                                    format
+                                    ...on StringRegistrationResultAnswer {
+                                        stringValue: value
+                                    }
+                                    ...on ArrayRegistrationResultAnswer {
+                                        arrayValue: value
+                                    }
                                 }
                             }
                         }
@@ -826,128 +845,172 @@ def process_webhook(payload: dict, db: Session) -> dict:
             }
             """
             
-            logger.info(f"Querying profile with ID: {resource_id}, org: {env_org_id}")
-            
-            # resourceId from webhook might be UUID or int - try to convert
-            try:
-                profile_id_int = int(resource_id)
-            except (ValueError, TypeError):
-                logger.warning(f"Resource ID '{resource_id}' is not an integer, falling back to full sync")
-                # Fall back to syncing all active registrations
-                registrations = get_all_registrations()
-                for reg in registrations:
-                    if reg.get("status") == 1:
-                        try:
-                            result = sync_registration(str(reg["id"]), db)
-                            logger.info(f"Fallback sync {reg['name']}: {result}")
-                        except Exception as e:
-                            logger.error(f"Fallback sync error: {e}")
-                return {"action": "fallback_sync", "reason": "non-integer resource_id"}
-            
-            data = graphql_query(profile_query, {
-                "profileId": profile_id_int,
-                "orgId": int(env_org_id)
+            data = graphql_query(query, {
+                "orgId": int(env_org_id),
+                "regId": str(reg_id)
             })
             
-            logger.info(f"Profile query response: {data}")
+            profiles = data.get("profiles", {}).get("results", [])
             
-            profile = data.get("profile")
-            if not profile:
-                logger.warning(f"Profile not found for ID {resource_id}")
-                return {"action": "error", "message": "Profile not found"}
-            
-            # Get the most recent registration result
-            reg_results = profile.get("registrationResults", {}).get("results", [])
-            logger.info(f"Found {len(reg_results)} registration results for profile")
-            
-            if not reg_results:
-                logger.warning(f"No registration results for profile {resource_id}")
-                return {"action": "ignored", "reason": "No registration results"}
-            
-            latest_reg = reg_results[0]
-            reg_name = latest_reg.get("registrationName", "Unknown")
-            
-            # Extract data
-            player_name = f"{profile.get('firstName', '')} {profile.get('lastName', '')}".strip()
-            birth_year = None
-            dob = profile.get("dateOfBirth")
-            if dob and "-" in str(dob):
-                birth_year = int(str(dob).split("-")[0])
-            
-            parent_email = (profile.get("email") or "unknown@example.com").lower().strip()
-            
-            # Extract division from answers
-            division = "Waiting Room"
-            for ans in latest_reg.get("answers", []):
-                name = (ans.get("name") or "").lower()
-                if "division" in name:
-                    val = ans.get("stringValue") or ans.get("arrayValue")
-                    if isinstance(val, list):
-                        val = val[0] if val else ""
-                    if val:
-                        division = str(val)
-                    break
-            
-            # Extract sport from registration name
-            sport = extract_sport_from_registration_name(reg_name)
-            season = extract_season_from_registration_name(reg_name)
-            
-            # Check if player already exists
-            existing_player = db.query(Player).filter(Player.full_name == player_name).first()
-            
-            if existing_player:
-                # Check if they already have this sport/season
-                existing_reg = db.query(Registration).filter(
-                    Registration.player_id == existing_player.id,
-                    Registration.sport == sport,
-                    Registration.season == season
-                ).first()
+            # Process each profile
+            for profile in profiles:
+                # Check if this profile has a recent registration result for this form
+                reg_results = profile.get("registrationResults", {}).get("results", [])
                 
-                if existing_reg:
-                    return {"action": "skipped", "reason": "Already registered", "player": player_name}
-                
-                # Add new sport for existing player
-                new_reg = Registration(
-                    player_id=existing_player.id,
-                    program=reg_name,
-                    division=division,
-                    sport=sport,
-                    season=season,
-                    confirmation_sent=True  # Existing player, no email needed
-                )
-                db.add(new_reg)
-                db.commit()
-                
-                return {"action": "added_sport", "player": player_name, "sport": sport}
-            
-            else:
-                # NEW PLAYER - assign jersey and create
-                jersey = assign_jersey_number(birth_year, db)
-                
-                new_player = Player(
-                    full_name=player_name,
-                    birth_year=birth_year,
-                    jersey_number=jersey,
-                    parent_email=parent_email,
-                    locked=False
-                )
-                db.add(new_player)
-                db.flush()
-                
-                new_reg = Registration(
-                    player_id=new_player.id,
-                    program=reg_name,
-                    division=division,
-                    sport=sport,
-                    season=season,
-                    confirmation_sent=False  # New player needs email
-                )
-                db.add(new_reg)
-                db.commit()
-                
-                logger.info(f"Webhook added new player: {player_name}, jersey #{jersey}")
-                return {"action": "created", "player": player_name, "jersey": jersey, "sport": sport}
+                for rr in reg_results:
+                    if str(rr.get("registrationId")) != str(reg_id):
+                        continue
+                    
+                    # Check if this was created recently (within last 10 minutes)
+                    created = rr.get("created")
+                    if created:
+                        from datetime import datetime, timedelta, timezone
+                        try:
+                            created_dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+                            now = datetime.now(timezone.utc)
+                            if now - created_dt > timedelta(minutes=10):
+                                # Not recent, skip
+                                continue
+                        except:
+                            pass
+                    
+                    # This is a recent registration - process it
+                    result = process_webhook_profile(profile, rr, reg_name, db)
+                    if result:
+                        processed.append(result)
+                    break  # Only process first matching result per profile
+        
+        if processed:
+            return {"action": "processed", "results": processed}
+        else:
+            return {"action": "no_recent", "reason": "No recent registrations found"}
         
     except Exception as e:
         logger.error(f"Webhook processing error: {e}", exc_info=True)
         return {"action": "error", "message": str(e)}
+
+
+def process_webhook_profile(profile: dict, reg_result: dict, reg_name: str, db: Session) -> dict:
+    """
+    Process a single profile from a webhook.
+    Uses the same matching logic as sync to avoid duplicates.
+    """
+    from app.models import Player, Registration
+    from app.services.assign import assign_jersey_number
+    from sqlalchemy import func
+    
+    # Extract data
+    player_name = f"{profile.get('firstName', '')} {profile.get('lastName', '')}".strip()
+    
+    birth_year = None
+    dob = profile.get("dateOfBirth")
+    if dob and "-" in str(dob):
+        try:
+            birth_year = int(str(dob).split("-")[0])
+        except:
+            pass
+    
+    parent_email = (profile.get("email") or "unknown@example.com").lower().strip()
+    
+    # Extract division from answers
+    division = "Waiting Room"
+    for ans in reg_result.get("answers", []):
+        name = (ans.get("name") or "").lower()
+        if "division" in name:
+            val = ans.get("stringValue") or ans.get("arrayValue")
+            if isinstance(val, list):
+                val = val[0] if val else ""
+            if val:
+                division = str(val)
+            break
+    
+    # Extract sport and season from registration name
+    sport = extract_sport_from_registration_name(reg_name).lower()
+    season = extract_season_from_registration_name(reg_name)
+    
+    logger.info(f"Webhook processing: {player_name} for {sport}/{season}, division: {division}")
+    
+    # Use same matching logic as sync - email first
+    existing_player = None
+    
+    # Strategy 1: Match by email (most reliable)
+    if parent_email and parent_email != "unknown@example.com":
+        existing_player = db.query(Player).filter(
+            func.lower(Player.parent_email) == parent_email.lower()
+        ).first()
+    
+    # Strategy 2: Exact name match
+    if not existing_player:
+        existing_player = db.query(Player).filter(Player.full_name == player_name).first()
+    
+    # Strategy 3: Case-insensitive name match
+    if not existing_player:
+        normalized_name = " ".join(player_name.lower().split())
+        existing_player = db.query(Player).filter(
+            func.lower(Player.full_name) == normalized_name
+        ).first()
+    
+    if existing_player:
+        # EXISTING PLAYER - add sport if needed, update division
+        current_regs = db.query(Registration).filter(Registration.player_id == existing_player.id).all()
+        current_sports = {reg.sport.lower() for reg in current_regs if reg.sport}
+        
+        if sport in current_sports:
+            # Update division
+            existing_reg = db.query(Registration).filter(
+                Registration.player_id == existing_player.id,
+                func.lower(Registration.sport) == sport
+            ).first()
+            
+            if existing_reg and division != "Waiting Room" and existing_reg.division != division:
+                existing_reg.division = division
+                db.commit()
+                logger.info(f"Webhook: Updated division for {existing_player.full_name}: {division}")
+                return {"action": "updated_division", "player": existing_player.full_name, "division": division}
+            else:
+                return {"action": "already_current", "player": existing_player.full_name}
+        else:
+            # Add new sport
+            new_reg = Registration(
+                player_id=existing_player.id,
+                program=reg_name,
+                division=division,
+                sport=sport,
+                season=season,
+                confirmation_sent=True  # Existing player
+            )
+            db.add(new_reg)
+            db.commit()
+            logger.info(f"Webhook: Added {sport} for {existing_player.full_name}")
+            return {"action": "added_sport", "player": existing_player.full_name, "sport": sport}
+    
+    else:
+        # NEW PLAYER
+        normalized_player_name = " ".join(word.capitalize() for word in player_name.split())
+        
+        jersey_number = None
+        if birth_year:
+            jersey_number = assign_jersey_number(db, birth_year)
+        
+        new_player = Player(
+            full_name=normalized_player_name,
+            birth_year=birth_year,
+            jersey_number=jersey_number,
+            parent_email=parent_email
+        )
+        db.add(new_player)
+        db.flush()
+        
+        new_reg = Registration(
+            player_id=new_player.id,
+            program=reg_name,
+            division=division,
+            sport=sport,
+            season=season,
+            confirmation_sent=False  # New player needs email
+        )
+        db.add(new_reg)
+        db.commit()
+        
+        logger.info(f"Webhook: Created new player {normalized_player_name}, jersey #{jersey_number}")
+        return {"action": "created", "player": normalized_player_name, "jersey": jersey_number, "sport": sport}
