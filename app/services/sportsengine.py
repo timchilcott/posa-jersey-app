@@ -579,6 +579,7 @@ def process_single_registration(
     
     # Normalize player name for matching (lowercase, single spaces)
     normalized_name = " ".join(player_name.lower().split())
+    first_name_lower = player_name.split()[0].lower() if player_name.split() else ""
     
     # Import func for case-insensitive queries
     from sqlalchemy import func
@@ -587,22 +588,12 @@ def process_single_registration(
     existing_player = None
     match_method = None
     
-    # Strategy 1: Match by email FIRST (most reliable)
-    if parent_email and parent_email != "unknown@example.com":
-        existing_player = db.query(Player).filter(
-            func.lower(Player.parent_email) == parent_email.lower()
-        ).first()
-        if existing_player:
-            match_method = "email"
-            logger.info(f"SYNC: Matched by EMAIL: {parent_email} -> {existing_player.full_name}")
+    # Strategy 1: Exact name match (most reliable)
+    existing_player = db.query(Player).filter(Player.full_name == player_name).first()
+    if existing_player:
+        match_method = "exact_name"
     
-    # Strategy 2: Exact name match
-    if not existing_player:
-        existing_player = db.query(Player).filter(Player.full_name == player_name).first()
-        if existing_player:
-            match_method = "exact_name"
-    
-    # Strategy 3: Case-insensitive name match
+    # Strategy 2: Case-insensitive name match
     if not existing_player:
         existing_player = db.query(Player).filter(
             func.lower(Player.full_name) == normalized_name
@@ -610,22 +601,42 @@ def process_single_registration(
         if existing_player:
             match_method = "case_insensitive_name"
     
-    # Strategy 4: First name + last name initial match (handles typos)
-    if not existing_player and len(player_name.split()) >= 2:
-        parts = player_name.split()
-        first_name = parts[0].lower()
-        last_initial = parts[-1][0].lower() if parts[-1] else ""
-        
-        potential_matches = db.query(Player).filter(
-            func.lower(Player.full_name).like(f"{first_name}%{last_initial}%")
+    # Strategy 3: Email + similar name (for typos like "Jaxsyn" vs "Jaxson")
+    # Only use email matching if first name is similar
+    if not existing_player and parent_email and parent_email != "unknown@example.com":
+        email_matches = db.query(Player).filter(
+            func.lower(Player.parent_email) == parent_email.lower()
         ).all()
         
-        # If only one match with same email, use it
+        for em in email_matches:
+            em_first_name = em.full_name.split()[0].lower() if em.full_name.split() else ""
+            # Check if first names are similar (same first 3 chars or very close)
+            if first_name_lower and em_first_name:
+                # Same first 3 characters = likely same person with typo
+                if first_name_lower[:3] == em_first_name[:3]:
+                    existing_player = em
+                    match_method = "email_similar_name"
+                    logger.info(f"SYNC: Matched by email+similar name: {player_name} -> {em.full_name}")
+                    break
+    
+    # Strategy 4: Fuzzy name match with email confirmation (for major typos)
+    if not existing_player and len(player_name.split()) >= 2 and parent_email != "unknown@example.com":
+        parts = player_name.split()
+        last_name_lower = parts[-1].lower() if parts[-1] else ""
+        
+        # Look for same last name + same email
+        potential_matches = db.query(Player).filter(
+            func.lower(Player.parent_email) == parent_email.lower()
+        ).all()
+        
         for pm in potential_matches:
-            if pm.parent_email and parent_email and pm.parent_email.lower() == parent_email.lower():
+            pm_parts = pm.full_name.split()
+            pm_last_name = pm_parts[-1].lower() if pm_parts else ""
+            # Same last name AND same email = likely same person
+            if last_name_lower and pm_last_name and last_name_lower == pm_last_name:
                 existing_player = pm
-                match_method = "fuzzy_name_email"
-                logger.info(f"SYNC: Fuzzy matched: {player_name} -> {existing_player.full_name}")
+                match_method = "email_same_lastname"
+                logger.info(f"SYNC: Matched by email+last name: {player_name} -> {pm.full_name}")
                 break
     
     if existing_player:
@@ -644,27 +655,24 @@ def process_single_registration(
         
         # Get all current registrations for this player
         current_regs = db.query(Registration).filter(Registration.player_id == player.id).all()
-        current_sports = {reg.sport.lower() for reg in current_regs if reg.sport}
         
-        # Check if they already have this sport
-        if sport.lower() in current_sports:
-            # Sport already exists - update division to the most current
-            existing_reg = db.query(Registration).filter(
-                Registration.player_id == player.id,
-                func.lower(Registration.sport) == sport.lower()
-            ).first()
-            
-            if existing_reg and division != "Waiting Room":
-                if existing_reg.division != division:
-                    logger.info(f"SYNC: Updating division for {player.full_name} ({sport}): '{existing_reg.division}' -> '{division}'")
-                    existing_reg.division = division
-                    results["updated_registrations"] += 1
-                else:
-                    logger.info(f"SYNC: {player.full_name} ({sport}) division already current: '{division}'")
+        # Check if they already have this sport+season combination
+        existing_reg = db.query(Registration).filter(
+            Registration.player_id == player.id,
+            func.lower(Registration.sport) == sport.lower(),
+            Registration.season == season
+        ).first()
+        
+        if existing_reg:
+            # Registration exists - just update division if needed
+            if division != "Waiting Room" and existing_reg.division != division:
+                logger.info(f"SYNC: Updating division for {player.full_name} ({sport}): '{existing_reg.division}' -> '{division}'")
+                existing_reg.division = division
+                results["updated_registrations"] += 1
             else:
-                logger.info(f"SYNC: {player.full_name} already has {sport}, no division update needed")
+                logger.info(f"SYNC: {player.full_name} ({sport}/{season}) already current")
         else:
-            # New sport for this player - add it
+            # New sport/season for this player - add it
             new_reg = Registration(
                 player_id=player.id,
                 program=program_name,
@@ -676,6 +684,7 @@ def process_single_registration(
                 confirmation_sent=True  # Existing player, no email needed
             )
             db.add(new_reg)
+            db.flush()  # Flush immediately to prevent duplicate adds in same batch
             logger.info(f"SYNC: Added {sport} for existing player: {player.full_name} with division '{division}'")
             results["new_registrations"] += 1
     
@@ -930,39 +939,44 @@ def process_webhook_profile(profile: dict, reg_result: dict, reg_name: str, db: 
     
     logger.info(f"Webhook processing: {player_name} for {sport}/{season}, division: {division}")
     
-    # Use same matching logic as sync - email first
+    # Use same matching logic as sync
     existing_player = None
+    normalized_name = " ".join(player_name.lower().split())
+    first_name_lower = player_name.split()[0].lower() if player_name.split() else ""
     
-    # Strategy 1: Match by email (most reliable)
-    if parent_email and parent_email != "unknown@example.com":
-        existing_player = db.query(Player).filter(
-            func.lower(Player.parent_email) == parent_email.lower()
-        ).first()
+    # Strategy 1: Exact name match
+    existing_player = db.query(Player).filter(Player.full_name == player_name).first()
     
-    # Strategy 2: Exact name match
+    # Strategy 2: Case-insensitive name match
     if not existing_player:
-        existing_player = db.query(Player).filter(Player.full_name == player_name).first()
-    
-    # Strategy 3: Case-insensitive name match
-    if not existing_player:
-        normalized_name = " ".join(player_name.lower().split())
         existing_player = db.query(Player).filter(
             func.lower(Player.full_name) == normalized_name
         ).first()
     
-    if existing_player:
-        # EXISTING PLAYER - add sport if needed, update division
-        current_regs = db.query(Registration).filter(Registration.player_id == existing_player.id).all()
-        current_sports = {reg.sport.lower() for reg in current_regs if reg.sport}
+    # Strategy 3: Email + similar name (for typos)
+    if not existing_player and parent_email and parent_email != "unknown@example.com":
+        email_matches = db.query(Player).filter(
+            func.lower(Player.parent_email) == parent_email.lower()
+        ).all()
         
-        if sport in current_sports:
-            # Update division
-            existing_reg = db.query(Registration).filter(
-                Registration.player_id == existing_player.id,
-                func.lower(Registration.sport) == sport
-            ).first()
-            
-            if existing_reg and division != "Waiting Room" and existing_reg.division != division:
+        for em in email_matches:
+            em_first_name = em.full_name.split()[0].lower() if em.full_name.split() else ""
+            if first_name_lower and em_first_name and first_name_lower[:3] == em_first_name[:3]:
+                existing_player = em
+                logger.info(f"Webhook: Matched by email+similar name: {player_name} -> {em.full_name}")
+                break
+    
+    if existing_player:
+        # EXISTING PLAYER - check if sport+season exists, update division
+        existing_reg = db.query(Registration).filter(
+            Registration.player_id == existing_player.id,
+            func.lower(Registration.sport) == sport,
+            Registration.season == season
+        ).first()
+        
+        if existing_reg:
+            # Registration exists - just update division if needed
+            if division != "Waiting Room" and existing_reg.division != division:
                 existing_reg.division = division
                 db.commit()
                 logger.info(f"Webhook: Updated division for {existing_player.full_name}: {division}")
@@ -970,7 +984,7 @@ def process_webhook_profile(profile: dict, reg_result: dict, reg_name: str, db: 
             else:
                 return {"action": "already_current", "player": existing_player.full_name}
         else:
-            # Add new sport
+            # Add new sport/season
             new_reg = Registration(
                 player_id=existing_player.id,
                 program=reg_name,
