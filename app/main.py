@@ -989,3 +989,65 @@ def sportsengine_status(request: Request):
             status["auth_error"] = str(e)
     
     return status
+
+
+@app.get("/debug/find-player/{name}")
+def debug_find_player(name: str, request: Request, db: Session = Depends(get_db)):
+    """Debug endpoint to find a player by name, including those without registrations."""
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        raise exc
+    
+    from sqlalchemy import func
+    
+    # Search for player (case-insensitive partial match)
+    players = db.query(Player).filter(
+        func.lower(Player.full_name).contains(name.lower())
+    ).all()
+    
+    results = []
+    for p in players:
+        regs = db.query(Registration).filter(Registration.player_id == p.id).all()
+        results.append({
+            "id": p.id,
+            "full_name": p.full_name,
+            "birth_year": p.birth_year,
+            "jersey_number": p.jersey_number,
+            "parent_email": p.parent_email,
+            "locked": p.locked,
+            "registrations": [
+                {
+                    "id": r.id,
+                    "sport": r.sport,
+                    "season": r.season,
+                    "division": r.division,
+                    "confirmation_sent": r.confirmation_sent
+                }
+                for r in regs
+            ]
+        })
+    
+    return {"search": name, "found": len(results), "players": results}
+
+
+@app.delete("/debug/delete-player/{player_id}")
+def debug_delete_player(player_id: int, request: Request, db: Session = Depends(get_db)):
+    """Delete a player by ID (including orphaned players not visible in admin)."""
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        raise exc
+    
+    player = db.query(Player).filter(Player.id == player_id).first()
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    name = player.full_name
+    
+    # Delete registrations first
+    db.query(Registration).filter(Registration.player_id == player_id).delete()
+    db.delete(player)
+    db.commit()
+    
+    return {"deleted": True, "player_id": player_id, "name": name}
