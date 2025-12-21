@@ -1081,3 +1081,19 @@ def debug_fix_player(player_id: int, birth_year: int, request: Request, db: Sess
         "birth_year": player.birth_year,
         "jersey_number": player.jersey_number
     }
+
+
+@app.post("/debug/mark-all-sent")
+def debug_mark_all_sent(request: Request, db: Session = Depends(get_db)):
+    """Mark all registrations as confirmation_sent=True without sending emails."""
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        raise exc
+    
+    count = db.query(Registration).filter(Registration.confirmation_sent == False).update(
+        {Registration.confirmation_sent: True}
+    )
+    db.commit()
+    
+    return {"marked_as_sent": count}
