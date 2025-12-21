@@ -109,6 +109,23 @@ async def stop_scheduler():
 templates = Jinja2Templates(directory="app/templates")
 Base.metadata.create_all(bind=engine)
 
+# Migration: Add grade column if it doesn't exist
+def run_migrations():
+    """Run database migrations for new columns."""
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        # Check if grade column exists
+        try:
+            conn.execute(text("SELECT grade FROM players LIMIT 1"))
+        except Exception:
+            # Column doesn't exist, add it
+            logger.info("Adding 'grade' column to players table...")
+            conn.execute(text("ALTER TABLE players ADD COLUMN grade VARCHAR"))
+            conn.commit()
+            logger.info("Added 'grade' column to players table")
+
+run_migrations()
+
 # ---------------------------------------------------------------------
 # Pydantic Models
 # ---------------------------------------------------------------------
@@ -334,6 +351,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
                     "registration_id": reg_id,
                     "full_name": p.full_name,
                     "birth_year": p.birth_year,
+                    "grade": p.grade,
                     "parent_email": p.parent_email,
                     "jersey_number": p.jersey_number,
                     "sports": sports,
@@ -353,6 +371,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
                 "registration_id": reg_id,
                 "full_name": p.full_name,
                 "birth_year": p.birth_year,
+                "grade": p.grade,
                 "parent_email": p.parent_email,
                 "jersey_number": p.jersey_number,
                 "sports": sports,
@@ -401,6 +420,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
                 "registration_id": reg_id,
                 "full_name": p.full_name,
                 "birth_year": p.birth_year,
+                "grade": p.grade,
                 "parent_email": p.parent_email,
                 "jersey_number": p.jersey_number,
                 "sports": sports,
@@ -416,6 +436,7 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
             "registration_id": reg_id,
             "full_name": p.full_name,
             "birth_year": p.birth_year,
+            "grade": p.grade,
             "parent_email": p.parent_email,
             "jersey_number": p.jersey_number,
             "sports": sports,
