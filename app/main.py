@@ -1051,3 +1051,33 @@ def debug_delete_player(player_id: int, request: Request, db: Session = Depends(
     db.commit()
     
     return {"deleted": True, "player_id": player_id, "name": name}
+
+
+@app.post("/debug/fix-player/{player_id}")
+def debug_fix_player(player_id: int, birth_year: int, request: Request, db: Session = Depends(get_db)):
+    """Fix a player's birth year and assign a jersey number."""
+    try:
+        require_login(request)
+    except HTTPException as exc:
+        raise exc
+    
+    from .services.assign import assign_jersey_number
+    
+    player = db.query(Player).filter(Player.id == player_id).first()
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    player.birth_year = birth_year
+    
+    if not player.jersey_number:
+        player.jersey_number = assign_jersey_number(db, birth_year)
+    
+    db.commit()
+    
+    return {
+        "fixed": True,
+        "player_id": player_id,
+        "name": player.full_name,
+        "birth_year": player.birth_year,
+        "jersey_number": player.jersey_number
+    }
