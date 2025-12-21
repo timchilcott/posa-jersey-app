@@ -675,29 +675,35 @@ def process_single_registration(
         # Normalize the name to Title Case for consistency
         normalized_player_name = " ".join(word.capitalize() for word in player_name.split())
         
-        # Assign jersey number based on birth year
+        # Assign jersey number based on birth year (if we have it)
         jersey_number = None
         if birth_year:
             jersey_number = assign_jersey_number(db, birth_year)
         
+        # If missing critical data, put in Waiting Room for manual triage
+        final_division = division
+        if not birth_year or not jersey_number:
+            final_division = "Waiting Room"
+            logger.info(f"SYNC: Missing data for {normalized_player_name} (birth_year={birth_year}, jersey={jersey_number}) - placing in Waiting Room")
+        
         logger.info(f"SYNC: Creating NEW player: {normalized_player_name} (email: {parent_email})")
         
-        # Create new player
+        # Create new player - ALWAYS capture, never reject
         player = Player(
             full_name=normalized_player_name,
-            birth_year=birth_year,
-            jersey_number=jersey_number,
+            birth_year=birth_year,  # May be None
+            jersey_number=jersey_number,  # May be None
             parent_email=parent_email
         )
         db.add(player)
         db.flush()  # Get player ID
         
-        # Create registration with confirmation_sent=False (needs email)
+        # Create registration - ALWAYS capture
         new_reg = Registration(
             player_id=player.id,
             program=program_name,
-            division=division,
-            sport=sport.lower(),  # Normalize sport name
+            division=final_division,
+            sport=sport.lower(),
             season=season,
             order_number=order_number,
             order_date=order_date,
@@ -706,7 +712,7 @@ def process_single_registration(
         db.add(new_reg)
         results["new_registrations"] += 1
         
-        logger.info(f"SYNC: Created new player: {normalized_player_name} (jersey #{jersey_number}, division: {division}, sport: {sport})")
+        logger.info(f"SYNC: Created new player: {normalized_player_name} (jersey #{jersey_number}, division: {final_division}, sport: {sport})")
 
 
 def sync_all_registrations(db: Session) -> dict:
@@ -971,17 +977,23 @@ def process_webhook_profile(profile: dict, reg_result: dict, reg_name: str, db: 
                 return {"action": "already_exists", "player": existing_player.full_name}
     
     else:
-        # NEW PLAYER
+        # NEW PLAYER - ALWAYS capture, never reject
         normalized_player_name = " ".join(word.capitalize() for word in player_name.split())
         
         jersey_number = None
         if birth_year:
             jersey_number = assign_jersey_number(db, birth_year)
         
+        # If missing critical data, put in Waiting Room for manual triage
+        final_division = division
+        if not birth_year or not jersey_number:
+            final_division = "Waiting Room"
+            logger.info(f"Webhook: Missing data for {normalized_player_name} - placing in Waiting Room")
+        
         new_player = Player(
             full_name=normalized_player_name,
-            birth_year=birth_year,
-            jersey_number=jersey_number,
+            birth_year=birth_year,  # May be None
+            jersey_number=jersey_number,  # May be None
             parent_email=parent_email
         )
         db.add(new_player)
@@ -990,7 +1002,7 @@ def process_webhook_profile(profile: dict, reg_result: dict, reg_name: str, db: 
         new_reg = Registration(
             player_id=new_player.id,
             program=reg_name,
-            division=division,
+            division=final_division,
             sport=sport,
             season=season,
             confirmation_sent=False  # New player needs email
@@ -998,5 +1010,5 @@ def process_webhook_profile(profile: dict, reg_result: dict, reg_name: str, db: 
         db.add(new_reg)
         db.commit()
         
-        logger.info(f"Webhook: Created new player {normalized_player_name}, jersey #{jersey_number}")
-        return {"action": "created", "player": normalized_player_name, "jersey": jersey_number, "sport": sport}
+        logger.info(f"Webhook: Created new player {normalized_player_name}, jersey #{jersey_number}, division: {final_division}")
+        return {"action": "created", "player": normalized_player_name, "jersey": jersey_number, "sport": sport, "division": final_division}
