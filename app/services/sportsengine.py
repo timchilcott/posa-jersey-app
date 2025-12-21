@@ -579,16 +579,17 @@ def process_single_registration(
     
     # Normalize player name for matching (lowercase, single spaces)
     normalized_name = " ".join(player_name.lower().split())
-    first_name_lower = player_name.split()[0].lower() if player_name.split() else ""
     
     # Import func for case-insensitive queries
     from sqlalchemy import func
+    from sqlalchemy.exc import IntegrityError
     
-    # Check if player already exists - try multiple matching strategies
+    # Check if player already exists - use NAME matching ONLY
+    # Email matching causes siblings to be merged incorrectly
     existing_player = None
     match_method = None
     
-    # Strategy 1: Exact name match (most reliable)
+    # Strategy 1: Exact name match
     existing_player = db.query(Player).filter(Player.full_name == player_name).first()
     if existing_player:
         match_method = "exact_name"
@@ -601,43 +602,9 @@ def process_single_registration(
         if existing_player:
             match_method = "case_insensitive_name"
     
-    # Strategy 3: Email + similar name (for typos like "Jaxsyn" vs "Jaxson")
-    # Only use email matching if first name is similar
-    if not existing_player and parent_email and parent_email != "unknown@example.com":
-        email_matches = db.query(Player).filter(
-            func.lower(Player.parent_email) == parent_email.lower()
-        ).all()
-        
-        for em in email_matches:
-            em_first_name = em.full_name.split()[0].lower() if em.full_name.split() else ""
-            # Check if first names are similar (same first 3 chars or very close)
-            if first_name_lower and em_first_name:
-                # Same first 3 characters = likely same person with typo
-                if first_name_lower[:3] == em_first_name[:3]:
-                    existing_player = em
-                    match_method = "email_similar_name"
-                    logger.info(f"SYNC: Matched by email+similar name: {player_name} -> {em.full_name}")
-                    break
-    
-    # Strategy 4: Fuzzy name match with email confirmation (for major typos)
-    if not existing_player and len(player_name.split()) >= 2 and parent_email != "unknown@example.com":
-        parts = player_name.split()
-        last_name_lower = parts[-1].lower() if parts[-1] else ""
-        
-        # Look for same last name + same email
-        potential_matches = db.query(Player).filter(
-            func.lower(Player.parent_email) == parent_email.lower()
-        ).all()
-        
-        for pm in potential_matches:
-            pm_parts = pm.full_name.split()
-            pm_last_name = pm_parts[-1].lower() if pm_parts else ""
-            # Same last name AND same email = likely same person
-            if last_name_lower and pm_last_name and last_name_lower == pm_last_name:
-                existing_player = pm
-                match_method = "email_same_lastname"
-                logger.info(f"SYNC: Matched by email+last name: {player_name} -> {pm.full_name}")
-                break
+    # NOTE: We intentionally do NOT match by email to avoid merging siblings
+    # If "Jaxsyn Smith" and "Jaxson Smith" are different entries, they'll be
+    # created as separate players. Admin can merge duplicates manually if needed.
     
     if existing_player:
         logger.info(f"SYNC: Found existing player via {match_method}: {existing_player.full_name} (ID: {existing_player.id}, incoming: {player_name})")
@@ -673,20 +640,33 @@ def process_single_registration(
                 logger.info(f"SYNC: {player.full_name} ({sport}/{season}) already current")
         else:
             # New sport/season for this player - add it
-            new_reg = Registration(
-                player_id=player.id,
-                program=program_name,
-                division=division,
-                sport=sport.lower(),  # Normalize sport name
-                season=season,
-                order_number=order_number,
-                order_date=order_date,
-                confirmation_sent=True  # Existing player, no email needed
-            )
-            db.add(new_reg)
-            db.flush()  # Flush immediately to prevent duplicate adds in same batch
-            logger.info(f"SYNC: Added {sport} for existing player: {player.full_name} with division '{division}'")
-            results["new_registrations"] += 1
+            try:
+                new_reg = Registration(
+                    player_id=player.id,
+                    program=program_name,
+                    division=division,
+                    sport=sport.lower(),
+                    season=season,
+                    order_number=order_number,
+                    order_date=order_date,
+                    confirmation_sent=True
+                )
+                db.add(new_reg)
+                db.flush()
+                logger.info(f"SYNC: Added {sport} for existing player: {player.full_name} with division '{division}'")
+                results["new_registrations"] += 1
+            except IntegrityError:
+                db.rollback()
+                # Registration was added by another process, just update it
+                existing_reg = db.query(Registration).filter(
+                    Registration.player_id == player.id,
+                    func.lower(Registration.sport) == sport.lower(),
+                    Registration.season == season
+                ).first()
+                if existing_reg and division != "Waiting Room":
+                    existing_reg.division = division
+                    results["updated_registrations"] += 1
+                logger.info(f"SYNC: Registration already existed for {player.full_name} ({sport}), updated")
     
     else:
         # NEW PLAYER - all matching strategies failed, this is truly a new person
@@ -939,10 +919,9 @@ def process_webhook_profile(profile: dict, reg_result: dict, reg_name: str, db: 
     
     logger.info(f"Webhook processing: {player_name} for {sport}/{season}, division: {division}")
     
-    # Use same matching logic as sync
+    # Use same matching logic as sync - NAME ONLY to avoid merging siblings
     existing_player = None
     normalized_name = " ".join(player_name.lower().split())
-    first_name_lower = player_name.split()[0].lower() if player_name.split() else ""
     
     # Strategy 1: Exact name match
     existing_player = db.query(Player).filter(Player.full_name == player_name).first()
@@ -952,19 +931,6 @@ def process_webhook_profile(profile: dict, reg_result: dict, reg_name: str, db: 
         existing_player = db.query(Player).filter(
             func.lower(Player.full_name) == normalized_name
         ).first()
-    
-    # Strategy 3: Email + similar name (for typos)
-    if not existing_player and parent_email and parent_email != "unknown@example.com":
-        email_matches = db.query(Player).filter(
-            func.lower(Player.parent_email) == parent_email.lower()
-        ).all()
-        
-        for em in email_matches:
-            em_first_name = em.full_name.split()[0].lower() if em.full_name.split() else ""
-            if first_name_lower and em_first_name and first_name_lower[:3] == em_first_name[:3]:
-                existing_player = em
-                logger.info(f"Webhook: Matched by email+similar name: {player_name} -> {em.full_name}")
-                break
     
     if existing_player:
         # EXISTING PLAYER - check if sport+season exists, update division
@@ -985,18 +951,24 @@ def process_webhook_profile(profile: dict, reg_result: dict, reg_name: str, db: 
                 return {"action": "already_current", "player": existing_player.full_name}
         else:
             # Add new sport/season
-            new_reg = Registration(
-                player_id=existing_player.id,
-                program=reg_name,
-                division=division,
-                sport=sport,
-                season=season,
-                confirmation_sent=True  # Existing player
-            )
-            db.add(new_reg)
-            db.commit()
-            logger.info(f"Webhook: Added {sport} for {existing_player.full_name}")
-            return {"action": "added_sport", "player": existing_player.full_name, "sport": sport}
+            try:
+                from sqlalchemy.exc import IntegrityError
+                new_reg = Registration(
+                    player_id=existing_player.id,
+                    program=reg_name,
+                    division=division,
+                    sport=sport,
+                    season=season,
+                    confirmation_sent=True
+                )
+                db.add(new_reg)
+                db.commit()
+                logger.info(f"Webhook: Added {sport} for {existing_player.full_name}")
+                return {"action": "added_sport", "player": existing_player.full_name, "sport": sport}
+            except IntegrityError:
+                db.rollback()
+                logger.info(f"Webhook: Registration already exists for {existing_player.full_name} ({sport})")
+                return {"action": "already_exists", "player": existing_player.full_name}
     
     else:
         # NEW PLAYER
