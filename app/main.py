@@ -23,7 +23,6 @@ from .email import (
     process_inbound_email,
     save_inbound_email,
     normalize_division,
-    DIVISION_ORDER,
 )
 
 logger = logging.getLogger(__name__)
@@ -112,13 +111,13 @@ Base.metadata.create_all(bind=engine)
 # Migration: Add grade column if it doesn't exist
 def run_migrations():
     """Run database migrations for new columns."""
-    from sqlalchemy import text
-    with engine.connect() as conn:
-        # Check if grade column exists
-        try:
-            conn.execute(text("SELECT grade FROM players LIMIT 1"))
-        except Exception:
-            # Column doesn't exist, add it
+    from sqlalchemy import text, inspect
+    
+    inspector = inspect(engine)
+    columns = [col['name'] for col in inspector.get_columns('players')]
+    
+    if 'grade' not in columns:
+        with engine.connect() as conn:
             logger.info("Adding 'grade' column to players table...")
             conn.execute(text("ALTER TABLE players ADD COLUMN grade VARCHAR"))
             conn.commit()
@@ -295,7 +294,7 @@ def invite_user(
 # Admin Dashboard
 # ---------------------------------------------------------------------
 @app.get("/admin", response_class=HTMLResponse)
-def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Depends(get_db)):
+def admin_dashboard(request: Request, db: Session = Depends(get_db)):
     try:
         require_login(request)
     except HTTPException as exc:
@@ -331,77 +330,6 @@ def admin_dashboard(request: Request, view: str = "birthyear", db: Session = Dep
 
     EXCLUDED_DIVISIONS = {"", "Unknown"}
     counted_player_ids = set()
-
-    # ------------------- DIVISION VIEW -------------------
-    if view == "division":
-        players_by_division = defaultdict(list)
-        unassigned_players = []
-        waiting_room_players = []
-        
-        for p in players:
-            sports = sorted({(r.sport or "").strip().lower() for r in p.registrations if r.sport})
-            divisions = sorted({(r.division or "").strip() for r in p.registrations if r.division})
-            confirmation_sent = any(r.confirmation_sent for r in p.registrations)
-            reg_id = p.registrations[0].id if p.registrations else None
-
-            # Check if player is in Waiting Room
-            if "Waiting Room" in divisions:
-                player_data = {
-                    "id": p.id,
-                    "registration_id": reg_id,
-                    "full_name": p.full_name,
-                    "birth_year": p.birth_year,
-                    "grade": p.grade,
-                    "parent_email": p.parent_email,
-                    "jersey_number": p.jersey_number,
-                    "sports": sports,
-                    "division": "Waiting Room",
-                    "divisions": divisions,
-                    "confirmation_sent": confirmation_sent,
-                    "is_duplicate": p.id in duplicate_ids,
-                }
-                waiting_room_players.append(player_data)
-                continue
-
-            valid_divisions = [d for d in divisions if d not in EXCLUDED_DIVISIONS]
-            primary_division = valid_divisions[0] if valid_divisions else "Unknown"
-
-            player_data = {
-                "id": p.id,
-                "registration_id": reg_id,
-                "full_name": p.full_name,
-                "birth_year": p.birth_year,
-                "grade": p.grade,
-                "parent_email": p.parent_email,
-                "jersey_number": p.jersey_number,
-                "sports": sports,
-                "division": primary_division,
-                "divisions": divisions,
-                "confirmation_sent": confirmation_sent,
-                "is_duplicate": p.id in duplicate_ids,
-            }
-
-            if primary_division in EXCLUDED_DIVISIONS:
-                unassigned_players.append(player_data)
-            else:
-                players_by_division[primary_division].append(player_data)
-                counted_player_ids.add(p.id)
-
-        sorted_players = dict(sorted(players_by_division.items(), key=lambda x: DIVISION_ORDER.get(x[0], 999)))
-
-        for division, plist in sorted_players.items():
-            plist.sort(key=lambda p: (p["jersey_number"] is None, p["jersey_number"]))
-
-        return templates.TemplateResponse("admin.html", {
-            "request": request,
-            "view": "division",
-            "players_by_group": sorted_players,
-            "group_list": list(sorted_players.keys()),
-            "unassigned_players": unassigned_players,
-            "waiting_room_players": waiting_room_players,
-            "total_players": len(counted_player_ids),
-            "birth_year_counts": birth_year_counts,
-        })
 
     # ------------------- BIRTH YEAR VIEW -------------------
     players_by_birth_year = defaultdict(list)
