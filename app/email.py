@@ -28,6 +28,7 @@ UNIFORM_ORDER_URL = (
     "https://treblemade.com/products/pines-soccer-reversible-jersey?_pos=1&_sid=0fa41b461&_ss=r"
 )
 DEFAULT_CC_EMAIL = "tim@posasports.org"
+DEFAULT_CC_EMAILS = ["tim@posasports.org", "taylor@posasports.org"]
 
 DIVISION_ORDER = {
     "U3": -1,
@@ -133,8 +134,9 @@ def send_confirmation_email(to_email, players, promo_code=None, registrations=No
         html_content=html,
         plain_text_content=_plain_text_from_html(html),
     )
-    if to_email != DEFAULT_CC_EMAIL:
-        message.add_cc(DEFAULT_CC_EMAIL)
+    for cc_email in DEFAULT_CC_EMAILS:
+        if to_email != cc_email:
+            message.add_cc(cc_email)
 
     try:
         sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
@@ -192,8 +194,9 @@ def send_pines_confirmation_email(to_email, players, registrations=None, db=None
         html_content=html,
         plain_text_content=_plain_text_from_html(html),
     )
-    if to_email != DEFAULT_CC_EMAIL:
-        message.add_cc(DEFAULT_CC_EMAIL)
+    for cc_email in DEFAULT_CC_EMAILS:
+        if to_email != cc_email:
+            message.add_cc(cc_email)
 
     try:
         sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
@@ -207,7 +210,7 @@ def send_pines_confirmation_email(to_email, players, registrations=None, db=None
         logger.error("Error sending Pines confirmation email: %s", e)
 
 # ---------------------------------------------------------------------
-# Inbound email capture / parsing
+# Inbound email capture / parsing (Legacy - for Blue Sombrero)
 # ---------------------------------------------------------------------
 def save_inbound_email(email_body: str, filename: str | None = None) -> None:
     root_dir = os.path.dirname(os.path.dirname(__file__))
@@ -220,48 +223,16 @@ def save_inbound_email(email_body: str, filename: str | None = None) -> None:
     except Exception as e:
         logger.error("Failed to save inbound email: %s", e)
 
-def parse_division_from_grade(grade: str) -> str:
-    """
-    Parse division from grade string.
-    Examples: "3rd/4th Grade" -> "U10", "K/1st Grade" -> "U6"
-    """
-    grade = grade.lower()
-    
-    # Extract highest grade number
-    numbers = re.findall(r'(\d+)(?:st|nd|rd|th)', grade)
-    
-    if not numbers:
-        # Check for Kindergarten
-        if 'k' in grade or 'kindergarten' in grade:
-            return "U6"
-        return "Waiting Room"
-    
-    # Convert grade to division
-    highest_grade = max(int(n) for n in numbers)
-    
-    grade_to_division = {
-        0: "U6",   # Kindergarten
-        1: "U6",   # 1st grade
-        2: "U8",   # 2nd grade
-        3: "U10",  # 3rd grade
-        4: "U10",  # 4th grade
-        5: "U12",  # 5th grade
-        6: "U12",  # 6th grade
-        7: "U14",  # 7th grade
-        8: "U14",  # 8th grade
-        9: "Pend Oreille Pines (High School Club Team)",  # High school
-        10: "Pend Oreille Pines (High School Club Team)",
-        11: "Pend Oreille Pines (High School Club Team)",
-        12: "Pend Oreille Pines (High School Club Team)",
-    }
-    
-    return grade_to_division.get(highest_grade, "Waiting Room")
 
 def process_inbound_email(email_body: str, db):
-    """Parse inbound email and create player/registration records."""
-    logger.info("=" * 80)
-    logger.info("PROCESSING INBOUND EMAIL - START")
-    logger.info("=" * 80)
+    """
+    Parse inbound email and create player/registration records.
+    
+    NOTE: This is the legacy Blue Sombrero email parser.
+    For SportsEngine, use the /sportsengine/sync endpoint instead.
+    """
+    logger.info("Processing inbound email (legacy parser)")
+    logger.warning("Email parsing is deprecated. Use SportsEngine API integration instead.")
     
     try:
         # Parse the email
@@ -299,250 +270,11 @@ def process_inbound_email(email_body: str, db):
             html_content = email_body
         
         soup = BeautifulSoup(html_content, 'html.parser')
-        
-        # Extract order info
-        order_number = None
-        order_no_match = re.search(r'Order\s*No:?\s*(\d+)', soup.get_text(), re.IGNORECASE)
-        if order_no_match:
-            order_number = order_no_match.group(1)
-            logger.info(f"✓ Order number: {order_number}")
-        
-        order_date = None
-        date_match = re.search(r'Order Date:[\s\w]+(\w{3}\s+\d{1,2},\s+\d{4})', soup.get_text())
-        if date_match:
-            try:
-                order_date = datetime.strptime(date_match.group(1), '%b %d, %Y')
-                logger.info(f"✓ Order date: {order_date}")
-            except:
-                pass
-        
-        # Get full text
         full_text = soup.get_text(separator=' ', strip=True)
         
-        # LOG EVERYTHING TO CONSOLE
-        print("\n" + "=" * 80)
-        print("FULL EXTRACTED TEXT (first 2000 characters)")
-        print("=" * 80)
-        print(full_text[:2000])
-        print("...")
-        print("=" * 80)
-        print(f"Total length: {len(full_text)} characters")
-        print("=" * 80 + "\n")
+        logger.info(f"Email content length: {len(full_text)} characters")
+        logger.info("NOTE: For SportsEngine registrations, use the API sync instead of email parsing.")
         
-        # Try to isolate Order Details section
-        order_section = None
-        
-        # Find "Order Details:" and extract until Payment History or Program Info
-        match = re.search(r'Order Details:(.{50,3000}?)(?:Payment History:|Program Info:|$)', full_text, re.IGNORECASE | re.DOTALL)
-        if match:
-            order_section = match.group(1).strip()
-            print("✓ Found Order Details section:")
-            print("-" * 80)
-            print(order_section[:800])  # Show more characters
-            print("-" * 80 + "\n")
-        else:
-            logger.warning("⚠ Could not find Order Details section, using full text")
-            order_section = full_text
-        
-        # CLEAN UP WHITESPACE - Convert line breaks to spaces
-        order_section = re.sub(r'\s*\n\s*', ' ', order_section)
-        order_section = re.sub(r'\s+', ' ', order_section)
-        
-        # Remove email forwarding artifacts (>, =09, =20, etc.)
-        order_section = re.sub(r'=\d+', '', order_section)  # Remove =09, =20
-        order_section = re.sub(r'>\s*', '', order_section)  # Remove >
-        order_section = re.sub(r'\s+', ' ', order_section)  # Clean up extra spaces again
-        
-        print("CLEANED ORDER SECTION:")
-        print(order_section[:500])
-        print("\n")
-        
-        # NOW TRY PARSING - Multi-line format handling
-        # Store all found players
-        all_players = []
-        
-        # Patterns for "1 Sophia Roop 2025 Pines Volleyball - 3rd/4th Grade"
-        patterns = [
-            # Pattern 1: With grade (most specific)
-            (r'\d+\s+([A-Z][a-z]+\s+[A-Z][a-z]+)\s+(\d{4})\s+Pines\s+([A-Za-z]+)\s+-\s+([^$]+?)(?=\$|\d+\s+[A-Z]|Division|Total|Non-Volunteer|$)',
-             "Pattern 1: Number Name Year Pines Sport - Grade"),
-            
-            # Pattern 2: Without grade
-            (r'\d+\s+([A-Z][a-z]+\s+[A-Z][a-z]+)\s+(\d{4})\s+Pines\s+([A-Za-z]+)',
-             "Pattern 2: Number Name Year Pines Sport"),
-            
-            # Pattern 3: Without leading number but with grade
-            (r'([A-Z][a-z]+\s+[A-Z][a-z]+)\s+(\d{4})\s+Pines\s+([A-Za-z]+)\s+-\s+([^$]+?)(?=\$|Division|Total|$)',
-             "Pattern 3: Name Year Pines Sport - Grade"),
-            
-            # Pattern 4: Lenient - just name, year, sport
-            (r'([A-Z][a-z]{2,}\s+[A-Z][a-z]{2,})\s+(\d{4}).*?(volleyball|soccer|basketball|baseball|softball|flag)',
-             "Pattern 4: Lenient name year sport"),
-        ]
-        
-        for pattern, description in patterns:
-            print(f"Testing: {description}")
-            matches = list(re.finditer(pattern, order_section, re.IGNORECASE))
-            print(f"  Found {len(matches)} potential matches")
-            
-            for i, match in enumerate(matches, 1):
-                groups = match.groups()
-                name = groups[0].strip()
-                yr = groups[1]
-                sp = groups[2].strip().lower()
-                gr = groups[3].strip() if len(groups) > 3 else None
-                
-                print(f"  Match {i}: '{name}' | {yr} | {sp} | {gr or 'no grade'}")
-                
-                # Validate name
-                invalid = ['thank', 'signing', 'order', 'total', 'balance', 'amount', 
-                          'division', 'price', 'volunteer', 'fee', 'details']
-                if any(kw in name.lower() for kw in invalid):
-                    logger.info(f"    ✗ Rejected (contains invalid keyword)")
-                    continue
-                
-                if len(name.split()) < 2:
-                    logger.info(f"    ✗ Rejected (less than 2 words)")
-                    continue
-                
-                # Validate year
-                try:
-                    year_int = int(yr)
-                    current_year = datetime.now().year
-                    if not (current_year - 20 <= year_int <= current_year + 5):
-                        logger.info(f"    ✗ Rejected (invalid year: {yr})")
-                        continue
-                except:
-                    logger.info(f"    ✗ Rejected (invalid year format)")
-                    continue
-                
-                logger.info(f"    ✓ VALID! Adding to list")
-                all_players.append({
-                    'name': name,
-                    'year': yr,
-                    'sport': sp,
-                    'grade': gr
-                })
-            
-            # If we found players with this pattern, stop trying other patterns
-            if all_players:
-                break
-            else:
-                print(f"  No valid matches from this pattern\n")
-        
-        # RESULT - Process all found players
-        if all_players:
-            print("\n" + "=" * 80)
-            print(f"✓✓✓ SUCCESSFULLY PARSED {len(all_players)} PLAYER(S) ✓✓✓")
-            for idx, player_data in enumerate(all_players, 1):
-                print(f"  Player {idx}: {player_data['name']}")
-                print(f"    Year: {player_data['year']}")
-                print(f"    Sport: {player_data['sport']}")
-                if player_data['grade']:
-                    print(f"    Grade: {player_data['grade']}")
-            print("=" * 80 + "\n")
-            
-            # Create/update each player
-            for player_data in all_players:
-                player_name = player_data['name']
-                year = player_data['year']
-                sport = player_data['sport']
-                grade = player_data['grade']
-                
-                if grade:
-                    print(f"✓ Grade info captured for {player_name}: {grade}")
-                
-                # Create/update player
-                existing_player = db.query(Player).filter(Player.full_name == player_name).first()
-                
-                if existing_player:
-                    existing_reg = db.query(Registration).filter(
-                        Registration.player_id == existing_player.id,
-                        Registration.sport == sport,
-                        Registration.season == year
-                    ).first()
-                    
-                    if existing_reg:
-                        logger.info(f"Registration already exists for {player_name}")
-                        if not existing_reg.order_number and order_number:
-                            existing_reg.order_number = order_number
-                            existing_reg.order_date = order_date
-                            db.commit()
-                            logger.info("✓ Updated order info")
-                    else:
-                        # Existing player, new registration for different sport/season
-                        # Use their existing division from any other registration
-                        other_reg = db.query(Registration).filter(
-                            Registration.player_id == existing_player.id
-                        ).first()
-                        
-                        if other_reg and other_reg.division and other_reg.division != "Waiting Room":
-                            division = other_reg.division
-                            logger.info(f"✓ Using existing division '{division}' for {player_name}")
-                        else:
-                            division = "Waiting Room"
-                            logger.info(f"✓ No existing division found, placing {player_name} in Waiting Room")
-                        
-                        program_name = f"{year} Pines {sport.title()}"
-                        if grade:
-                            program_name += f" - {grade}"
-                        
-                        new_reg = Registration(
-                            player_id=existing_player.id,
-                            program=program_name,
-                            division=division,
-                            sport=sport,
-                            season=year,
-                            order_number=order_number,
-                            order_date=order_date,
-                            confirmation_sent=False
-                        )
-                        db.add(new_reg)
-                        db.commit()
-                        logger.info(f"✓ Added registration for {player_name} in {division}")
-                else:
-                    # New player - put in Waiting Room
-                    division = "Waiting Room"
-                    logger.info(f"✓ New player {player_name} will be placed in Waiting Room")
-                    
-                    new_player = Player(
-                        full_name=player_name,
-                        parent_email=parent_email or "unknown@example.com",
-                        jersey_number=None,
-                        birth_year=None
-                    )
-                    db.add(new_player)
-                    db.flush()
-                    
-                    program_name = f"{year} Pines {sport.title()}"
-                    if grade:
-                        program_name += f" - {grade}"
-                    
-                    new_reg = Registration(
-                        player_id=new_player.id,
-                        program=program_name,
-                        division=division,
-                        sport=sport,
-                        season=year,
-                        order_number=order_number,
-                        order_date=order_date,
-                        confirmation_sent=False
-                    )
-                    db.add(new_reg)
-                    db.commit()
-                    logger.info(f"✓ Created new player {player_name} in Waiting Room")
-            
-            logger.info(f"SUCCESS - Processed {len(all_players)} player(s) from email")
-        else:
-            logger.error("\n" + "=" * 80)
-            logger.error("✗✗✗ PARSING FAILED ✗✗✗")
-            logger.error("Could not extract valid player information")
-            logger.error("Review the extracted text and patterns above")
-            logger.error("=" * 80)
-            
     except Exception as e:
-        logger.error("=" * 80)
-        logger.error(f"✗✗✗ EXCEPTION ✗✗✗")
-        logger.error(f"Error: {e}", exc_info=True)
-        logger.error("=" * 80)
+        logger.error(f"Error processing email: {e}", exc_info=True)
         db.rollback()
