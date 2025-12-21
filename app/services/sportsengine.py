@@ -429,6 +429,29 @@ def extract_division(answers: list) -> str:
     return "Waiting Room"
 
 
+def extract_grade(answers: list) -> Optional[str]:
+    """
+    Extract grade from registration answers.
+    
+    Looks for a field labeled "Grade" (case-insensitive) and returns
+    its value. Returns None if not found.
+    """
+    if not answers:
+        return None
+    
+    for answer in answers:
+        question = answer.get("question", {})
+        label = (question.get("label") or "").strip().lower()
+        value = (answer.get("value") or "").strip()
+        
+        # Check for Grade field (case-insensitive)
+        if label in ["grade", "school grade", "current grade", "grade level"]:
+            if value:
+                return value
+    
+    return None
+
+
 def extract_birth_year(registrant: dict) -> Optional[int]:
     """Extract birth year from registrant's date of birth."""
     dob = registrant.get("dateOfBirth")
@@ -561,11 +584,12 @@ def process_single_registration(
     birth_year = extract_birth_year(registrant)
     parent_email = extract_parent_email(reg)
     division = extract_division(reg.get("answers", []))
+    grade = extract_grade(reg.get("answers", []))
     order_number = reg.get("orderNumber")
     
     # Log extracted data for debugging
     logger.info(f"SYNC: Processing {player_name} for {sport}/{season}")
-    logger.info(f"SYNC: Division extracted: '{division}'")
+    logger.info(f"SYNC: Division extracted: '{division}', Grade: '{grade}'")
     logger.info(f"SYNC: Answers received: {reg.get('answers', [])}")
     
     # Parse created_at for order_date
@@ -619,6 +643,10 @@ def process_single_registration(
         # Update parent email if we have a better one
         if parent_email != "unknown@example.com" and player.parent_email == "unknown@example.com":
             player.parent_email = parent_email
+        
+        # Update grade if we have it (always use latest)
+        if grade:
+            player.grade = grade
         
         # Get all current registrations for this player
         current_regs = db.query(Registration).filter(Registration.player_id == player.id).all()
@@ -692,6 +720,7 @@ def process_single_registration(
         player = Player(
             full_name=normalized_player_name,
             birth_year=birth_year,  # May be None
+            grade=grade,  # May be None
             jersey_number=jersey_number,  # May be None
             parent_email=parent_email
         )
@@ -909,6 +938,7 @@ def process_webhook_profile(profile: dict, reg_result: dict, reg_name: str, db: 
     
     # Extract division from answers
     division = "Waiting Room"
+    grade = None
     for ans in reg_result.get("answers", []):
         name = (ans.get("name") or "").lower()
         if "division" in name:
@@ -917,13 +947,18 @@ def process_webhook_profile(profile: dict, reg_result: dict, reg_name: str, db: 
                 val = val[0] if val else ""
             if val:
                 division = str(val)
-            break
+        if "grade" in name:
+            val = ans.get("stringValue") or ans.get("arrayValue")
+            if isinstance(val, list):
+                val = val[0] if val else ""
+            if val:
+                grade = str(val)
     
     # Extract sport and season from registration name
     sport = extract_sport_from_registration_name(reg_name).lower()
     season = extract_season_from_registration_name(reg_name)
     
-    logger.info(f"Webhook processing: {player_name} for {sport}/{season}, division: {division}")
+    logger.info(f"Webhook processing: {player_name} for {sport}/{season}, division: {division}, grade: {grade}")
     
     # Use same matching logic as sync - NAME ONLY to avoid merging siblings
     existing_player = None
@@ -939,7 +974,11 @@ def process_webhook_profile(profile: dict, reg_result: dict, reg_name: str, db: 
         ).first()
     
     if existing_player:
-        # EXISTING PLAYER - check if sport+season exists, update division
+        # EXISTING PLAYER - update grade if we have it
+        if grade:
+            existing_player.grade = grade
+        
+        # Check if sport+season exists, update division
         existing_reg = db.query(Registration).filter(
             Registration.player_id == existing_player.id,
             func.lower(Registration.sport) == sport,
@@ -993,6 +1032,7 @@ def process_webhook_profile(profile: dict, reg_result: dict, reg_name: str, db: 
         new_player = Player(
             full_name=normalized_player_name,
             birth_year=birth_year,  # May be None
+            grade=grade,  # May be None
             jersey_number=jersey_number,  # May be None
             parent_email=parent_email
         )
