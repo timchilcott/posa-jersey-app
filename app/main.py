@@ -341,8 +341,11 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         reg_id = p.registrations[0].id if p.registrations else None
         divisions = {(r.division or "").strip() for r in p.registrations if r.division}
 
-        # Check if player is in Waiting Room
-        if "Waiting Room" in divisions:
+        # Check if player is in Waiting Room OR is orphaned (no registrations, no birth year)
+        is_orphaned = not p.registrations or not p.birth_year
+        is_in_waiting_room = "Waiting Room" in divisions
+        
+        if is_in_waiting_room or is_orphaned:
             player_data = {
                 "id": p.id,
                 "registration_id": reg_id,
