@@ -20,8 +20,9 @@ Base.metadata.create_all(bind=engine)
 # App setup
 app = FastAPI(title="POSA Jersey Management")
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Mount static files if directory exists
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Templates
 templates = Jinja2Templates(directory="templates")
