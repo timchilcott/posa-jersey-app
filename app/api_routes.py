@@ -185,8 +185,7 @@ def get_filtered_players(
         search_term = f"%{search}%"
         query = query.filter(
             (Player.full_name.ilike(search_term)) |
-            (Player.parent_email.ilike(search_term)) |
-            (Player.jersey_number.ilike(search_term))
+            (Player.parent_email.ilike(search_term))
         )
     
     # Get distinct players
@@ -209,11 +208,16 @@ def get_filtered_players(
         # Check if any registration has email sent
         email_sent = any(reg.confirmation_sent for reg in registrations)
         
+        # Display jersey: show "VOLUNTEER" for locked/volunteer players
+        jersey_display = player.jersey_number
+        if player.locked:
+            jersey_display = "VOLUNTEER"
+        
         result.append({
             'id': player.id,
             'name': player.full_name,
             'birthYear': player.birth_year,
-            'jersey': player.jersey_number,
+            'jersey': jersey_display,
             'email': player.parent_email,
             'emailSent': email_sent,
             'locked': player.locked,
@@ -251,7 +255,11 @@ def send_player_email(player_id: int, db: Session = Depends(get_db)):
     Send confirmation email to a player.
     Can resend even if already sent.
     """
-    from app.email import send_confirmation_email
+    from app.email import (
+        send_confirmation_email,
+        send_pines_confirmation_email,
+        PROMO_CODES,
+    )
     
     player = db.query(Player).filter(Player.id == player_id).first()
     if not player:
@@ -268,19 +276,81 @@ def send_player_email(player_id: int, db: Session = Depends(get_db)):
             'message': 'No registrations found'
         }
     
-    # ACTUALLY SEND THE EMAIL
+    # Separate Pines HS vs standard registrations
+    pines_division = "Pend Oreille Pines (High School Club Team)"
+    standard_regs = [r for r in registrations if r.division != pines_division]
+    pines_regs = [r for r in registrations if r.division == pines_division]
+    
+    emails_sent = 0
+    
     try:
-        send_confirmation_email(player, registrations)
+        # Send standard confirmation for youth divisions
+        if standard_regs:
+            # Find all players with same parent email to get correct promo code
+            sibling_players = db.query(Player).filter(
+                Player.parent_email == player.parent_email,
+                Player.locked != True  # Exclude volunteers
+            ).all()
+            sibling_ids = {p.id for p in sibling_players}
+            
+            # Get all standard registrations for this family
+            family_standard_regs = db.query(Registration).filter(
+                Registration.player_id.in_(sibling_ids),
+                Registration.division != pines_division
+            ).all()
+            
+            # Build player list for email (all siblings with standard regs)
+            players_data = []
+            family_reg_map = {}  # player_id -> list of regs
+            for reg in family_standard_regs:
+                family_reg_map.setdefault(reg.player_id, []).append(reg)
+            
+            for sib in sibling_players:
+                sib_regs = family_reg_map.get(sib.id, [])
+                if sib_regs:
+                    # Use most recent sport for display
+                    latest_reg = max(sib_regs, key=lambda r: r.created_at or datetime.min)
+                    players_data.append({
+                        'name': sib.full_name,
+                        'jersey_number': sib.jersey_number,
+                        'sport': latest_reg.sport or 'Unknown'
+                    })
+            
+            promo_code = PROMO_CODES.get(len(players_data))
+            
+            send_confirmation_email(
+                to_email=player.parent_email,
+                players=players_data,
+                promo_code=promo_code,
+                registrations=family_standard_regs,
+                db=db
+            )
+            emails_sent += 1
         
-        # Mark all as sent
+        # Send Pines confirmation for HS Club Team
+        if pines_regs:
+            players_data = [{
+                'name': player.full_name,
+                'jersey_number': player.jersey_number,
+                'sport': reg.sport or 'Unknown'
+            } for reg in pines_regs]
+            
+            send_pines_confirmation_email(
+                to_email=player.parent_email,
+                players=players_data,
+                registrations=pines_regs,
+                db=db
+            )
+            emails_sent += 1
+        
+        # Mark all as sent (in case the email functions didn't already)
         for reg in registrations:
             reg.confirmation_sent = True
-        
         db.commit()
         
         return {
             'success': True,
-            'emailsSent': len(registrations),
+            'emailsSent': emails_sent,
             'message': f'Email sent to {player.parent_email}'
         }
     except Exception as e:
@@ -294,36 +364,11 @@ def send_player_email(player_id: int, db: Session = Depends(get_db)):
 @router.post("/send-bulk-emails")
 def send_bulk_emails(player_ids: List[int], db: Session = Depends(get_db)):
     """Send emails to multiple players"""
-    from app.email import send_confirmation_email
-    
     results = []
     for player_id in player_ids:
         try:
-            player = db.query(Player).filter(Player.id == player_id).first()
-            if not player:
-                results.append({'playerId': player_id, 'success': False, 'error': 'Player not found'})
-                continue
-            
-            registrations = db.query(Registration).filter(
-                Registration.player_id == player_id,
-                Registration.confirmation_sent == False
-            ).all()
-            
-            if not registrations:
-                results.append({'playerId': player_id, 'success': False, 'error': 'No unsent registrations'})
-                continue
-            
-            # ACTUALLY SEND THE EMAIL
-            send_confirmation_email(player, registrations)
-            
-            # Mark as sent
-            for reg in registrations:
-                reg.confirmation_sent = True
-            
-            db.commit()
-            
-            results.append({'playerId': player_id, 'success': True, 'emailsSent': len(registrations)})
-            
+            result = send_player_email(player_id, db=db)
+            results.append({'playerId': player_id, **result})
         except Exception as e:
             results.append({'playerId': player_id, 'success': False, 'error': str(e)})
     
