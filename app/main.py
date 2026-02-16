@@ -283,6 +283,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     const data = await response.json();
                     if (data.success) {
                         await this.loadPlayers();
+                        this.applyFilters();
                         this.editingPlayer = null;
                         if (data.jersey) {
                             alert('Player updated! Jersey: #' + data.jersey);
