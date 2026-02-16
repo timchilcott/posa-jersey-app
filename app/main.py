@@ -67,6 +67,15 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                         <option value="2024">2024</option>
                     </select>
                 </div>
+                <div class="w-28">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Season</label>
+                    <select x-model="filters.season" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">All</option>
+                        <template x-for="season in availableSeasons" :key="season">
+                            <option :value="season" x-text="season"></option>
+                        </template>
+                    </select>
+                </div>
                 <div class="w-40">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Status</label>
                     <select x-model="filters.status" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
@@ -186,9 +195,10 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             editingPlayer: null,
             allPlayers: [],
             filteredPlayers: [],
-            filters: { search: '', birthYear: '', sport: '', year: '', status: '' },
+            filters: { search: '', birthYear: '', sport: '', year: '', season: '', status: '' },
             availableBirthYears: [],
             availableSports: [],
+            availableSeasons: [],
             
             async init() {
                 await this.loadPlayers();
@@ -203,8 +213,10 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     this.filteredPlayers = data.players;
                     this.availableBirthYears = [...new Set(data.players.map(p => p.birthYear).filter(Boolean))].sort((a, b) => b - a);
                     const allSports = new Set();
-                    data.players.forEach(p => { p.registrations.forEach(r => allSports.add(r.sport)); });
+                    const allSeasons = new Set();
+                    data.players.forEach(p => { p.registrations.forEach(r => { allSports.add(r.sport); if (r.season) allSeasons.add(r.season); }); });
                     this.availableSports = [...allSports].sort();
+                    this.availableSeasons = [...allSeasons].sort();
                 } catch (error) {
                     console.error('Failed to load players:', error);
                 }
@@ -228,6 +240,10 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                         const hasYear = player.registrations.some(r => r.year == this.filters.year);
                         if (!hasYear) return false;
                     }
+                    if (this.filters.season) {
+                        const hasSeason = player.registrations.some(r => r.season === this.filters.season);
+                        if (!hasSeason) return false;
+                    }
                     
                     if (this.filters.status === 'needsEmail' && player.emailSent) return false;
                     if (this.filters.status === 'waitingRoom') {
@@ -243,7 +259,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             },
             
             clearFilters() {
-                this.filters = { search: '', birthYear: '', sport: '', year: '', status: '' };
+                this.filters = { search: '', birthYear: '', sport: '', year: '', season: '', status: '' };
                 this.applyFilters();
             },
             
