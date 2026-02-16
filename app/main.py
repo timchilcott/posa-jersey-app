@@ -82,7 +82,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                         </template>
                     </select>
                 </div>
-                <div class="w-28">
+                <div class="w-28" x-show="availableSeasons.length > 0">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Season</label>
                     <select x-model="filters.season" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500">
                         <option value="">All</option>
@@ -157,7 +157,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                                                       :class="reg.sport === 'Soccer' ? 'bg-green-50 text-green-700' : reg.sport === 'Basketball' ? 'bg-orange-50 text-orange-700' : reg.sport === 'Flag Football' ? 'bg-yellow-50 text-yellow-700' : reg.sport === 'Volleyball' ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'"
                                                       :title="reg.division">
                                                     <span x-text="reg.sport"></span>
-                                                    <span class="ml-1 opacity-60" x-text="reg.season && /\d{4}/.test(reg.season) ? reg.season : (reg.season ? reg.season + ' ' : '') + reg.year"></span>
+                                                    <span class="ml-1 opacity-60" x-text="reg.season"></span>
                                                 </span>
                                             </template>
                                         </div>
@@ -255,11 +255,11 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                 }
             },
             
-            // Extract season name (Fall, Spring, Winter) from full season string like "Fall 2025"
-            getSeasonName(season) {
+            // Extract the year portion from a season string like "Fall 2025" -> 2025, or "2025" -> 2025
+            getSeasonYear(season) {
                 if (!season) return '';
-                const match = season.match(/^(fall|spring|winter|summer)/i);
-                return match ? match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase() : '';
+                const match = season.match(/\d{4}/);
+                return match ? match[0] : '';
             },
             
             // Recompute available options for each dropdown based on all OTHER active filters.
@@ -282,7 +282,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                 const allRegs = [];
                 playerFiltered.forEach(p => {
                     p.registrations.forEach(r => {
-                        allRegs.push({ sport: r.sport, year: r.year, season: r.season, seasonName: this.getSeasonName(r.season), birthYear: p.birthYear });
+                        allRegs.push({ sport: r.sport, year: r.year, season: r.season, seasonYear: this.getSeasonYear(r.season), birthYear: p.birthYear });
                     });
                 });
                 
@@ -290,14 +290,14 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                 const matchExcept = (regs, exclude) => regs.filter(r => {
                     if (exclude !== 'sport' && this.filters.sport && r.sport !== this.filters.sport) return false;
                     if (exclude !== 'year' && this.filters.year && String(r.year) !== String(this.filters.year)) return false;
-                    if (exclude !== 'season' && this.filters.season && r.seasonName !== this.filters.season) return false;
+                    if (exclude !== 'season' && this.filters.season && r.season !== this.filters.season) return false;
                     if (exclude !== 'birthYear' && this.filters.birthYear && String(r.birthYear) !== String(this.filters.birthYear)) return false;
                     return true;
                 });
                 
                 this.availableSports = [...new Set(matchExcept(allRegs, 'sport').map(r => r.sport).filter(Boolean))].filter(s => s.toLowerCase() !== 'unknown').sort();
                 this.availableYears = [...new Set(matchExcept(allRegs, 'year').map(r => r.year).filter(Boolean))].sort((a, b) => b - a);
-                this.availableSeasons = [...new Set(matchExcept(allRegs, 'season').map(r => r.seasonName).filter(Boolean))].filter(s => s.toLowerCase() !== 'unknown').sort();
+                this.availableSeasons = [...new Set(matchExcept(allRegs, 'season').map(r => r.season).filter(Boolean))].filter(s => s.toLowerCase() !== 'unknown' && /[a-z]/i.test(s)).sort();
                 this.availableBirthYears = [...new Set(matchExcept(allRegs, 'birthYear').map(r => r.birthYear).filter(Boolean))].sort((a, b) => b - a);
                 
                 // Auto-clear stale selections (value no longer in available options)
@@ -328,7 +328,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                         if (!hasYear) return false;
                     }
                     if (this.filters.season) {
-                        const hasSeason = player.registrations.some(r => this.getSeasonName(r.season) === this.filters.season);
+                        const hasSeason = player.registrations.some(r => r.season === this.filters.season);
                         if (!hasSeason) return false;
                     }
                     
@@ -782,6 +782,9 @@ async def cleanup_registrations(db: Session = Depends(get_db)):
         # === VOLLEYBALL: 'Spring 2026' should be '2025' ===
         ("UPDATE registrations SET season = '2025' WHERE LOWER(sport) = 'volleyball' AND season = 'Spring 2026' AND player_id NOT IN (SELECT player_id FROM registrations WHERE LOWER(sport) = 'volleyball' AND season = '2025')", "volleyball 'Spring 2026' → '2025' (safe)"),
         ("DELETE FROM registrations WHERE LOWER(sport) = 'volleyball' AND season = 'Spring 2026'", "volleyball delete duplicate 'Spring 2026' regs"),
+        
+        # === NON-SOCCER: strip Fall/Spring prefix, keep just year ===
+        ("UPDATE registrations SET season = REGEXP_REPLACE(season, '^(Fall|Spring|Winter|Summer)\\s+', '') WHERE LOWER(sport) != 'soccer' AND season ~ '^(Fall|Spring|Winter|Summer)\\s+\\d{4}$'", "non-soccer: strip season prefix"),
         
         # === CLEANUP: delete ghost 'unknown' sport registrations ===
         ("DELETE FROM registrations WHERE LOWER(sport) = 'unknown'", "delete unknown sport registrations"),
