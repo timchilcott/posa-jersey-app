@@ -71,6 +71,8 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Status</label>
                     <select x-model="filters.status" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         <option value="">All</option>
+                        <option value="players">Players Only</option>
+                        <option value="volunteers">Volunteers Only</option>
                         <option value="needsEmail">Needs Email</option>
                         <option value="waitingRoom">Waiting Room</option>
                         <option value="active">Active</option>
@@ -109,7 +111,10 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                             <tr class="hover:bg-gray-50">
                                 <td class="px-4 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-900" x-text="player.name"></div></td>
                                 <td class="px-4 py-4 whitespace-nowrap"><div class="text-sm text-gray-900" x-text="player.birthYear || 'Missing'"></div></td>
-                                <td class="px-4 py-4 whitespace-nowrap"><span class="px-2 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded">#<span x-text="player.jersey"></span></span></td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <span x-show="player.jersey !== 'VOLUNTEER'" class="px-2 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded">#<span x-text="player.jersey"></span></span>
+                                    <span x-show="player.jersey === 'VOLUNTEER'" class="px-2 py-1 text-sm font-medium text-purple-700 bg-purple-100 rounded">VOLUNTEER</span>
+                                </td>
                                 <td class="px-4 py-4 whitespace-nowrap"><div class="text-sm text-gray-600" x-text="player.email"></div></td>
                                 <td class="px-4 py-4">
                                     <div class="flex flex-wrap gap-1">
@@ -167,6 +172,12 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
                         <input type="email" x-model="editingPlayer.email" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div class="mb-4">
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" x-model="editingPlayer.isVolunteer" class="w-4 h-4 text-blue-600 rounded">
+                            <span class="text-sm font-medium text-gray-700">Volunteer/Parent (not a player)</span>
+                        </label>
                     </div>
                     <div class="flex justify-end space-x-3">
                         <button @click="editingPlayer = null" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
@@ -226,6 +237,12 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                         const hasYear = player.registrations.some(r => r.year == this.filters.year);
                         if (!hasYear) return false;
                     }
+                    
+                    // Volunteer filters
+                    const isVolunteer = player.jersey === 'VOLUNTEER' || player.locked;
+                    if (this.filters.status === 'players' && isVolunteer) return false;
+                    if (this.filters.status === 'volunteers' && !isVolunteer) return false;
+                    
                     if (this.filters.status === 'needsEmail' && player.emailSent) return false;
                     if (this.filters.status === 'waitingRoom') {
                         const inWaitingRoom = player.registrations.some(r => r.division === 'Waiting Room');
@@ -245,7 +262,10 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             },
             
             editPlayer(player) {
-                this.editingPlayer = { ...player };
+                this.editingPlayer = { 
+                    ...player,
+                    isVolunteer: player.jersey === 'VOLUNTEER' || player.locked
+                };
             },
             
             async savePlayer() {
@@ -256,14 +276,19 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                         body: JSON.stringify({
                             full_name: this.editingPlayer.name,
                             parent_email: this.editingPlayer.email,
-                            birth_year: this.editingPlayer.birthYear
+                            birth_year: this.editingPlayer.birthYear,
+                            is_volunteer: this.editingPlayer.isVolunteer
                         })
                     });
                     const data = await response.json();
                     if (data.success) {
                         await this.loadPlayers();
                         this.editingPlayer = null;
-                        alert('Player updated! Jersey: #' + data.jersey);
+                        if (data.jersey) {
+                            alert('Player updated! Jersey: #' + data.jersey);
+                        } else {
+                            alert('Volunteer updated!');
+                        }
                     }
                 } catch (error) {
                     console.error('Failed to update player:', error);
@@ -325,23 +350,37 @@ async def update_player(player_id: int, request: Request, db: Session = Depends(
         player.parent_email = data["parent_email"]
     if "birth_year" in data:
         player.birth_year = data["birth_year"]
-        
-        # AUTO-ASSIGN JERSEY when birth year is added
-        if not player.jersey_number or player.jersey_number in ["", "0", "WR"]:
-            max_jersey = db.query(func.max(Player.jersey_number)).filter(
-                Player.birth_year == data["birth_year"]
-            ).scalar()
-            
-            try:
-                next_num = int(max_jersey or 0) + 1
-            except:
-                next_num = 1
-            
-            player.jersey_number = str(next_num)
+    
+    # Handle volunteer flag
+    is_volunteer = data.get("is_volunteer", False)
+    
+    if is_volunteer:
+        # Mark as volunteer - no jersey number
+        player.jersey_number = "VOLUNTEER"
+        player.locked = True  # Use locked field to mark as volunteer
+    else:
+        # Regular player - auto-assign jersey if needed
+        if "birth_year" in data and data["birth_year"]:
+            if not player.jersey_number or player.jersey_number in ["", "0", "WR", "VOLUNTEER"]:
+                max_jersey = db.query(func.max(Player.jersey_number)).filter(
+                    Player.birth_year == data["birth_year"],
+                    Player.jersey_number != "VOLUNTEER"
+                ).scalar()
+                
+                try:
+                    next_num = int(max_jersey or 0) + 1
+                except:
+                    next_num = 1
+                
+                player.jersey_number = str(next_num)
+                player.locked = False
     
     db.commit()
     
-    return {"success": True, "jersey": player.jersey_number}
+    return {
+        "success": True, 
+        "jersey": player.jersey_number if player.jersey_number != "VOLUNTEER" else None
+    }
 
 @app.get("/health")
 async def health():
