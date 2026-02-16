@@ -767,15 +767,23 @@ async def cleanup_registrations(db: Session = Depends(get_db)):
     from sqlalchemy import text
     
     fixes = [
-        # Volleyball: update unknown→Spring 2026 only where player doesn't already have that season
-        ("UPDATE registrations SET season = 'Spring 2026' WHERE LOWER(sport) = 'volleyball' AND season = 'unknown' AND player_id NOT IN (SELECT player_id FROM registrations WHERE LOWER(sport) = 'volleyball' AND season = 'Spring 2026')", "volleyball unknown → Spring 2026 (safe)"),
-        # Volleyball: delete leftover unknown dupes (player already has Spring 2026)
-        ("DELETE FROM registrations WHERE LOWER(sport) = 'volleyball' AND season = 'unknown'", "volleyball delete duplicate unknown regs"),
-        # Basketball: update 2025→2026 only where player doesn't already have a 2026 registration
-        ("UPDATE registrations SET season = '2026' WHERE LOWER(sport) = 'basketball' AND season = '2025' AND player_id NOT IN (SELECT player_id FROM registrations WHERE LOWER(sport) = 'basketball' AND season = '2026')", "basketball season 2025 → 2026 (safe)"),
-        # Basketball: delete leftover 2025 dupes (player already has 2026)
-        ("DELETE FROM registrations WHERE LOWER(sport) = 'basketball' AND season = '2025'", "basketball delete duplicate 2025 regs"),
-        # Delete ghost 'unknown' sport registrations (confirmed no player has only unknown regs)
+        # === SOCCER: normalize all 2025 variations to 'Fall 2025' ===
+        # Update 'fall' → 'Fall 2025' (200 rows) - only where player doesn't already have 'Fall 2025'
+        ("UPDATE registrations SET season = 'Fall 2025' WHERE LOWER(sport) = 'soccer' AND season = 'fall' AND player_id NOT IN (SELECT player_id FROM registrations WHERE LOWER(sport) = 'soccer' AND season = 'Fall 2025')", "soccer 'fall' → 'Fall 2025' (safe)"),
+        # Delete leftover 'fall' dupes where player already has 'Fall 2025'
+        ("DELETE FROM registrations WHERE LOWER(sport) = 'soccer' AND season = 'fall'", "soccer delete duplicate 'fall' regs"),
+        # Update '2025' → 'Fall 2025' (6 rows)
+        ("UPDATE registrations SET season = 'Fall 2025' WHERE LOWER(sport) = 'soccer' AND season = '2025' AND player_id NOT IN (SELECT player_id FROM registrations WHERE LOWER(sport) = 'soccer' AND season = 'Fall 2025')", "soccer '2025' → 'Fall 2025' (safe)"),
+        ("DELETE FROM registrations WHERE LOWER(sport) = 'soccer' AND season = '2025'", "soccer delete duplicate '2025' regs"),
+        # Update '2024' → 'Fall 2025' (1 row)
+        ("UPDATE registrations SET season = 'Fall 2025' WHERE LOWER(sport) = 'soccer' AND season = '2024' AND player_id NOT IN (SELECT player_id FROM registrations WHERE LOWER(sport) = 'soccer' AND season = 'Fall 2025')", "soccer '2024' → 'Fall 2025' (safe)"),
+        ("DELETE FROM registrations WHERE LOWER(sport) = 'soccer' AND season = '2024'", "soccer delete duplicate '2024' regs"),
+        
+        # === VOLLEYBALL: 'Spring 2026' should be '2025' ===
+        ("UPDATE registrations SET season = '2025' WHERE LOWER(sport) = 'volleyball' AND season = 'Spring 2026' AND player_id NOT IN (SELECT player_id FROM registrations WHERE LOWER(sport) = 'volleyball' AND season = '2025')", "volleyball 'Spring 2026' → '2025' (safe)"),
+        ("DELETE FROM registrations WHERE LOWER(sport) = 'volleyball' AND season = 'Spring 2026'", "volleyball delete duplicate 'Spring 2026' regs"),
+        
+        # === CLEANUP: delete ghost 'unknown' sport registrations ===
         ("DELETE FROM registrations WHERE LOWER(sport) = 'unknown'", "delete unknown sport registrations"),
     ]
     
