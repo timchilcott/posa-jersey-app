@@ -716,6 +716,7 @@ async def debug_divisions(db: Session = Depends(get_db)):
     return f"<html><body style='font-family: monospace; padding: 20px;'>{''.join(lines)}</body></html>"
 
 
+@app.get("/api/fix-seasons", response_class=HTMLResponse)
 async def fix_seasons(db: Session = Depends(get_db)):
     """One-time fix: normalize all season values. DELETE AFTER USE."""
     from sqlalchemy import text
