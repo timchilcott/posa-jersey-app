@@ -77,9 +77,9 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Year</label>
                     <select x-model="filters.year" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500">
                         <option value="">All</option>
-                        <option value="2026">2026</option>
-                        <option value="2025">2025</option>
-                        <option value="2024">2024</option>
+                        <template x-for="y in availableYears" :key="y">
+                            <option :value="y" x-text="y"></option>
+                        </template>
                     </select>
                 </div>
                 <div class="w-28">
@@ -233,6 +233,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             filters: { search: '', birthYear: '', sport: '', year: '', season: '', status: '' },
             availableBirthYears: [],
             availableSports: [],
+            availableYears: [],
             availableSeasons: [],
             birthYearColorMap: {},
             duplicateJerseys: new Set(),
@@ -248,20 +249,67 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     const response = await fetch('/api/admin/players');
                     const data = await response.json();
                     this.allPlayers = data.players;
-                    this.filteredPlayers = data.players;
-                    this.availableBirthYears = [...new Set(data.players.map(p => p.birthYear).filter(Boolean))].sort((a, b) => b - a);
-                    const allSports = new Set();
-                    const allSeasons = new Set();
-                    data.players.forEach(p => { p.registrations.forEach(r => { allSports.add(r.sport); if (r.season) allSeasons.add(r.season); }); });
-                    this.availableSports = [...allSports].sort();
-                    this.availableSeasons = [...allSeasons].sort();
-                    this.buildRowMeta();
+                    this.applyFilters();
                 } catch (error) {
                     console.error('Failed to load players:', error);
                 }
             },
             
+            // Extract season name (Fall, Spring, Winter) from full season string like "Fall 2025"
+            getSeasonName(season) {
+                if (!season) return '';
+                const match = season.match(/^(Fall|Spring|Winter|Summer)/i);
+                return match ? match[1] : '';
+            },
+            
+            // Recompute available options for each dropdown based on all OTHER active filters.
+            // This is "faceted search" — each dropdown shows only values that would produce results.
+            updateAvailableOptions() {
+                // Collect all registrations from players that pass player-level filters (search, status)
+                // Then for each dropdown, apply all reg-level filters EXCEPT that dropdown's own filter.
+                const playerFiltered = this.allPlayers.filter(p => {
+                    if (this.filters.search) {
+                        const s = this.filters.search.toLowerCase();
+                        if (!p.name.toLowerCase().includes(s) && !p.email.toLowerCase().includes(s) && !(p.jersey && p.jersey.toString().includes(s))) return false;
+                    }
+                    if (this.filters.status === 'needsEmail' && p.emailSent) return false;
+                    if (this.filters.status === 'waitingRoom' && !p.registrations.some(r => r.division === 'Waiting Room')) return false;
+                    if (this.filters.status === 'active' && !p.registrations.some(r => r.year === 2026)) return false;
+                    return true;
+                });
+                
+                // Flatten to registration-level rows, carrying birthYear along
+                const allRegs = [];
+                playerFiltered.forEach(p => {
+                    p.registrations.forEach(r => {
+                        allRegs.push({ sport: r.sport, year: r.year, season: r.season, seasonName: this.getSeasonName(r.season), birthYear: p.birthYear });
+                    });
+                });
+                
+                // Helper: filter regs by all reg-level filters except one
+                const matchExcept = (regs, exclude) => regs.filter(r => {
+                    if (exclude !== 'sport' && this.filters.sport && r.sport !== this.filters.sport) return false;
+                    if (exclude !== 'year' && this.filters.year && String(r.year) !== String(this.filters.year)) return false;
+                    if (exclude !== 'season' && this.filters.season && r.seasonName !== this.filters.season) return false;
+                    if (exclude !== 'birthYear' && this.filters.birthYear && String(r.birthYear) !== String(this.filters.birthYear)) return false;
+                    return true;
+                });
+                
+                this.availableSports = [...new Set(matchExcept(allRegs, 'sport').map(r => r.sport).filter(Boolean))].sort();
+                this.availableYears = [...new Set(matchExcept(allRegs, 'year').map(r => r.year).filter(Boolean))].sort((a, b) => b - a);
+                this.availableSeasons = [...new Set(matchExcept(allRegs, 'season').map(r => r.seasonName).filter(Boolean))].sort();
+                this.availableBirthYears = [...new Set(matchExcept(allRegs, 'birthYear').map(r => r.birthYear).filter(Boolean))].sort((a, b) => b - a);
+                
+                // Auto-clear stale selections (value no longer in available options)
+                if (this.filters.sport && !this.availableSports.includes(this.filters.sport)) this.filters.sport = '';
+                if (this.filters.year && !this.availableYears.map(String).includes(String(this.filters.year))) this.filters.year = '';
+                if (this.filters.season && !this.availableSeasons.includes(this.filters.season)) this.filters.season = '';
+                if (this.filters.birthYear && !this.availableBirthYears.map(String).includes(String(this.filters.birthYear))) this.filters.birthYear = '';
+            },
+            
             applyFilters() {
+                this.updateAvailableOptions();
+                
                 this.filteredPlayers = this.allPlayers.filter(player => {
                     if (this.filters.search) {
                         const search = this.filters.search.toLowerCase();
@@ -280,7 +328,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                         if (!hasYear) return false;
                     }
                     if (this.filters.season) {
-                        const hasSeason = player.registrations.some(r => r.season === this.filters.season);
+                        const hasSeason = player.registrations.some(r => this.getSeasonName(r.season) === this.filters.season);
                         if (!hasSeason) return false;
                     }
                     
@@ -366,7 +414,6 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     const data = await response.json();
                     if (data.success) {
                         await this.loadPlayers();
-                        this.applyFilters();
                         this.editingPlayer = null;
                         alert('Player updated!');
                     }
@@ -387,7 +434,6 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     const data = await response.json();
                     if (data.success) {
                         await this.loadPlayers();
-                        this.applyFilters();
                     } else {
                         alert('Failed: ' + (data.error || 'Unknown error'));
                     }
@@ -405,7 +451,6 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                         alert(`Email sent to ${player.email}`);
                         // Reload players to update email status
                         await this.loadPlayers();
-                        this.applyFilters();
                     } else {
                         alert(`Failed: ${data.message || data.error}`);
                     }
