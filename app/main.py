@@ -1,413 +1,126 @@
-# POSA Jersey App - Complete Main Application
+# POSA Jersey App - Diagnostic Version
 
 import os
+import pathlib
 from datetime import datetime
-from fastapi import FastAPI, Request, Depends, HTTPException, Form
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi import FastAPI, Request, Depends, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
-from app.database import get_db, engine
-from app.models import Base, Player, Registration
-from app.email import send_confirmation_email
-from app.api_routes import router as admin_api_router
+# Check paths
+BASE_DIR = pathlib.Path(__file__).resolve().parent.parent
+TEMPLATES_DIR = BASE_DIR / "templates"
 
-# Create tables
-Base.metadata.create_all(bind=engine)
+print("=" * 80)
+print("DIAGNOSTIC INFO:")
+print(f"BASE_DIR: {BASE_DIR}")
+print(f"TEMPLATES_DIR: {TEMPLATES_DIR}")
+print(f"Templates dir exists: {TEMPLATES_DIR.exists()}")
+if TEMPLATES_DIR.exists():
+    print(f"Templates in dir: {list(TEMPLATES_DIR.iterdir())}")
+print("=" * 80)
+
+# Import database
+try:
+    from app.database import get_db, engine
+    from app.models import Base
+    print("✓ Database imports successful")
+    Base.metadata.create_all(bind=engine)
+    print("✓ Database tables created")
+except Exception as e:
+    print(f"✗ Database error: {e}")
+
+# Import API routes
+try:
+    from app.api_routes import router as admin_api_router
+    print("✓ API routes imported")
+except Exception as e:
+    print(f"✗ API routes error: {e}")
 
 # App setup
 app = FastAPI(title="POSA Jersey Management")
 
 # Mount static files if directory exists
 if os.path.exists("static"):
+    from fastapi.staticfiles import StaticFiles
     app.mount("/static", StaticFiles(directory="static"), name="static")
+    print("✓ Static files mounted")
 
 # Templates
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+print(f"✓ Templates initialized at: {TEMPLATES_DIR}")
 
 # Include API routes
-app.include_router(admin_api_router)
+try:
+    app.include_router(admin_api_router)
+    print("✓ API router included")
+except Exception as e:
+    print(f"✗ Router error: {e}")
 
 # Environment variables
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 CURRENT_SEASON = os.getenv("CURRENT_SEASON", "2026")
 
-# Simple session storage (in production, use Redis or similar)
-active_sessions = set()
+
+@app.get("/")
+async def home():
+    return {
+        "status": "ok",
+        "message": "App is running",
+        "base_dir": str(BASE_DIR),
+        "templates_dir": str(TEMPLATES_DIR),
+        "templates_exists": TEMPLATES_DIR.exists(),
+        "database_url": os.getenv("DATABASE_URL", "NOT SET")[:20] + "..." if os.getenv("DATABASE_URL") else "NOT SET"
+    }
 
 
-# ============================================
-# Authentication
-# ============================================
-
-def require_login(request: Request):
-    # Check if user is logged in
-    session_token = request.cookies.get("session_token")
-    if not session_token or session_token not in active_sessions:
-        raise HTTPException(
-            status_code=303,
-            headers={"Location": "/login"}
-        )
-    return True
-
-
-@app.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request):
-    # Login page
-    return """
+@app.get("/debug")
+async def debug():
+    return HTMLResponse(f"""
     <html>
-    <head>
-        <title>Login - POSA Admin</title>
-        <style>
-            body { font-family: sans-serif; max-width: 400px; margin: 100px auto; padding: 20px; }
-            input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; }
-            button { width: 100%; padding: 10px; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; }
-            button:hover { background: #0052a3; }
-            .error { color: red; margin: 10px 0; }
-        </style>
-    </head>
     <body>
-        <h1>POSA Admin Login</h1>
-        <form method="post" action="/login">
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit">Login</button>
-        </form>
+        <h1>Diagnostic Info</h1>
+        <pre>
+BASE_DIR: {BASE_DIR}
+TEMPLATES_DIR: {TEMPLATES_DIR}
+Templates exists: {TEMPLATES_DIR.exists()}
+Templates files: {list(TEMPLATES_DIR.iterdir()) if TEMPLATES_DIR.exists() else 'DIR NOT FOUND'}
+DATABASE_URL set: {bool(os.getenv('DATABASE_URL'))}
+        </pre>
     </body>
     </html>
-    """
+    """)
 
-
-@app.post("/login")
-async def login(password: str = Form(...)):
-    # Process login
-    if password == ADMIN_PASSWORD:
-        session_token = os.urandom(32).hex()
-        active_sessions.add(session_token)
-        response = RedirectResponse("/admin", status_code=303)
-        response.set_cookie("session_token", session_token)
-        return response
-    else:
-        return HTMLResponse("""
-        <html>
-        <body>
-            <h1>Login Failed</h1>
-            <p>Invalid password</p>
-            <a href="/login">Try again</a>
-        </body>
-        </html>
-        """, status_code=401)
-
-
-@app.get("/logout")
-async def logout(request: Request):
-    # Logout
-    session_token = request.cookies.get("session_token")
-    if session_token in active_sessions:
-        active_sessions.remove(session_token)
-    response = RedirectResponse("/login", status_code=303)
-    response.delete_cookie("session_token")
-    return response
-
-
-# ============================================
-# Admin Dashboard
-# ============================================
 
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
     # Admin dashboard - table interface
+    print(f"Admin route hit, looking for template at: {TEMPLATES_DIR / 'admin_table.html'}")
+    
     try:
-        require_login(request)
-    except HTTPException as exc:
-        return RedirectResponse(exc.headers["Location"], status_code=exc.status_code)
-    
-    return templates.TemplateResponse("admin_table.html", {
-        "request": request
-    })
-
-
-@app.get("/")
-async def home():
-    # Home page - redirect to admin
-    return RedirectResponse("/admin")
-
-
-# ============================================
-# Player Management
-# ============================================
-
-@app.post("/api/players")
-async def create_player(
-    request: Request,
-    full_name: str = Form(...),
-    birth_year: int = Form(...),
-    parent_email: str = Form(...),
-    division: str = Form("Waiting Room"),
-    sport: str = Form("Soccer"),
-    db: Session = Depends(get_db)
-):
-    # Create a new player
-    require_login(request)
-    
-    # Check if player exists
-    existing = db.query(Player).filter(
-        Player.full_name == full_name,
-        Player.birth_year == birth_year
-    ).first()
-    
-    if existing:
-        return JSONResponse(
-            {"error": "Player already exists"},
-            status_code=400
-        )
-    
-    # Assign jersey number (next available for birth year)
-    max_jersey = db.query(func.max(Player.jersey_number)).filter(
-        Player.birth_year == birth_year
-    ).scalar()
-    
-    jersey_number = str(int(max_jersey or 0) + 1)
-    
-    # Create player
-    player = Player(
-        full_name=full_name,
-        birth_year=birth_year,
-        parent_email=parent_email,
-        jersey_number=jersey_number,
-        locked=False
-    )
-    db.add(player)
-    db.flush()
-    
-    # Create registration
-    registration = Registration(
-        player_id=player.id,
-        program=f"{CURRENT_SEASON} Pines {sport}",
-        division=division,
-        sport=sport,
-        season=CURRENT_SEASON,
-        confirmation_sent=False,
-        created_at=datetime.utcnow()
-    )
-    db.add(registration)
-    db.commit()
-    
-    return JSONResponse({
-        "success": True,
-        "player": {
-            "id": player.id,
-            "name": player.full_name,
-            "jersey": player.jersey_number,
-            "birthYear": player.birth_year
-        }
-    })
-
-
-@app.put("/api/players/{player_id}")
-async def update_player(
-    player_id: int,
-    request: Request,
-    db: Session = Depends(get_db)
-):
-    # Update player details
-    require_login(request)
-    
-    player = db.query(Player).filter(Player.id == player_id).first()
-    if not player:
-        raise HTTPException(status_code=404, detail="Player not found")
-    
-    data = await request.json()
-    
-    # Update allowed fields
-    if "full_name" in data:
-        player.full_name = data["full_name"]
-    if "parent_email" in data:
-        player.parent_email = data["parent_email"]
-    if "birth_year" in data:
-        player.birth_year = data["birth_year"]
-    
-    db.commit()
-    
-    return JSONResponse({"success": True})
-
-
-@app.delete("/api/players/{player_id}")
-async def delete_player(
-    player_id: int,
-    request: Request,
-    db: Session = Depends(get_db)
-):
-    # Delete a player
-    require_login(request)
-    
-    player = db.query(Player).filter(Player.id == player_id).first()
-    if not player:
-        raise HTTPException(status_code=404, detail="Player not found")
-    
-    # Delete all registrations
-    db.query(Registration).filter(Registration.player_id == player_id).delete()
-    
-    # Delete player
-    db.delete(player)
-    db.commit()
-    
-    return JSONResponse({"success": True})
-
-
-# ============================================
-# Email Management
-# ============================================
-
-@app.post("/api/players/{player_id}/send-email")
-async def send_player_email_route(
-    player_id: int,
-    request: Request,
-    db: Session = Depends(get_db)
-):
-    # Send confirmation email to player
-    require_login(request)
-    
-    player = db.query(Player).filter(Player.id == player_id).first()
-    if not player:
-        raise HTTPException(status_code=404, detail="Player not found")
-    
-    # Get unsent registrations
-    registrations = db.query(Registration).filter(
-        Registration.player_id == player_id,
-        Registration.confirmation_sent == False
-    ).all()
-    
-    if not registrations:
-        return JSONResponse({
-            "success": False,
-            "message": "No unsent registrations"
-        })
-    
-    # Send email (implement your actual email logic here)
-    try:
-        # send_confirmation_email(player, registrations)
-        
-        # Mark as sent
-        for reg in registrations:
-            reg.confirmation_sent = True
-        db.commit()
-        
-        return JSONResponse({
-            "success": True,
-            "emailsSent": len(registrations),
-            "message": f"Email sent to {player.parent_email}"
+        return templates.TemplateResponse("admin_table.html", {
+            "request": request
         })
     except Exception as e:
-        return JSONResponse({
-            "success": False,
-            "error": str(e)
-        }, status_code=500)
-
-
-@app.post("/api/send-bulk-emails")
-async def send_bulk_emails_route(
-    request: Request,
-    db: Session = Depends(get_db)
-):
-    # Send emails to multiple players
-    require_login(request)
-    
-    data = await request.json()
-    player_ids = data.get("player_ids", [])
-    
-    results = []
-    for player_id in player_ids:
-        try:
-            player = db.query(Player).filter(Player.id == player_id).first()
-            if not player:
-                results.append({"playerId": player_id, "success": False, "error": "Not found"})
-                continue
-            
-            registrations = db.query(Registration).filter(
-                Registration.player_id == player_id,
-                Registration.confirmation_sent == False
-            ).all()
-            
-            if registrations:
-                # send_confirmation_email(player, registrations)
-                for reg in registrations:
-                    reg.confirmation_sent = True
-                db.commit()
-                
-                results.append({"playerId": player_id, "success": True})
-            else:
-                results.append({"playerId": player_id, "success": False, "error": "No unsent registrations"})
-                
-        except Exception as e:
-            results.append({"playerId": player_id, "success": False, "error": str(e)})
-    
-    success_count = sum(1 for r in results if r.get("success"))
-    
-    return JSONResponse({
-        "total": len(player_ids),
-        "success": success_count,
-        "failed": len(player_ids) - success_count,
-        "results": results
-    })
-
-
-# ============================================
-# SportsEngine Sync
-# ============================================
-
-@app.post("/sync/pull")
-async def sync_sportsengine(request: Request, db: Session = Depends(get_db)):
-    # Sync with SportsEngine
-    require_login(request)
-    
-    # TODO: Implement your SportsEngine sync logic here
-    # from app.services.sportsengine import sync_registrations
-    # results = sync_registrations(db)
-    
-    return JSONResponse({
-        "success": True,
-        "summary": "Sync complete (not implemented yet)",
-        "added": 0,
-        "updated": 0,
-        "errors": 0
-    })
-
-
-# ============================================
-# Utility Endpoints
-# ============================================
-
-@app.get("/api/summary")
-async def get_summary(db: Session = Depends(get_db)):
-    # Get dashboard summary stats
-    total_players = db.query(func.count(Player.id)).scalar()
-    
-    waiting_room = db.query(func.count(Player.id.distinct())).join(
-        Registration
-    ).filter(Registration.division == "Waiting Room").scalar() or 0
-    
-    needs_email = db.query(func.count(Player.id.distinct())).join(
-        Registration
-    ).filter(Registration.confirmation_sent == False).scalar() or 0
-    
-    return JSONResponse({
-        "totalPlayers": total_players,
-        "waitingRoom": waiting_room,
-        "needsEmail": needs_email
-    })
+        print(f"Template error: {e}")
+        return HTMLResponse(f"""
+        <html>
+        <body>
+            <h1>Template Error</h1>
+            <p>Error: {e}</p>
+            <p>Templates dir: {TEMPLATES_DIR}</p>
+            <p>Templates exists: {TEMPLATES_DIR.exists()}</p>
+            <p>Files: {list(TEMPLATES_DIR.iterdir()) if TEMPLATES_DIR.exists() else 'NOT FOUND'}</p>
+        </body>
+        </html>
+        """, status_code=500)
 
 
 @app.get("/health")
 async def health_check():
-    # Health check endpoint
     return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
 
-
-# ============================================
-# Run App
-# ============================================
 
 if __name__ == "__main__":
     import uvicorn
