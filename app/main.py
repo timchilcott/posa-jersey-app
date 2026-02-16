@@ -164,6 +164,9 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                                             <button @click="editPlayer(item)" class="p-1 rounded hover:bg-gray-100 text-blue-600" title="Edit">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                             </button>
+                                            <button @click="markVolunteer(item)" class="p-1 rounded hover:bg-purple-100 text-purple-500" title="Mark as Volunteer">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                            </button>
                                         </div>
                                     </td>
                                 </template>
@@ -359,6 +362,27 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                 }
             },
             
+            async markVolunteer(player) {
+                if (!confirm(`Mark ${player.name} as a volunteer? They will be moved to the Volunteers page.`)) return;
+                try {
+                    const response = await fetch(`/api/players/${player.id}/set-volunteer`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ is_volunteer: true })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        await this.loadPlayers();
+                        this.applyFilters();
+                    } else {
+                        alert('Failed: ' + (data.error || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Failed to mark volunteer:', error);
+                    alert('Failed to mark as volunteer');
+                }
+            },
+            
             async sendEmail(player) {
                 try {
                     const response = await fetch(`/api/admin/players/${player.id}/send-email`, { method: 'POST' });
@@ -463,6 +487,7 @@ VOLUNTEER_TEMPLATE = """<!DOCTYPE html>
                             <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                             <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registration Type</th>
                             <th class="w-24 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="w-20 px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
@@ -482,6 +507,11 @@ VOLUNTEER_TEMPLATE = """<!DOCTYPE html>
                                 <td class="px-3 py-3 text-center">
                                     <span x-show="!vol.emailSent" class="px-2 py-0.5 text-xs font-medium bg-orange-100 text-orange-700 rounded">Needs Email</span>
                                     <span x-show="vol.emailSent" class="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded">✓ Sent</span>
+                                </td>
+                                <td class="px-3 py-3 text-right">
+                                    <button @click="moveToPlayers(vol)" class="p-1 rounded hover:bg-blue-100 text-blue-500" title="Move to Players">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+                                    </button>
                                 </td>
                             </tr>
                         </template>
@@ -532,6 +562,27 @@ VOLUNTEER_TEMPLATE = """<!DOCTYPE html>
                     }
                     return true;
                 });
+            },
+            
+            async moveToPlayers(vol) {
+                if (!confirm(`Move ${vol.name} to the Players list?`)) return;
+                try {
+                    const response = await fetch(`/api/players/${vol.id}/set-volunteer`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ is_volunteer: false })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        this.all = this.all.filter(v => v.id !== vol.id);
+                        this.applyFilter();
+                    } else {
+                        alert('Failed: ' + (data.error || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Failed:', error);
+                    alert('Failed to move to players');
+                }
             }
         }
     }
@@ -542,6 +593,18 @@ VOLUNTEER_TEMPLATE = """<!DOCTYPE html>
 @app.get("/admin/volunteers", response_class=HTMLResponse)
 async def admin_volunteers(request: Request):
     return HTMLResponse(VOLUNTEER_TEMPLATE)
+
+@app.post("/api/players/{player_id}/set-volunteer")
+async def set_volunteer(player_id: int, request: Request, db: Session = Depends(get_db)):
+    player = db.query(Player).filter(Player.id == player_id).first()
+    if not player:
+        return {"success": False, "error": "Player not found"}
+    
+    data = await request.json()
+    player.locked = bool(data.get("is_volunteer", False))
+    db.commit()
+    
+    return {"success": True, "is_volunteer": player.locked}
 
 @app.put("/api/players/{player_id}")
 async def update_player(player_id: int, request: Request, db: Session = Depends(get_db)):
@@ -630,6 +693,8 @@ async def fix_seasons(db: Session = Depends(get_db)):
     from sqlalchemy import text
     
     fixes = [
+        # Reset all locked flags (old meaning was 'jersey confirmed', not volunteer)
+        ("UPDATE players SET locked = false WHERE locked = true", "Reset all locked flags (old jersey-confirmed, not volunteer)"),
         # Soccer: 'fall' and 'Fall 2025' → 'Fall 2025'
         ("UPDATE registrations SET season = 'Fall 2025' WHERE sport = 'Soccer' AND season = 'fall'", "soccer fall → Fall 2025"),
         ("UPDATE registrations SET season = 'Fall 2025' WHERE sport = 'Soccer' AND season = 'Fall 2025'", "soccer Fall 2025 (already correct)"),
