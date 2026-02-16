@@ -12,6 +12,21 @@ from app.models import Player, Registration
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
+# Divisions that indicate volunteer/parent (not a player)
+VOLUNTEER_DIVISIONS = [
+    "Volunteer",
+    "Volunteers", 
+    "Background Screening",
+    "Background Check",
+]
+
+def is_volunteer_division(division):
+    """Check if a division name indicates a volunteer/parent registration"""
+    if not division:
+        return False
+    d = division.lower()
+    return any(v.lower() in d for v in VOLUNTEER_DIVISIONS)
+
 
 @router.get("/birth-year-groups")
 def get_birth_year_groups(db: Session = Depends(get_db)):
@@ -154,6 +169,7 @@ def get_filtered_players(
     needs_email: Optional[bool] = None,
     waiting_room: Optional[bool] = None,
     search: Optional[str] = None,
+    volunteers_only: Optional[bool] = False,
     db: Session = Depends(get_db)
 ):
     """
@@ -190,6 +206,24 @@ def get_filtered_players(
     
     # Get distinct players
     players = query.distinct().all()
+    
+    # Separate volunteers from players based on their registrations
+    all_regs_by_player = {}
+    for player in players:
+        regs = db.query(Registration).filter(Registration.player_id == player.id).all()
+        all_regs_by_player[player.id] = regs
+    
+    # A player is a "volunteer" if ALL their registrations are volunteer divisions
+    def player_is_volunteer(p):
+        regs = all_regs_by_player.get(p.id, [])
+        if not regs:
+            return False
+        return all(is_volunteer_division(r.division) for r in regs)
+    
+    if volunteers_only:
+        players = [p for p in players if player_is_volunteer(p)]
+    else:
+        players = [p for p in players if not player_is_volunteer(p)]
     
     # Sort: youngest birth year first, then jersey number ascending
     # Nulls go to the end for both fields
