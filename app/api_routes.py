@@ -217,10 +217,8 @@ def get_filtered_players(
         # Check if any registration has email sent
         email_sent = any(reg.confirmation_sent for reg in registrations)
         
-        # Display jersey: show "VOLUNTEER" for locked/volunteer players
+        # Show actual jersey number
         jersey_display = player.jersey_number
-        if player.locked:
-            jersey_display = "VOLUNTEER"
         
         result.append({
             'id': player.id,
@@ -297,8 +295,7 @@ def send_player_email(player_id: int, db: Session = Depends(get_db)):
         if standard_regs:
             # Find all players with same parent email to get correct promo code
             sibling_players = db.query(Player).filter(
-                Player.parent_email == player.parent_email,
-                Player.locked != True  # Exclude volunteers
+                Player.parent_email == player.parent_email
             ).all()
             sibling_ids = {p.id for p in sibling_players}
             
