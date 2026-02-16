@@ -112,43 +112,60 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                             <th class="w-20 px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        <template x-for="player in filteredPlayers" :key="player.id">
-                            <tr :class="rowClass(player)">
-                                <td class="px-3 py-3">
-                                    <div class="text-sm font-medium text-gray-900" x-text="player.name"></div>
-                                    <div class="text-xs text-gray-500" x-text="'Born ' + (player.birthYear || '?')"></div>
-                                </td>
-                                <td class="px-3 py-3 text-center">
-                                    <span class="px-2 py-0.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded" x-text="'#' + (player.jersey || '-')"></span>
-                                </td>
-                                <td class="px-3 py-3"><div class="text-sm text-gray-600 truncate" x-text="player.email"></div></td>
-                                <td class="px-3 py-3">
-                                    <div class="flex flex-wrap gap-1">
-                                        <template x-for="reg in player.registrations" :key="reg.id">
-                                            <span class="inline-flex items-center px-1.5 py-0.5 text-xs rounded cursor-default"
-                                                  :class="reg.sport === 'Soccer' ? 'bg-green-50 text-green-700' : reg.sport === 'Basketball' ? 'bg-orange-50 text-orange-700' : reg.sport === 'Flag Football' ? 'bg-yellow-50 text-yellow-700' : reg.sport === 'Volleyball' ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'"
-                                                  :title="reg.division">
-                                                <span x-text="reg.sport"></span>
-                                                <span class="ml-1 opacity-60" x-text="(reg.season ? reg.season + ' ' : '') + reg.year"></span>
-                                            </span>
-                                        </template>
-                                    </div>
-                                </td>
-                                <td class="px-3 py-3 text-center">
-                                    <span x-show="!player.emailSent" class="px-2 py-0.5 text-xs font-medium bg-orange-100 text-orange-700 rounded">Needs Email</span>
-                                    <span x-show="player.emailSent" class="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded">✓ Sent</span>
-                                </td>
-                                <td class="px-3 py-3 text-right">
-                                    <div class="flex items-center justify-end space-x-1">
-                                        <button @click="sendEmail(player)" class="p-1 rounded hover:bg-gray-100" :class="player.emailSent ? 'text-gray-400' : 'text-green-600'" :title="player.emailSent ? 'Resend Email' : 'Send Email'">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                                        </button>
-                                        <button @click="editPlayer(player)" class="p-1 rounded hover:bg-gray-100 text-blue-600" title="Edit">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                                        </button>
-                                    </div>
-                                </td>
+                    <tbody class="divide-y divide-gray-200">
+                        <template x-for="item in displayList" :key="item._key">
+                            <tr :class="item._isHeader ? 'bg-gray-200 border-t-2 border-gray-300' : rowClass(item)">
+                                <template x-if="item._isHeader">
+                                    <td colspan="6" class="px-3 py-2">
+                                        <span class="text-sm font-bold text-gray-700" x-text="'Birth Year ' + item.birthYear"></span>
+                                        <span class="ml-2 text-xs text-gray-500" x-text="item._count + ' players'"></span>
+                                    </td>
+                                </template>
+                                <template x-if="!item._isHeader">
+                                    <td class="px-3 py-3">
+                                        <div class="text-sm font-medium text-gray-900" x-text="item.name"></div>
+                                    </td>
+                                </template>
+                                <template x-if="!item._isHeader">
+                                    <td class="px-3 py-3 text-center">
+                                        <span class="px-2 py-0.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded" x-text="'#' + (item.jersey || '-')"></span>
+                                    </td>
+                                </template>
+                                <template x-if="!item._isHeader">
+                                    <td class="px-3 py-3"><div class="text-sm text-gray-600 truncate" x-text="item.email"></div></td>
+                                </template>
+                                <template x-if="!item._isHeader">
+                                    <td class="px-3 py-3">
+                                        <div class="flex flex-wrap gap-1">
+                                            <template x-for="reg in item.registrations" :key="reg.id">
+                                                <span class="inline-flex items-center px-1.5 py-0.5 text-xs rounded cursor-default"
+                                                      :class="reg.sport === 'Soccer' ? 'bg-green-50 text-green-700' : reg.sport === 'Basketball' ? 'bg-orange-50 text-orange-700' : reg.sport === 'Flag Football' ? 'bg-yellow-50 text-yellow-700' : reg.sport === 'Volleyball' ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'"
+                                                      :title="reg.division">
+                                                    <span x-text="reg.sport"></span>
+                                                    <span class="ml-1 opacity-60" x-text="(reg.season ? reg.season + ' ' : '') + reg.year"></span>
+                                                </span>
+                                            </template>
+                                        </div>
+                                    </td>
+                                </template>
+                                <template x-if="!item._isHeader">
+                                    <td class="px-3 py-3 text-center">
+                                        <span x-show="!item.emailSent" class="px-2 py-0.5 text-xs font-medium bg-orange-100 text-orange-700 rounded">Needs Email</span>
+                                        <span x-show="item.emailSent" class="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded">✓ Sent</span>
+                                    </td>
+                                </template>
+                                <template x-if="!item._isHeader">
+                                    <td class="px-3 py-3 text-right">
+                                        <div class="flex items-center justify-end space-x-1">
+                                            <button @click="sendEmail(item)" class="p-1 rounded hover:bg-gray-100" :class="item.emailSent ? 'text-gray-400' : 'text-green-600'" :title="item.emailSent ? 'Resend Email' : 'Send Email'">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                                            </button>
+                                            <button @click="editPlayer(item)" class="p-1 rounded hover:bg-gray-100 text-blue-600" title="Edit">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </template>
                             </tr>
                         </template>
                     </tbody>
@@ -201,6 +218,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             availableSeasons: [],
             birthYearColorMap: {},
             duplicateJerseys: new Set(),
+            displayList: [],
             
             async init() {
                 await this.loadPlayers();
@@ -281,6 +299,21 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                             byYear[key] = p.id;
                         }
                     }
+                });
+                
+                // Build display list with year headers
+                this.displayList = [];
+                let lastYear = null;
+                const yearCounts = {};
+                this.filteredPlayers.forEach(p => {
+                    yearCounts[p.birthYear] = (yearCounts[p.birthYear] || 0) + 1;
+                });
+                this.filteredPlayers.forEach(p => {
+                    if (p.birthYear !== lastYear) {
+                        this.displayList.push({ _isHeader: true, _key: 'h-' + (p.birthYear || 'none'), birthYear: p.birthYear || 'Unknown', _count: yearCounts[p.birthYear] || 0 });
+                        lastYear = p.birthYear;
+                    }
+                    this.displayList.push({ ...p, _isHeader: false, _key: 'p-' + p.id });
                 });
             },
             
