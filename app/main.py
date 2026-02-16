@@ -92,51 +92,51 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
 
         <div x-show="!loading" class="bg-white rounded-lg shadow overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
+                <table class="min-w-full divide-y divide-gray-200 table-fixed">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Birth Year</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jersey</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registrations</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            <th class="w-52 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Player</th>
+                            <th class="w-16 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jersey</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registrations</th>
+                            <th class="w-24 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="w-20 px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         <template x-for="player in filteredPlayers" :key="player.id">
                             <tr class="hover:bg-gray-50">
-                                <td class="px-4 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-900" x-text="player.name"></div></td>
-                                <td class="px-4 py-4 whitespace-nowrap"><div class="text-sm text-gray-900" x-text="player.birthYear || 'Missing'"></div></td>
-                                <td class="px-4 py-4 whitespace-nowrap">
-                                    <span class="px-2 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded">#<span x-text="player.jersey || '-'"></span></span>
+                                <td class="px-3 py-3">
+                                    <div class="text-sm font-medium text-gray-900" x-text="player.name"></div>
+                                    <div class="text-xs text-gray-500" x-text="'Born ' + (player.birthYear || '?')"></div>
                                 </td>
-                                <td class="px-4 py-4 whitespace-nowrap"><div class="text-sm text-gray-600" x-text="player.email"></div></td>
-                                <td class="px-4 py-4">
+                                <td class="px-3 py-3 text-center">
+                                    <span class="px-2 py-0.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded" x-text="'#' + (player.jersey || '-')"></span>
+                                </td>
+                                <td class="px-3 py-3"><div class="text-sm text-gray-600 truncate" x-text="player.email"></div></td>
+                                <td class="px-3 py-3">
                                     <div class="flex flex-wrap gap-1">
                                         <template x-for="reg in player.registrations" :key="reg.id">
-                                            <span class="inline-flex items-center px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded">
+                                            <span class="inline-flex items-center px-1.5 py-0.5 text-xs rounded cursor-default"
+                                                  :class="reg.sport === 'Soccer' ? 'bg-green-50 text-green-700' : reg.sport === 'Basketball' ? 'bg-orange-50 text-orange-700' : reg.sport === 'Flag Football' ? 'bg-yellow-50 text-yellow-700' : reg.sport === 'Volleyball' ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'"
+                                                  :title="reg.division">
                                                 <span x-text="reg.sport"></span>
-                                                <span class="ml-1 text-gray-500">•</span>
-                                                <span class="ml-1" x-text="reg.division"></span>
-                                                <span class="ml-1 text-gray-500">•</span>
-                                                <span class="ml-1" x-text="reg.year"></span>
+                                                <span class="ml-1 opacity-60" x-text="reg.year"></span>
                                             </span>
                                         </template>
                                     </div>
                                 </td>
-                                <td class="px-4 py-4 whitespace-nowrap">
-                                    <span x-show="!player.emailSent" class="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-700 rounded">Needs Email</span>
-                                    <span x-show="player.emailSent" class="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded">✓ Email Sent</span>
+                                <td class="px-3 py-3 text-center">
+                                    <span x-show="!player.emailSent" class="px-2 py-0.5 text-xs font-medium bg-orange-100 text-orange-700 rounded">Needs Email</span>
+                                    <span x-show="player.emailSent" class="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded">✓ Sent</span>
                                 </td>
-                                <td class="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <div class="flex items-center justify-end space-x-2">
-                                        <button @click="sendEmail(player)" class="hover:text-green-900" :class="player.emailSent ? 'text-gray-400' : 'text-green-600'" :title="player.emailSent ? 'Resend Email' : 'Send Email'">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                                <td class="px-3 py-3 text-right">
+                                    <div class="flex items-center justify-end space-x-1">
+                                        <button @click="sendEmail(player)" class="p-1 rounded hover:bg-gray-100" :class="player.emailSent ? 'text-gray-400' : 'text-green-600'" :title="player.emailSent ? 'Resend Email' : 'Send Email'">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                                         </button>
-                                        <button @click="editPlayer(player)" class="text-blue-600 hover:text-blue-900" title="Edit">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                        <button @click="editPlayer(player)" class="p-1 rounded hover:bg-gray-100 text-blue-600" title="Edit">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                         </button>
                                     </div>
                                 </td>
