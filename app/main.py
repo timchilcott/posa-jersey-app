@@ -441,3 +441,25 @@ async def update_player(player_id: int, request: Request, db: Session = Depends(
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
+
+@app.get("/api/debug/seasons", response_class=HTMLResponse)
+async def debug_seasons(db: Session = Depends(get_db)):
+    """Show all distinct season values and counts"""
+    from sqlalchemy import text
+    rows = db.execute(text("""
+        SELECT season, sport, 
+               EXTRACT(YEAR FROM created_at)::int as reg_year,
+               COUNT(*) as cnt
+        FROM registrations 
+        GROUP BY season, sport, reg_year
+        ORDER BY reg_year DESC, sport, season
+    """)).fetchall()
+    
+    lines = ["<h2>Season Values in Database</h2><table border='1' cellpadding='5'>"]
+    lines.append("<tr><th>Season</th><th>Sport</th><th>Reg Year</th><th>Count</th></tr>")
+    for row in rows:
+        season_val = repr(row[0])
+        lines.append(f"<tr><td>{season_val}</td><td>{row[1]}</td><td>{row[2]}</td><td>{row[3]}</td></tr>")
+    lines.append("</table>")
+    
+    return f"<html><body style='font-family: monospace; padding: 20px;'>{''.join(lines)}</body></html>"
