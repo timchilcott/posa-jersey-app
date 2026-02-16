@@ -114,7 +114,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         <template x-for="player in filteredPlayers" :key="player.id">
-                            <tr class="hover:bg-gray-50">
+                            <tr :class="rowClass(player)">
                                 <td class="px-3 py-3">
                                     <div class="text-sm font-medium text-gray-900" x-text="player.name"></div>
                                     <div class="text-xs text-gray-500" x-text="'Born ' + (player.birthYear || '?')"></div>
@@ -199,6 +199,8 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             availableBirthYears: [],
             availableSports: [],
             availableSeasons: [],
+            birthYearColorMap: {},
+            duplicateJerseys: new Set(),
             
             async init() {
                 await this.loadPlayers();
@@ -217,6 +219,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     data.players.forEach(p => { p.registrations.forEach(r => { allSports.add(r.sport); if (r.season) allSeasons.add(r.season); }); });
                     this.availableSports = [...allSports].sort();
                     this.availableSeasons = [...allSeasons].sort();
+                    this.buildRowMeta();
                 } catch (error) {
                     console.error('Failed to load players:', error);
                 }
@@ -256,6 +259,35 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     }
                     return true;
                 });
+                this.buildRowMeta();
+            },
+            
+            buildRowMeta() {
+                // Birth year alternating colors
+                const years = [...new Set(this.filteredPlayers.map(p => p.birthYear).filter(Boolean))].sort((a, b) => b - a);
+                this.birthYearColorMap = {};
+                years.forEach((y, i) => { this.birthYearColorMap[y] = i % 2 === 0; });
+                
+                // Duplicate jersey detection within birth year
+                this.duplicateJerseys = new Set();
+                const byYear = {};
+                this.filteredPlayers.forEach(p => {
+                    if (p.birthYear && p.jersey) {
+                        const key = p.birthYear + '-' + p.jersey;
+                        if (byYear[key]) {
+                            this.duplicateJerseys.add(byYear[key]);
+                            this.duplicateJerseys.add(p.id);
+                        } else {
+                            byYear[key] = p.id;
+                        }
+                    }
+                });
+            },
+            
+            rowClass(player) {
+                if (this.duplicateJerseys.has(player.id)) return 'bg-red-50 hover:bg-red-100';
+                if (player.birthYear && this.birthYearColorMap[player.birthYear]) return 'bg-white hover:bg-gray-50';
+                return 'bg-gray-50 hover:bg-gray-100';
             },
             
             clearFilters() {
