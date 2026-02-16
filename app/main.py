@@ -389,3 +389,81 @@ async def update_player(player_id: int, request: Request, db: Session = Depends(
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
+
+
+# ============================================================
+# TEMPORARY MIGRATION ENDPOINT - DELETE AFTER USE
+# Restores jersey numbers from the recovery database backup
+# ============================================================
+@app.get("/migrate-jerseys", response_class=HTMLResponse)
+async def migrate_jerseys(db: Session = Depends(get_db)):
+    """
+    One-time migration: connect to recovery DB and restore jersey numbers.
+    DELETE THIS ENDPOINT AFTER RUNNING IT ONCE.
+    """
+    from sqlalchemy import create_engine, text
+    
+    # Recovery database connection (internal URL - only works inside Render)
+    RECOVERY_DB_URL = "postgresql://posa_jerseys_user:eD4MTErCvXeDOr3jJuBJHtGC0LgjMbm8@dpg-d698tmn5r7bs73f49rgg-a:5432/posa_jerseys_yy3g"
+    
+    results = []
+    try:
+        recovery_engine = create_engine(RECOVERY_DB_URL)
+        with recovery_engine.connect() as conn:
+            # Get all players with jersey numbers from the backup
+            rows = conn.execute(text(
+                "SELECT id, full_name, jersey_number, birth_year, locked FROM players"
+            )).fetchall()
+        
+        updated = 0
+        skipped = 0
+        not_found = 0
+        
+        for row in rows:
+            backup_id = row[0]
+            backup_name = row[1]
+            backup_jersey = row[2]
+            backup_birth_year = row[3]
+            backup_locked = row[4]
+            
+            # Find the player in live DB
+            player = db.query(Player).filter(Player.id == backup_id).first()
+            
+            if not player:
+                not_found += 1
+                results.append(f"NOT FOUND: ID {backup_id} ({backup_name})")
+                continue
+            
+            # Restore jersey number if backup had one and live doesn't
+            if backup_jersey is not None and player.jersey_number is None:
+                player.jersey_number = backup_jersey
+                updated += 1
+                results.append(f"RESTORED: {backup_name} -> Jersey #{backup_jersey}")
+            elif backup_jersey is not None and player.jersey_number != backup_jersey:
+                old = player.jersey_number
+                player.jersey_number = backup_jersey
+                updated += 1
+                results.append(f"UPDATED: {backup_name} -> Jersey #{backup_jersey} (was #{old})")
+            else:
+                skipped += 1
+                results.append(f"OK: {backup_name} - Jersey #{player.jersey_number or 'None'} (unchanged)")
+        
+        db.commit()
+        
+        summary = f"<h2>Migration Complete</h2><p>Updated: {updated} | Skipped: {skipped} | Not Found: {not_found}</p>"
+        detail_html = "<br>".join(results)
+        
+        return f"""<html><body style='font-family: monospace; padding: 20px;'>
+            {summary}
+            <hr>
+            <h3>Details:</h3>
+            <p>{detail_html}</p>
+            <hr>
+            <p style='color: red; font-weight: bold;'>NOW DELETE THE /migrate-jerseys ENDPOINT FROM main.py AND REDEPLOY!</p>
+        </body></html>"""
+        
+    except Exception as e:
+        return f"""<html><body style='font-family: monospace; padding: 20px;'>
+            <h2 style='color: red;'>Migration Failed</h2>
+            <p>{str(e)}</p>
+        </body></html>"""
