@@ -188,8 +188,14 @@ def get_filtered_players(
             (Player.parent_email.ilike(search_term))
         )
     
-    # Get distinct players
-    players = query.distinct().all()
+    # Get distinct players, ordered youngest to oldest, then jersey # ascending
+    from sqlalchemy import case
+    players = query.distinct().order_by(
+        case((Player.birth_year.is_(None), 1), else_=0),  # nulls last
+        Player.birth_year.desc(),
+        case((Player.jersey_number.is_(None), 1), else_=0),  # null jerseys last
+        Player.jersey_number.asc()
+    ).all()
     
     # Format response
     result = []
