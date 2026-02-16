@@ -27,6 +27,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             <div class="flex items-center justify-between">
                 <h1 class="text-2xl font-bold text-gray-900">POSA Jersey Admin</h1>
                 <div class="flex items-center space-x-3">
+                    <a href="/admin/volunteers" class="text-purple-600 hover:text-purple-800 px-4 py-2 text-sm font-medium">Volunteers</a>
                     <button @click="syncSportsEngine()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium">Sync SportsEngine</button>
                 </div>
             </div>
@@ -402,6 +403,146 @@ async def home():
 async def admin_dashboard(request: Request):
     return HTMLResponse(ADMIN_TEMPLATE)
 
+VOLUNTEER_TEMPLATE = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POSA Volunteers</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-50" x-data="volunteerApp()" x-init="init()">
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <h1 class="text-2xl font-bold text-gray-900">POSA Volunteers</h1>
+                <div class="flex items-center space-x-3">
+                    <a href="/admin" class="text-blue-600 hover:text-blue-800 px-4 py-2 text-sm font-medium">&larr; Players</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex flex-wrap gap-3 items-end">
+                <div class="flex-1 min-w-64">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Search</label>
+                    <input type="search" x-model="search" @input.debounce.300ms="applyFilter()" placeholder="Name or email..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                </div>
+                <div class="w-48">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Type</label>
+                    <select x-model="typeFilter" @change="applyFilter()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                        <option value="">All</option>
+                        <template x-for="t in availableTypes" :key="t">
+                            <option :value="t" x-text="t"></option>
+                        </template>
+                    </select>
+                </div>
+                <button @click="search = ''; typeFilter = ''; applyFilter()" class="px-4 py-2 text-gray-600 hover:text-gray-900 text-sm font-medium">Clear</button>
+            </div>
+            <div class="mt-3 text-sm text-gray-600">
+                Showing <span class="font-medium" x-text="filtered.length"></span> of <span x-text="all.length"></span> volunteers
+            </div>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <div x-show="loading" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+            <p class="mt-2 text-gray-600">Loading volunteers...</p>
+        </div>
+
+        <div x-show="!loading" class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 table-fixed">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="w-56 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registration Type</th>
+                            <th class="w-24 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <template x-for="vol in filtered" :key="vol.id">
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-3 py-3">
+                                    <div class="text-sm font-medium text-gray-900" x-text="vol.name"></div>
+                                </td>
+                                <td class="px-3 py-3"><div class="text-sm text-gray-600" x-text="vol.email"></div></td>
+                                <td class="px-3 py-3">
+                                    <div class="flex flex-wrap gap-1">
+                                        <template x-for="reg in vol.registrations" :key="reg.id">
+                                            <span class="inline-flex items-center px-1.5 py-0.5 text-xs rounded bg-purple-50 text-purple-700" x-text="reg.division"></span>
+                                        </template>
+                                    </div>
+                                </td>
+                                <td class="px-3 py-3 text-center">
+                                    <span x-show="!vol.emailSent" class="px-2 py-0.5 text-xs font-medium bg-orange-100 text-orange-700 rounded">Needs Email</span>
+                                    <span x-show="vol.emailSent" class="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded">✓ Sent</span>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+            <div x-show="filtered.length === 0 && !loading" class="text-center py-12">
+                <div class="text-gray-400 text-5xl mb-3">🙋</div>
+                <h3 class="text-lg font-medium text-gray-900 mb-1">No volunteers found</h3>
+                <p class="text-gray-500">Try adjusting your filters</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    function volunteerApp() {
+        return {
+            loading: true,
+            all: [],
+            filtered: [],
+            search: '',
+            typeFilter: '',
+            availableTypes: [],
+            
+            async init() {
+                try {
+                    const response = await fetch('/api/admin/players?volunteers_only=true');
+                    const data = await response.json();
+                    this.all = data.players;
+                    this.filtered = data.players;
+                    const types = new Set();
+                    data.players.forEach(v => v.registrations.forEach(r => types.add(r.division)));
+                    this.availableTypes = [...types].sort();
+                } catch (error) {
+                    console.error('Failed to load volunteers:', error);
+                }
+                this.loading = false;
+            },
+            
+            applyFilter() {
+                this.filtered = this.all.filter(vol => {
+                    if (this.search) {
+                        const s = this.search.toLowerCase();
+                        if (!vol.name.toLowerCase().includes(s) && !vol.email.toLowerCase().includes(s)) return false;
+                    }
+                    if (this.typeFilter) {
+                        if (!vol.registrations.some(r => r.division === this.typeFilter)) return false;
+                    }
+                    return true;
+                });
+            }
+        }
+    }
+    </script>
+</body>
+</html>"""
+
+@app.get("/admin/volunteers", response_class=HTMLResponse)
+async def admin_volunteers(request: Request):
+    return HTMLResponse(VOLUNTEER_TEMPLATE)
+
 @app.put("/api/players/{player_id}")
 async def update_player(player_id: int, request: Request, db: Session = Depends(get_db)):
     player = db.query(Player).filter(Player.id == player_id).first()
@@ -464,7 +605,26 @@ async def debug_seasons(db: Session = Depends(get_db)):
     
     return f"<html><body style='font-family: monospace; padding: 20px;'>{''.join(lines)}</body></html>"
 
-@app.get("/api/fix-seasons", response_class=HTMLResponse)
+@app.get("/api/debug/divisions", response_class=HTMLResponse)
+async def debug_divisions(db: Session = Depends(get_db)):
+    """Show all distinct division values"""
+    from sqlalchemy import text
+    rows = db.execute(text("""
+        SELECT division, sport, COUNT(*) as cnt
+        FROM registrations 
+        GROUP BY division, sport
+        ORDER BY sport, division
+    """)).fetchall()
+    
+    lines = ["<h2>Division Values in Database</h2><table border='1' cellpadding='5'>"]
+    lines.append("<tr><th>Division</th><th>Sport</th><th>Count</th></tr>")
+    for row in rows:
+        lines.append(f"<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td></tr>")
+    lines.append("</table>")
+    
+    return f"<html><body style='font-family: monospace; padding: 20px;'>{''.join(lines)}</body></html>"
+
+
 async def fix_seasons(db: Session = Depends(get_db)):
     """One-time fix: normalize all season values. DELETE AFTER USE."""
     from sqlalchemy import text
