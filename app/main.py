@@ -71,8 +71,6 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Status</label>
                     <select x-model="filters.status" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         <option value="">All</option>
-                        <option value="players">Players Only</option>
-                        <option value="volunteers">Volunteers Only</option>
                         <option value="needsEmail">Needs Email</option>
                         <option value="waitingRoom">Waiting Room</option>
                         <option value="active">Active</option>
@@ -112,8 +110,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                                 <td class="px-4 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-900" x-text="player.name"></div></td>
                                 <td class="px-4 py-4 whitespace-nowrap"><div class="text-sm text-gray-900" x-text="player.birthYear || 'Missing'"></div></td>
                                 <td class="px-4 py-4 whitespace-nowrap">
-                                    <span x-show="!player.locked" class="px-2 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded">#<span x-text="player.jersey || '-'"></span></span>
-                                    <span x-show="player.locked" class="px-2 py-1 text-sm font-medium text-purple-700 bg-purple-100 rounded">VOLUNTEER</span>
+                                    <span class="px-2 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded">#<span x-text="player.jersey || '-'"></span></span>
                                 </td>
                                 <td class="px-4 py-4 whitespace-nowrap"><div class="text-sm text-gray-600" x-text="player.email"></div></td>
                                 <td class="px-4 py-4">
@@ -172,12 +169,6 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
                         <input type="email" x-model="editingPlayer.email" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                    </div>
-                    <div class="mb-4">
-                        <label class="flex items-center space-x-2">
-                            <input type="checkbox" x-model="editingPlayer.isVolunteer" class="w-4 h-4 text-blue-600 rounded">
-                            <span class="text-sm font-medium text-gray-700">Volunteer/Parent (not a player)</span>
-                        </label>
                     </div>
                     <div class="flex justify-end space-x-3">
                         <button @click="editingPlayer = null" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
@@ -238,11 +229,6 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                         if (!hasYear) return false;
                     }
                     
-                    // Volunteer filters
-                    const isVolunteer = player.locked;
-                    if (this.filters.status === 'players' && isVolunteer) return false;
-                    if (this.filters.status === 'volunteers' && !isVolunteer) return false;
-                    
                     if (this.filters.status === 'needsEmail' && player.emailSent) return false;
                     if (this.filters.status === 'waitingRoom') {
                         const inWaitingRoom = player.registrations.some(r => r.division === 'Waiting Room');
@@ -263,8 +249,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             
             editPlayer(player) {
                 this.editingPlayer = { 
-                    ...player,
-                    isVolunteer: player.locked
+                    ...player
                 };
             },
             
@@ -276,8 +261,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                         body: JSON.stringify({
                             full_name: this.editingPlayer.name,
                             parent_email: this.editingPlayer.email,
-                            birth_year: this.editingPlayer.birthYear,
-                            is_volunteer: this.editingPlayer.isVolunteer
+                            birth_year: this.editingPlayer.birthYear
                         })
                     });
                     const data = await response.json();
@@ -285,11 +269,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                         await this.loadPlayers();
                         this.applyFilters();
                         this.editingPlayer = null;
-                        if (data.jersey) {
-                            alert('Player updated! Jersey: #' + data.jersey);
-                        } else {
-                            alert('Volunteer updated!');
-                        }
+                        alert('Player updated!');
                     }
                 } catch (error) {
                     console.error('Failed to update player:', error);
@@ -356,114 +336,27 @@ async def update_player(player_id: int, request: Request, db: Session = Depends(
     if "birth_year" in data:
         player.birth_year = data["birth_year"]
     
-    # Handle volunteer flag
-    is_volunteer = data.get("is_volunteer", False)
-    
-    if is_volunteer:
-        # Mark as volunteer - keep jersey number intact!
-        player.locked = True
-    else:
-        # Regular player - auto-assign jersey if needed
-        player.locked = False
-        if "birth_year" in data and data["birth_year"]:
-            if not player.jersey_number or player.jersey_number == 0:
-                max_jersey = db.query(func.max(Player.jersey_number)).filter(
-                    Player.birth_year == data["birth_year"],
-                    Player.locked != True
-                ).scalar()
-                
-                try:
-                    next_num = int(max_jersey or 0) + 1
-                except:
-                    next_num = 1
-                
-                player.jersey_number = next_num
+    # Auto-assign jersey if needed
+    if "birth_year" in data and data["birth_year"]:
+        if not player.jersey_number or player.jersey_number == 0:
+            max_jersey = db.query(func.max(Player.jersey_number)).filter(
+                Player.birth_year == data["birth_year"]
+            ).scalar()
+            
+            try:
+                next_num = int(max_jersey or 0) + 1
+            except:
+                next_num = 1
+            
+            player.jersey_number = next_num
     
     db.commit()
     
     return {
         "success": True, 
-        "jersey": player.jersey_number if not player.locked else None
+        "jersey": player.jersey_number
     }
 
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
-
-
-# ============================================================
-# TEMPORARY MIGRATION ENDPOINT - DELETE AFTER USE
-# Restores jersey numbers from the recovery database backup
-# ============================================================
-@app.get("/migrate-jerseys", response_class=HTMLResponse)
-async def migrate_jerseys(db: Session = Depends(get_db)):
-    """
-    One-time migration: connect to recovery DB and restore jersey numbers.
-    DELETE THIS ENDPOINT AFTER RUNNING IT ONCE.
-    """
-    from sqlalchemy import create_engine, text
-    
-    # Recovery database connection (internal URL - only works inside Render)
-    RECOVERY_DB_URL = "postgresql://posa_jerseys_user:eD4MTErCvXeDOr3jJuBJHtGC0LgjMbm8@dpg-d698tmn5r7bs73f49rgg-a:5432/posa_jerseys_yy3g"
-    
-    results = []
-    try:
-        recovery_engine = create_engine(RECOVERY_DB_URL)
-        with recovery_engine.connect() as conn:
-            # Get all players with jersey numbers from the backup
-            rows = conn.execute(text(
-                "SELECT id, full_name, jersey_number, birth_year, locked FROM players"
-            )).fetchall()
-        
-        updated = 0
-        skipped = 0
-        not_found = 0
-        
-        for row in rows:
-            backup_id = row[0]
-            backup_name = row[1]
-            backup_jersey = row[2]
-            backup_birth_year = row[3]
-            backup_locked = row[4]
-            
-            # Find the player in live DB
-            player = db.query(Player).filter(Player.id == backup_id).first()
-            
-            if not player:
-                not_found += 1
-                results.append(f"NOT FOUND: ID {backup_id} ({backup_name})")
-                continue
-            
-            # Restore jersey number if backup had one and live doesn't
-            if backup_jersey is not None and player.jersey_number is None:
-                player.jersey_number = backup_jersey
-                updated += 1
-                results.append(f"RESTORED: {backup_name} -> Jersey #{backup_jersey}")
-            elif backup_jersey is not None and player.jersey_number != backup_jersey:
-                old = player.jersey_number
-                player.jersey_number = backup_jersey
-                updated += 1
-                results.append(f"UPDATED: {backup_name} -> Jersey #{backup_jersey} (was #{old})")
-            else:
-                skipped += 1
-                results.append(f"OK: {backup_name} - Jersey #{player.jersey_number or 'None'} (unchanged)")
-        
-        db.commit()
-        
-        summary = f"<h2>Migration Complete</h2><p>Updated: {updated} | Skipped: {skipped} | Not Found: {not_found}</p>"
-        detail_html = "<br>".join(results)
-        
-        return f"""<html><body style='font-family: monospace; padding: 20px;'>
-            {summary}
-            <hr>
-            <h3>Details:</h3>
-            <p>{detail_html}</p>
-            <hr>
-            <p style='color: red; font-weight: bold;'>NOW DELETE THE /migrate-jerseys ENDPOINT FROM main.py AND REDEPLOY!</p>
-        </body></html>"""
-        
-    except Exception as e:
-        return f"""<html><body style='font-family: monospace; padding: 20px;'>
-            <h2 style='color: red;'>Migration Failed</h2>
-            <p>{str(e)}</p>
-        </body></html>"""
