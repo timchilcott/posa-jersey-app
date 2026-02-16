@@ -360,8 +360,7 @@ async def update_player(player_id: int, request: Request, db: Session = Depends(
     is_volunteer = data.get("is_volunteer", False)
     
     if is_volunteer:
-        # Mark as volunteer - no jersey number (store None, not a string)
-        player.jersey_number = None
+        # Mark as volunteer - keep jersey number intact!
         player.locked = True
     else:
         # Regular player - auto-assign jersey if needed
