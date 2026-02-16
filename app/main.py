@@ -1,6 +1,5 @@
-\"""
-POSA Jersey App - Complete Main Application
-"""
+# POSA Jersey App - Complete Main Application
+
 import os
 from datetime import datetime
 from fastapi import FastAPI, Request, Depends, HTTPException, Form
@@ -43,7 +42,7 @@ active_sessions = set()
 # ============================================
 
 def require_login(request: Request):
-    """Check if user is logged in"""
+    # Check if user is logged in
     session_token = request.cookies.get("session_token")
     if not session_token or session_token not in active_sessions:
         raise HTTPException(
@@ -55,7 +54,7 @@ def require_login(request: Request):
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    """Login page"""
+    # Login page
     return """
     <html>
     <head>
@@ -81,7 +80,7 @@ async def login_page(request: Request):
 
 @app.post("/login")
 async def login(password: str = Form(...)):
-    """Process login"""
+    # Process login
     if password == ADMIN_PASSWORD:
         session_token = os.urandom(32).hex()
         active_sessions.add(session_token)
@@ -102,7 +101,7 @@ async def login(password: str = Form(...)):
 
 @app.get("/logout")
 async def logout(request: Request):
-    """Logout"""
+    # Logout
     session_token = request.cookies.get("session_token")
     if session_token in active_sessions:
         active_sessions.remove(session_token)
@@ -117,7 +116,7 @@ async def logout(request: Request):
 
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
-    """Admin dashboard - table interface"""
+    # Admin dashboard - table interface
     try:
         require_login(request)
     except HTTPException as exc:
@@ -130,7 +129,7 @@ async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
 
 @app.get("/")
 async def home():
-    """Home page - redirect to admin"""
+    # Home page - redirect to admin
     return RedirectResponse("/admin")
 
 
@@ -148,7 +147,7 @@ async def create_player(
     sport: str = Form("Soccer"),
     db: Session = Depends(get_db)
 ):
-    """Create a new player"""
+    # Create a new player
     require_login(request)
     
     # Check if player exists
@@ -211,7 +210,7 @@ async def update_player(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    """Update player details"""
+    # Update player details
     require_login(request)
     
     player = db.query(Player).filter(Player.id == player_id).first()
@@ -239,7 +238,7 @@ async def delete_player(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    """Delete a player"""
+    # Delete a player
     require_login(request)
     
     player = db.query(Player).filter(Player.id == player_id).first()
@@ -266,7 +265,7 @@ async def send_player_email_route(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    """Send confirmation email to player"""
+    # Send confirmation email to player
     require_login(request)
     
     player = db.query(Player).filter(Player.id == player_id).first()
@@ -311,7 +310,7 @@ async def send_bulk_emails_route(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    """Send emails to multiple players"""
+    # Send emails to multiple players
     require_login(request)
     
     data = await request.json()
@@ -359,7 +358,7 @@ async def send_bulk_emails_route(
 
 @app.post("/sync/pull")
 async def sync_sportsengine(request: Request, db: Session = Depends(get_db)):
-    """Sync with SportsEngine"""
+    # Sync with SportsEngine
     require_login(request)
     
     # TODO: Implement your SportsEngine sync logic here
@@ -381,7 +380,7 @@ async def sync_sportsengine(request: Request, db: Session = Depends(get_db)):
 
 @app.get("/api/summary")
 async def get_summary(db: Session = Depends(get_db)):
-    """Get dashboard summary stats"""
+    # Get dashboard summary stats
     total_players = db.query(func.count(Player.id)).scalar()
     
     waiting_room = db.query(func.count(Player.id.distinct())).join(
@@ -401,7 +400,7 @@ async def get_summary(db: Session = Depends(get_db)):
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    # Health check endpoint
     return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
 
 
