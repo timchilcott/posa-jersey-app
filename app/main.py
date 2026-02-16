@@ -112,8 +112,8 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                                 <td class="px-4 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-900" x-text="player.name"></div></td>
                                 <td class="px-4 py-4 whitespace-nowrap"><div class="text-sm text-gray-900" x-text="player.birthYear || 'Missing'"></div></td>
                                 <td class="px-4 py-4 whitespace-nowrap">
-                                    <span x-show="player.jersey !== 'VOLUNTEER'" class="px-2 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded">#<span x-text="player.jersey"></span></span>
-                                    <span x-show="player.jersey === 'VOLUNTEER'" class="px-2 py-1 text-sm font-medium text-purple-700 bg-purple-100 rounded">VOLUNTEER</span>
+                                    <span x-show="!player.locked" class="px-2 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded">#<span x-text="player.jersey || '-'"></span></span>
+                                    <span x-show="player.locked" class="px-2 py-1 text-sm font-medium text-purple-700 bg-purple-100 rounded">VOLUNTEER</span>
                                 </td>
                                 <td class="px-4 py-4 whitespace-nowrap"><div class="text-sm text-gray-600" x-text="player.email"></div></td>
                                 <td class="px-4 py-4">
@@ -239,7 +239,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     }
                     
                     // Volunteer filters
-                    const isVolunteer = player.jersey === 'VOLUNTEER' || player.locked;
+                    const isVolunteer = player.locked;
                     if (this.filters.status === 'players' && isVolunteer) return false;
                     if (this.filters.status === 'volunteers' && !isVolunteer) return false;
                     
@@ -264,7 +264,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             editPlayer(player) {
                 this.editingPlayer = { 
                     ...player,
-                    isVolunteer: player.jersey === 'VOLUNTEER' || player.locked
+                    isVolunteer: player.locked
                 };
             },
             
@@ -359,16 +359,17 @@ async def update_player(player_id: int, request: Request, db: Session = Depends(
     is_volunteer = data.get("is_volunteer", False)
     
     if is_volunteer:
-        # Mark as volunteer - no jersey number
-        player.jersey_number = "VOLUNTEER"
-        player.locked = True  # Use locked field to mark as volunteer
+        # Mark as volunteer - no jersey number (store None, not a string)
+        player.jersey_number = None
+        player.locked = True
     else:
         # Regular player - auto-assign jersey if needed
+        player.locked = False
         if "birth_year" in data and data["birth_year"]:
-            if not player.jersey_number or player.jersey_number in ["", "0", "WR", "VOLUNTEER"]:
+            if not player.jersey_number or player.jersey_number == 0:
                 max_jersey = db.query(func.max(Player.jersey_number)).filter(
                     Player.birth_year == data["birth_year"],
-                    Player.jersey_number != "VOLUNTEER"
+                    Player.locked != True
                 ).scalar()
                 
                 try:
@@ -376,14 +377,13 @@ async def update_player(player_id: int, request: Request, db: Session = Depends(
                 except:
                     next_num = 1
                 
-                player.jersey_number = str(next_num)
-                player.locked = False
+                player.jersey_number = next_num
     
     db.commit()
     
     return {
         "success": True, 
-        "jersey": player.jersey_number if player.jersey_number != "VOLUNTEER" else None
+        "jersey": player.jersey_number if not player.locked else None
     }
 
 @app.get("/health")
