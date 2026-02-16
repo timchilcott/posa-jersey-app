@@ -19,16 +19,30 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>POSA Jersey Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    pines: { 50: '#f0f7f0', 100: '#d9edd9', 200: '#b3dbb3', 300: '#7fc07f', 400: '#5aa55a', 500: '#3C7939', 600: '#2f6130', 700: '#254d26', 800: '#1c3a1d', 900: '#142914' }
+                }
+            }
+        }
+    }
+    </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="bg-gray-50" x-data="tableApp()" x-init="init()">
     <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div class="max-w-7xl mx-auto px-4 py-4">
+        <div class="max-w-7xl mx-auto px-4 py-3">
             <div class="flex items-center justify-between">
-                <h1 class="text-2xl font-bold text-gray-900">POSA Jersey Admin</h1>
                 <div class="flex items-center space-x-3">
-                    <a href="/admin/volunteers" class="text-purple-600 hover:text-purple-800 px-4 py-2 text-sm font-medium">Volunteers</a>
-                    <button @click="syncSportsEngine()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium">Sync SportsEngine</button>
+                    <img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-8">
+                    <h1 class="text-xl font-bold text-gray-900">Jersey Admin</h1>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <a href="/admin/volunteers" class="text-pines-500 hover:text-pines-700 px-3 py-2 text-sm font-medium">Volunteers</a>
+                    <button @click="syncSportsEngine()" class="bg-pines-500 hover:bg-pines-600 text-white px-4 py-2 rounded-lg text-sm font-medium">Sync SportsEngine</button>
                 </div>
             </div>
         </div>
@@ -39,11 +53,11 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             <div class="flex flex-wrap gap-3 items-end">
                 <div class="flex-1 min-w-64">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Search</label>
-                    <input type="search" x-model="filters.search" @input.debounce.300ms="applyFilters()" @keyup.enter="applyFilters()" placeholder="Name, email, or jersey #..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <input type="search" x-model="filters.search" @input.debounce.300ms="applyFilters()" @keyup.enter="applyFilters()" placeholder="Name, email, or jersey #..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent">
                 </div>
                 <div class="w-32">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Birth Year</label>
-                    <select x-model="filters.birthYear" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <select x-model="filters.birthYear" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500">
                         <option value="">All</option>
                         <template x-for="year in availableBirthYears" :key="year">
                             <option :value="year" x-text="year"></option>
@@ -52,7 +66,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                 </div>
                 <div class="w-40">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Sport</label>
-                    <select x-model="filters.sport" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <select x-model="filters.sport" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500">
                         <option value="">All</option>
                         <template x-for="sport in availableSports" :key="sport">
                             <option :value="sport" x-text="sport"></option>
@@ -61,7 +75,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                 </div>
                 <div class="w-28">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Year</label>
-                    <select x-model="filters.year" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <select x-model="filters.year" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500">
                         <option value="">All</option>
                         <option value="2026">2026</option>
                         <option value="2025">2025</option>
@@ -70,7 +84,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                 </div>
                 <div class="w-28">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Season</label>
-                    <select x-model="filters.season" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <select x-model="filters.season" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500">
                         <option value="">All</option>
                         <template x-for="season in availableSeasons" :key="season">
                             <option :value="season" x-text="season"></option>
@@ -79,7 +93,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                 </div>
                 <div class="w-40">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Status</label>
-                    <select x-model="filters.status" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <select x-model="filters.status" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500">
                         <option value="">All</option>
                         <option value="needsEmail">Needs Email</option>
                         <option value="waitingRoom">Waiting Room</option>
@@ -96,7 +110,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
 
     <main class="max-w-7xl mx-auto px-4 py-6">
         <div x-show="loading" class="text-center py-12">
-            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pines-500"></div>
             <p class="mt-2 text-gray-600">Loading players...</p>
         </div>
 
@@ -115,11 +129,11 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         <template x-for="item in displayList" :key="item._key">
-                            <tr :class="item._isHeader ? 'bg-gray-200 border-t-2 border-gray-300' : rowClass(item)">
+                            <tr :class="item._isHeader ? 'bg-pines-50 border-t-2 border-pines-200' : rowClass(item)">
                                 <template x-if="item._isHeader">
                                     <td colspan="6" class="px-3 py-2">
-                                        <span class="text-sm font-bold text-gray-700" x-text="'Birth Year ' + item.birthYear"></span>
-                                        <span class="ml-2 text-xs text-gray-500" x-text="item._count + ' players'"></span>
+                                        <span class="text-sm font-bold text-pines-700" x-text="'Birth Year ' + item.birthYear"></span>
+                                        <span class="ml-2 text-xs text-pines-500" x-text="item._count + ' players'"></span>
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
@@ -161,7 +175,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                                             <button @click="sendEmail(item)" class="p-1 rounded hover:bg-gray-100" :class="item.emailSent ? 'text-gray-400' : 'text-green-600'" :title="item.emailSent ? 'Resend Email' : 'Send Email'">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                                             </button>
-                                            <button @click="editPlayer(item)" class="p-1 rounded hover:bg-gray-100 text-blue-600" title="Edit">
+                                            <button @click="editPlayer(item)" class="p-1 rounded hover:bg-gray-100 text-pines-500" title="Edit">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                             </button>
                                             <button @click="markVolunteer(item)" class="p-1 rounded hover:bg-purple-100 text-purple-500" title="Mark as Volunteer">
@@ -202,7 +216,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     </div>
                     <div class="flex justify-end space-x-3">
                         <button @click="editingPlayer = null" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                        <button @click="savePlayer()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
+                        <button @click="savePlayer()" class="px-4 py-2 bg-pines-500 text-white rounded-lg hover:bg-pines-600">Save</button>
                     </div>
                 </div>
             </template>
@@ -434,15 +448,29 @@ VOLUNTEER_TEMPLATE = """<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>POSA Volunteers</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    pines: { 50: '#f0f7f0', 100: '#d9edd9', 200: '#b3dbb3', 300: '#7fc07f', 400: '#5aa55a', 500: '#3C7939', 600: '#2f6130', 700: '#254d26', 800: '#1c3a1d', 900: '#142914' }
+                }
+            }
+        }
+    }
+    </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="bg-gray-50" x-data="volunteerApp()" x-init="init()">
     <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div class="max-w-7xl mx-auto px-4 py-4">
+        <div class="max-w-7xl mx-auto px-4 py-3">
             <div class="flex items-center justify-between">
-                <h1 class="text-2xl font-bold text-gray-900">POSA Volunteers</h1>
                 <div class="flex items-center space-x-3">
-                    <a href="/admin" class="text-blue-600 hover:text-blue-800 px-4 py-2 text-sm font-medium">&larr; Players</a>
+                    <img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-8">
+                    <h1 class="text-xl font-bold text-gray-900">Volunteers</h1>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <a href="/admin" class="text-pines-500 hover:text-pines-700 px-3 py-2 text-sm font-medium">&larr; Players</a>
                 </div>
             </div>
         </div>
@@ -453,11 +481,11 @@ VOLUNTEER_TEMPLATE = """<!DOCTYPE html>
             <div class="flex flex-wrap gap-3 items-end">
                 <div class="flex-1 min-w-64">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Search</label>
-                    <input type="search" x-model="search" @input.debounce.300ms="applyFilter()" placeholder="Name or email..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                    <input type="search" x-model="search" @input.debounce.300ms="applyFilter()" placeholder="Name or email..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent">
                 </div>
                 <div class="w-48">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Type</label>
-                    <select x-model="typeFilter" @change="applyFilter()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    <select x-model="typeFilter" @change="applyFilter()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500">
                         <option value="">All</option>
                         <template x-for="t in availableTypes" :key="t">
                             <option :value="t" x-text="t"></option>
@@ -474,7 +502,7 @@ VOLUNTEER_TEMPLATE = """<!DOCTYPE html>
 
     <main class="max-w-7xl mx-auto px-4 py-6">
         <div x-show="loading" class="text-center py-12">
-            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pines-500"></div>
             <p class="mt-2 text-gray-600">Loading volunteers...</p>
         </div>
 
@@ -500,7 +528,7 @@ VOLUNTEER_TEMPLATE = """<!DOCTYPE html>
                                 <td class="px-3 py-3">
                                     <div class="flex flex-wrap gap-1">
                                         <template x-for="reg in vol.registrations" :key="reg.id">
-                                            <span class="inline-flex items-center px-1.5 py-0.5 text-xs rounded bg-purple-50 text-purple-700" x-text="reg.division"></span>
+                                            <span class="inline-flex items-center px-1.5 py-0.5 text-xs rounded bg-pines-50 text-pines-700" x-text="reg.division"></span>
                                         </template>
                                     </div>
                                 </td>
@@ -509,7 +537,7 @@ VOLUNTEER_TEMPLATE = """<!DOCTYPE html>
                                     <span x-show="vol.emailSent" class="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded">✓ Sent</span>
                                 </td>
                                 <td class="px-3 py-3 text-right">
-                                    <button @click="moveToPlayers(vol)" class="p-1 rounded hover:bg-blue-100 text-blue-500" title="Move to Players">
+                                    <button @click="moveToPlayers(vol)" class="p-1 rounded hover:bg-pines-100 text-pines-500" title="Move to Players">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
                                     </button>
                                 </td>
