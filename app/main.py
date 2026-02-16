@@ -767,10 +767,14 @@ async def cleanup_registrations(db: Session = Depends(get_db)):
     from sqlalchemy import text
     
     fixes = [
-        # Volleyball: fix bad season from bulk script (no 'year' column - year comes from created_at)
-        ("UPDATE registrations SET season = 'Spring 2026' WHERE LOWER(sport) = 'volleyball' AND season = 'unknown'", "volleyball unknown season → Spring 2026"),
-        # Basketball: Dec 2025 signups are for the 2026 season (fix the season string)
-        ("UPDATE registrations SET season = '2026' WHERE LOWER(sport) = 'basketball' AND season = '2025'", "basketball season 2025 → 2026"),
+        # Volleyball: update unknown→Spring 2026 only where player doesn't already have that season
+        ("UPDATE registrations SET season = 'Spring 2026' WHERE LOWER(sport) = 'volleyball' AND season = 'unknown' AND player_id NOT IN (SELECT player_id FROM registrations WHERE LOWER(sport) = 'volleyball' AND season = 'Spring 2026')", "volleyball unknown → Spring 2026 (safe)"),
+        # Volleyball: delete leftover unknown dupes (player already has Spring 2026)
+        ("DELETE FROM registrations WHERE LOWER(sport) = 'volleyball' AND season = 'unknown'", "volleyball delete duplicate unknown regs"),
+        # Basketball: update 2025→2026 only where player doesn't already have a 2026 registration
+        ("UPDATE registrations SET season = '2026' WHERE LOWER(sport) = 'basketball' AND season = '2025' AND player_id NOT IN (SELECT player_id FROM registrations WHERE LOWER(sport) = 'basketball' AND season = '2026')", "basketball season 2025 → 2026 (safe)"),
+        # Basketball: delete leftover 2025 dupes (player already has 2026)
+        ("DELETE FROM registrations WHERE LOWER(sport) = 'basketball' AND season = '2025'", "basketball delete duplicate 2025 regs"),
         # Delete ghost 'unknown' sport registrations (confirmed no player has only unknown regs)
         ("DELETE FROM registrations WHERE LOWER(sport) = 'unknown'", "delete unknown sport registrations"),
     ]
