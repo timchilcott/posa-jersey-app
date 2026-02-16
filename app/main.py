@@ -121,7 +121,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                                                   :class="reg.sport === 'Soccer' ? 'bg-green-50 text-green-700' : reg.sport === 'Basketball' ? 'bg-orange-50 text-orange-700' : reg.sport === 'Flag Football' ? 'bg-yellow-50 text-yellow-700' : reg.sport === 'Volleyball' ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'"
                                                   :title="reg.division">
                                                 <span x-text="reg.sport"></span>
-                                                <span class="ml-1 opacity-60" x-text="reg.year"></span>
+                                                <span class="ml-1 opacity-60" x-text="(reg.season ? reg.season + ' ' : '') + reg.year"></span>
                                             </span>
                                         </template>
                                     </div>
