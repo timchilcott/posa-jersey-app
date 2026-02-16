@@ -38,7 +38,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             <div class="flex flex-wrap gap-3 items-end">
                 <div class="flex-1 min-w-64">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Search</label>
-                    <input type="search" x-model="filters.search" @input="applyFilters()" placeholder="Name, email, or jersey #..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <input type="search" x-model="filters.search" @input.debounce.300ms="applyFilters()" @keyup.enter="applyFilters()" placeholder="Name, email, or jersey #..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 </div>
                 <div class="w-32">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Birth Year</label>
@@ -225,7 +225,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                         const search = this.filters.search.toLowerCase();
                         const matchesName = player.name.toLowerCase().includes(search);
                         const matchesEmail = player.email.toLowerCase().includes(search);
-                        const matchesJersey = player.jersey.toString().includes(search);
+                        const matchesJersey = player.jersey ? player.jersey.toString().toLowerCase().includes(search) : false;
                         if (!matchesName && !matchesEmail && !matchesJersey) return false;
                     }
                     if (this.filters.birthYear && player.birthYear != this.filters.birthYear) return false;
