@@ -380,3 +380,24 @@ async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
+
+@app.put("/api/players/{player_id}")
+async def update_player(player_id: int, request: Request, db: Session = Depends(get_db)):
+    from app.models import Player
+    
+    player = db.query(Player).filter(Player.id == player_id).first()
+    if not player:
+        return {"success": False, "error": "Player not found"}
+    
+    data = await request.json()
+    
+    if "full_name" in data:
+        player.full_name = data["full_name"]
+    if "parent_email" in data:
+        player.parent_email = data["parent_email"]
+    if "birth_year" in data:
+        player.birth_year = data["birth_year"]
+    
+    db.commit()
+    
+    return {"success": True}
