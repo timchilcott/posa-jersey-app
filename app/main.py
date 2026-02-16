@@ -295,9 +295,9 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     return true;
                 });
                 
-                this.availableSports = [...new Set(matchExcept(allRegs, 'sport').map(r => r.sport).filter(Boolean))].sort();
+                this.availableSports = [...new Set(matchExcept(allRegs, 'sport').map(r => r.sport).filter(Boolean))].filter(s => s.toLowerCase() !== 'unknown').sort();
                 this.availableYears = [...new Set(matchExcept(allRegs, 'year').map(r => r.year).filter(Boolean))].sort((a, b) => b - a);
-                this.availableSeasons = [...new Set(matchExcept(allRegs, 'season').map(r => r.seasonName).filter(Boolean))].sort();
+                this.availableSeasons = [...new Set(matchExcept(allRegs, 'season').map(r => r.seasonName).filter(Boolean))].filter(s => s.toLowerCase() !== 'unknown').sort();
                 this.availableBirthYears = [...new Set(matchExcept(allRegs, 'birthYear').map(r => r.birthYear).filter(Boolean))].sort((a, b) => b - a);
                 
                 // Auto-clear stale selections (value no longer in available options)
@@ -761,41 +761,33 @@ async def debug_divisions(db: Session = Depends(get_db)):
     return f"<html><body style='font-family: monospace; padding: 20px;'>{''.join(lines)}</body></html>"
 
 
-@app.get("/api/fix-seasons", response_class=HTMLResponse)
-async def fix_seasons(db: Session = Depends(get_db)):
-    """One-time fix: normalize all season values. DELETE AFTER USE."""
+@app.get("/api/cleanup-registrations", response_class=HTMLResponse)
+async def cleanup_registrations(db: Session = Depends(get_db)):
+    """One-time fix: clean up bad registration data. DELETE AFTER USE."""
     from sqlalchemy import text
     
     fixes = [
-        # Reset all locked flags (old meaning was 'jersey confirmed', not volunteer)
-        ("UPDATE players SET locked = false WHERE locked = true", "Reset all locked flags (old jersey-confirmed, not volunteer)"),
-        # Soccer: 'fall' and 'Fall 2025' → 'Fall 2025'
-        ("UPDATE registrations SET season = 'Fall 2025' WHERE sport = 'Soccer' AND season = 'fall'", "soccer fall → Fall 2025"),
-        ("UPDATE registrations SET season = 'Fall 2025' WHERE sport = 'Soccer' AND season = 'Fall 2025'", "soccer Fall 2025 (already correct)"),
-        # Soccer: '2025' → 'Fall 2025'
-        ("UPDATE registrations SET season = 'Fall 2025' WHERE sport = 'Soccer' AND season = '2025'", "soccer 2025 → Fall 2025"),
-        # Soccer: '2026' → 'Spring 2026'
-        ("UPDATE registrations SET season = 'Spring 2026' WHERE sport = 'Soccer' AND season = '2026'", "soccer 2026 → Spring 2026"),
-        # Basketball: all → '2026'
-        ("UPDATE registrations SET season = '2026' WHERE sport = 'Basketball' AND season != '2026'", "basketball → 2026"),
-        # Volleyball: '2025' → 'Spring 2026'
-        ("UPDATE registrations SET season = 'Spring 2026' WHERE sport = 'Volleyball' AND season = '2025'", "volleyball 2025 → Spring 2026"),
-        # Volleyball: 'unknown' → 'Spring 2026'
-        ("UPDATE registrations SET season = 'Spring 2026' WHERE sport = 'Volleyball' AND season = 'unknown'", "volleyball unknown → Spring 2026"),
+        # Volleyball: fix bad season/year from bulk script
+        ("UPDATE registrations SET season = 'Spring 2026', year = 2026 WHERE sport = 'Volleyball' AND (season = 'unknown' OR year = 2025)", "volleyball bad season/year → Spring 2026"),
+        # Basketball: Dec 2025 signups are for the 2026 season
+        ("UPDATE registrations SET year = 2026 WHERE sport = 'Basketball' AND year = 2025", "basketball year 2025 → 2026"),
+        # Delete ghost 'unknown' sport registrations (confirmed no player has only unknown regs)
+        ("DELETE FROM registrations WHERE sport = 'unknown'", "delete unknown sport registrations"),
     ]
     
     results = []
     for sql, label in fixes:
         count = db.execute(text(sql)).rowcount
-        results.append(f"{label}: {count} rows updated")
+        results.append(f"{label}: {count} rows affected")
     
     db.commit()
     
     detail = "<br>".join(results)
     return f"""<html><body style='font-family: monospace; padding: 20px;'>
-        <h2>Season Cleanup Complete</h2>
+        <h2>Registration Cleanup Complete</h2>
         <p>{detail}</p>
         <hr>
         <p><a href='/api/debug/seasons'>View current season values</a></p>
-        <p style='color: red; font-weight: bold;'>DELETE THE /api/fix-seasons ENDPOINT AFTER CONFIRMING!</p>
+        <p><a href='/api/debug/divisions'>View current divisions</a></p>
+        <p style='color: red; font-weight: bold;'>DELETE THIS ENDPOINT AFTER CONFIRMING!</p>
     </body></html>"""
