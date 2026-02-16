@@ -142,7 +142,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                                                       :class="reg.sport === 'Soccer' ? 'bg-green-50 text-green-700' : reg.sport === 'Basketball' ? 'bg-orange-50 text-orange-700' : reg.sport === 'Flag Football' ? 'bg-yellow-50 text-yellow-700' : reg.sport === 'Volleyball' ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'"
                                                       :title="reg.division">
                                                     <span x-text="reg.sport"></span>
-                                                    <span class="ml-1 opacity-60" x-text="(reg.season ? reg.season + ' ' : '') + reg.year"></span>
+                                                    <span class="ml-1 opacity-60" x-text="reg.season && /\d{4}/.test(reg.season) ? reg.season : (reg.season ? reg.season + ' ' : '') + reg.year"></span>
                                                 </span>
                                             </template>
                                         </div>
@@ -463,3 +463,40 @@ async def debug_seasons(db: Session = Depends(get_db)):
     lines.append("</table>")
     
     return f"<html><body style='font-family: monospace; padding: 20px;'>{''.join(lines)}</body></html>"
+
+@app.get("/api/fix-seasons", response_class=HTMLResponse)
+async def fix_seasons(db: Session = Depends(get_db)):
+    """One-time fix: normalize all season values. DELETE AFTER USE."""
+    from sqlalchemy import text
+    
+    fixes = [
+        # Soccer: 'fall' and 'Fall 2025' → 'Fall 2025'
+        ("UPDATE registrations SET season = 'Fall 2025' WHERE sport = 'Soccer' AND season = 'fall'", "soccer fall → Fall 2025"),
+        ("UPDATE registrations SET season = 'Fall 2025' WHERE sport = 'Soccer' AND season = 'Fall 2025'", "soccer Fall 2025 (already correct)"),
+        # Soccer: '2025' → 'Fall 2025'
+        ("UPDATE registrations SET season = 'Fall 2025' WHERE sport = 'Soccer' AND season = '2025'", "soccer 2025 → Fall 2025"),
+        # Soccer: '2026' → 'Spring 2026'
+        ("UPDATE registrations SET season = 'Spring 2026' WHERE sport = 'Soccer' AND season = '2026'", "soccer 2026 → Spring 2026"),
+        # Basketball: all → '2026'
+        ("UPDATE registrations SET season = '2026' WHERE sport = 'Basketball' AND season != '2026'", "basketball → 2026"),
+        # Volleyball: '2025' → 'Spring 2026'
+        ("UPDATE registrations SET season = 'Spring 2026' WHERE sport = 'Volleyball' AND season = '2025'", "volleyball 2025 → Spring 2026"),
+        # Volleyball: 'unknown' → 'Spring 2026'
+        ("UPDATE registrations SET season = 'Spring 2026' WHERE sport = 'Volleyball' AND season = 'unknown'", "volleyball unknown → Spring 2026"),
+    ]
+    
+    results = []
+    for sql, label in fixes:
+        count = db.execute(text(sql)).rowcount
+        results.append(f"{label}: {count} rows updated")
+    
+    db.commit()
+    
+    detail = "<br>".join(results)
+    return f"""<html><body style='font-family: monospace; padding: 20px;'>
+        <h2>Season Cleanup Complete</h2>
+        <p>{detail}</p>
+        <hr>
+        <p><a href='/api/debug/seasons'>View current season values</a></p>
+        <p style='color: red; font-weight: bold;'>DELETE THE /api/fix-seasons ENDPOINT AFTER CONFIRMING!</p>
+    </body></html>"""
