@@ -258,8 +258,8 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             // Extract season name (Fall, Spring, Winter) from full season string like "Fall 2025"
             getSeasonName(season) {
                 if (!season) return '';
-                const match = season.match(/^(Fall|Spring|Winter|Summer)/i);
-                return match ? match[1] : '';
+                const match = season.match(/^(fall|spring|winter|summer)/i);
+                return match ? match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase() : '';
             },
             
             // Recompute available options for each dropdown based on all OTHER active filters.
