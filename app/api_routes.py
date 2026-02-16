@@ -249,39 +249,81 @@ def get_needs_email_players(db: Session = Depends(get_db)):
 def send_player_email(player_id: int, db: Session = Depends(get_db)):
     """
     Send confirmation email to a player.
-    This would integrate with your existing email sending logic.
+    Can resend even if already sent.
     """
+    from app.email import send_confirmation_email
+    
     player = db.query(Player).filter(Player.id == player_id).first()
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
     
-    # TODO: Integrate with actual email sending logic from app/email.py
-    # For now, just mark registrations as sent
+    # Get ALL registrations (including already sent ones - allow resending)
     registrations = db.query(Registration).filter(
-        Registration.player_id == player_id,
-        Registration.confirmation_sent == False
+        Registration.player_id == player_id
     ).all()
     
-    for reg in registrations:
-        reg.confirmation_sent = True
+    if not registrations:
+        return {
+            'success': False,
+            'message': 'No registrations found'
+        }
     
-    db.commit()
-    
-    return {
-        'success': True,
-        'emailsSent': len(registrations),
-        'message': f'Email sent to {player.parent_email}'
-    }
+    # ACTUALLY SEND THE EMAIL
+    try:
+        send_confirmation_email(player, registrations)
+        
+        # Mark all as sent
+        for reg in registrations:
+            reg.confirmation_sent = True
+        
+        db.commit()
+        
+        return {
+            'success': True,
+            'emailsSent': len(registrations),
+            'message': f'Email sent to {player.parent_email}'
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e),
+            'message': f'Failed to send email: {str(e)}'
+        }
 
 
 @router.post("/send-bulk-emails")
 def send_bulk_emails(player_ids: List[int], db: Session = Depends(get_db)):
     """Send emails to multiple players"""
+    from app.email import send_confirmation_email
+    
     results = []
     for player_id in player_ids:
         try:
-            result = send_player_email(player_id, db)
-            results.append({'playerId': player_id, **result})
+            player = db.query(Player).filter(Player.id == player_id).first()
+            if not player:
+                results.append({'playerId': player_id, 'success': False, 'error': 'Player not found'})
+                continue
+            
+            registrations = db.query(Registration).filter(
+                Registration.player_id == player_id,
+                Registration.confirmation_sent == False
+            ).all()
+            
+            if not registrations:
+                results.append({'playerId': player_id, 'success': False, 'error': 'No unsent registrations'})
+                continue
+            
+            # ACTUALLY SEND THE EMAIL
+            send_confirmation_email(player, registrations)
+            
+            # Mark as sent
+            for reg in registrations:
+                reg.confirmation_sent = True
+            
+            db.commit()
+            
+            results.append({'playerId': player_id, 'success': True, 'emailsSent': len(registrations)})
+            
         except Exception as e:
             results.append({'playerId': player_id, 'success': False, 'error': str(e)})
     
