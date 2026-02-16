@@ -213,8 +213,10 @@ def get_filtered_players(
         regs = db.query(Registration).filter(Registration.player_id == player.id).all()
         all_regs_by_player[player.id] = regs
     
-    # A player is a "volunteer" if ALL their registrations are volunteer divisions
+    # A player is a "volunteer" if manually marked (locked=True) OR all their registrations are volunteer divisions
     def player_is_volunteer(p):
+        if p.locked:
+            return True
         regs = all_regs_by_player.get(p.id, [])
         if not regs:
             return False
