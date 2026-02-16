@@ -210,11 +210,43 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
 
     </main>
 
+    <!-- Edit Player Modal -->
+    <div x-show="editingPlayer" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="editingPlayer = null">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 class="text-xl font-bold mb-4">Edit Player</h3>
+            <template x-if="editingPlayer">
+                <div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                        <input type="text" x-model="editingPlayer.name" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Birth Year</label>
+                        <input type="number" x-model="editingPlayer.birthYear" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" x-model="editingPlayer.email" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Jersey #</label>
+                        <input type="text" x-model="editingPlayer.jersey" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button @click="editingPlayer = null" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                        <button @click="savePlayer()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
     <script>
         function tableApp() {
             return {
                 loading: true,
                 showAddPlayer: false,
+                editingPlayer: null,
                 allPlayers: [],
                 filteredPlayers: [],
                 filters: { search: '', birthYear: '', sport: '', year: '', status: '' },
@@ -293,7 +325,30 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                 },
                 
                 editPlayer(player) {
-                    console.log('Edit player:', player);
+                    this.editingPlayer = { ...player };
+                },
+                
+                async savePlayer() {
+                    try {
+                        const response = await fetch(`/api/players/${this.editingPlayer.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                full_name: this.editingPlayer.name,
+                                parent_email: this.editingPlayer.email,
+                                birth_year: this.editingPlayer.birthYear
+                            })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            await this.loadPlayers();
+                            this.editingPlayer = null;
+                            alert('Player updated successfully');
+                        }
+                    } catch (error) {
+                        console.error('Failed to update player:', error);
+                        alert('Failed to update player');
+                    }
                 },
                 
                 async syncSportsEngine() {
