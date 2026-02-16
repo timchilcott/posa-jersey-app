@@ -135,7 +135,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                                 </td>
                                 <td class="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <div class="flex items-center justify-end space-x-2">
-                                        <button @click="sendEmail(player)" x-show="!player.emailSent" class="text-green-600 hover:text-green-900" title="Send Email">
+                                        <button @click="sendEmail(player)" class="hover:text-green-900" :class="player.emailSent ? 'text-gray-400' : 'text-green-600'" :title="player.emailSent ? 'Resend Email' : 'Send Email'">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                                         </button>
                                         <button @click="editPlayer(player)" class="text-blue-600 hover:text-blue-900" title="Edit">
@@ -301,8 +301,12 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     const response = await fetch(`/api/admin/players/${player.id}/send-email`, { method: 'POST' });
                     const data = await response.json();
                     if (data.success) {
-                        player.emailSent = true;
                         alert(`Email sent to ${player.email}`);
+                        // Reload players to update email status
+                        await this.loadPlayers();
+                        this.applyFilters();
+                    } else {
+                        alert(`Failed: ${data.message || data.error}`);
                     }
                 } catch (error) {
                     console.error('Failed to send email:', error);
