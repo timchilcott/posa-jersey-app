@@ -767,12 +767,12 @@ async def cleanup_registrations(db: Session = Depends(get_db)):
     from sqlalchemy import text
     
     fixes = [
-        # Volleyball: fix bad season/year from bulk script
-        ("UPDATE registrations SET season = 'Spring 2026', year = 2026 WHERE sport = 'Volleyball' AND (season = 'unknown' OR year = 2025)", "volleyball bad season/year → Spring 2026"),
-        # Basketball: Dec 2025 signups are for the 2026 season
-        ("UPDATE registrations SET year = 2026 WHERE sport = 'Basketball' AND year = 2025", "basketball year 2025 → 2026"),
+        # Volleyball: fix bad season from bulk script (no 'year' column - year comes from created_at)
+        ("UPDATE registrations SET season = 'Spring 2026' WHERE LOWER(sport) = 'volleyball' AND season = 'unknown'", "volleyball unknown season → Spring 2026"),
+        # Basketball: Dec 2025 signups are for the 2026 season (fix the season string)
+        ("UPDATE registrations SET season = '2026' WHERE LOWER(sport) = 'basketball' AND season = '2025'", "basketball season 2025 → 2026"),
         # Delete ghost 'unknown' sport registrations (confirmed no player has only unknown regs)
-        ("DELETE FROM registrations WHERE sport = 'unknown'", "delete unknown sport registrations"),
+        ("DELETE FROM registrations WHERE LOWER(sport) = 'unknown'", "delete unknown sport registrations"),
     ]
     
     results = []
