@@ -154,7 +154,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                                 <template x-if="!item._isHeader">
                                     <td class="px-3 py-3">
                                         <div class="flex flex-wrap gap-1">
-                                            <template x-for="reg in item.registrations" :key="reg.id">
+                                            <template x-for="reg in sortedRegs(item.registrations)" :key="reg.id">
                                                 <span class="inline-flex items-center px-1.5 py-0.5 text-xs rounded cursor-default"
                                                       :class="sportColor(reg.sport)"
                                                       :title="reg.sport + ' \\u2013 ' + reg.season + ' (' + reg.division + ')'">
@@ -414,6 +414,18 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                 if (sport === 'Flag Football') return 'bg-yellow-50 text-yellow-700';
                 if (sport === 'Volleyball') return 'bg-purple-50 text-purple-700';
                 return 'bg-blue-50 text-blue-700';
+            },
+            
+            sortedRegs(regs) {
+                const seasonOrder = { 'winter': 4, 'fall': 3, 'summer': 2, 'spring': 1 };
+                return [...regs].sort((a, b) => {
+                    const yearA = parseInt((a.season || '').match(/\\d{4}/)?.[0] || a.year || 0);
+                    const yearB = parseInt((b.season || '').match(/\\d{4}/)?.[0] || b.year || 0);
+                    if (yearB !== yearA) return yearB - yearA;
+                    const wordA = (a.season || '').split(' ')[0].toLowerCase();
+                    const wordB = (b.season || '').split(' ')[0].toLowerCase();
+                    return (seasonOrder[wordB] || 0) - (seasonOrder[wordA] || 0);
+                });
             },
             
             clearFilters() {
