@@ -195,9 +195,9 @@ def get_registration_results(registration_id: str, cursor: str = None) -> dict:
     try:
         reg_data = graphql_query(reg_name_query, {"regId": str(registration_id), "orgId": int(org_id)})
         registration_name = reg_data.get("registration", {}).get("name", "Unknown")
-        logger.info(f"SYNC: Registration name: {registration_name}")
+        print(f"SYNC: Registration name: {registration_name}", flush=True)
     except Exception as e:
-        logger.warning(f"Could not fetch registration name for {registration_id}: {e}")
+        print(f"SYNC: Could not fetch registration name for {registration_id}: {e}", flush=True)
     
     # Get profiles who submitted this registration
     list_query = """
@@ -237,11 +237,17 @@ def get_registration_results(registration_id: str, cursor: str = None) -> dict:
         "page": page
     }
     
-    data = graphql_query(list_query, variables)
+    print(f"SYNC: Querying profiles for registration {registration_id} (page {page})...", flush=True)
+    try:
+        data = graphql_query(list_query, variables)
+    except Exception as e:
+        print(f"SYNC: PROFILES QUERY FAILED: {e}", flush=True)
+        raise
     
     profiles_data = data.get("profiles", {})
     page_info = profiles_data.get("pageInformation", {})
     profiles = profiles_data.get("results", [])
+    print(f"SYNC: Found {len(profiles)} profiles for registration {registration_id} (page {page}, total pages: {page_info.get('pages', '?')})", flush=True)
     
     # For each profile, get their registration answers
     results = []
@@ -794,9 +800,11 @@ def sync_all_registrations(db: Session) -> dict:
                 all_results["updated_registrations"] += result["updated_registrations"]
                 all_results["errors"].extend(result["errors"])
             except Exception as e:
+                print(f"SYNC ERROR: Form '{form['name']}': {e}", flush=True)
                 logger.error(f"Error syncing form {form['id']}: {e}", exc_info=True)
                 all_results["errors"].append(f"Form {form['name']}: {str(e)}")
         else:
+            print(f"SYNC: Skipping form '{form['name']}' (status={repr(status)})", flush=True)
             logger.info(f"SYNC: Skipping form '{form['name']}' (status={repr(status)})")
     
     # Fallback: if no forms matched the status filter, sync ALL forms
@@ -813,9 +821,11 @@ def sync_all_registrations(db: Session) -> dict:
                 all_results["updated_registrations"] += result["updated_registrations"]
                 all_results["errors"].extend(result["errors"])
             except Exception as e:
+                print(f"SYNC ERROR (fallback): Form '{form['name']}': {e}", flush=True)
                 logger.error(f"Error syncing form {form['id']}: {e}", exc_info=True)
                 all_results["errors"].append(f"Form {form['name']}: {str(e)}")
     
+    print(f"SYNC: COMPLETE: {all_results}", flush=True)
     logger.info(f"SYNC: All forms complete: {all_results}")
     return all_results
 
