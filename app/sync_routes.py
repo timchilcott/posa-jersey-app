@@ -4,10 +4,21 @@ Sync routes - wires up SportsEngine sync to actual HTTP endpoints.
 Add to main.py:
     from app.sync_routes import router as sync_router
     app.include_router(sync_router)
+
+Routes:
+    POST /sync/pull              - Admin UI "Sync SportsEngine" button
+    POST /sync/pull/{id}         - Sync a single registration form
+    POST /sportsengine/webhook   - Incoming webhook from SportsEngine
+    GET  /sportsengine/status    - Connection status check
+    GET  /sportsengine/registrations - List available registration forms
+    POST /sportsengine/sync      - Sync (used by sportsengine.html page)
+    GET  /api/debug/player-lookup
+    GET  /api/debug/sport-season-mismatches
 """
+import os
 import logging
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse, HTMLResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.database import get_db
@@ -18,6 +29,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["sync"])
 
 
+# ------------------------------------------------------------------
+# Primary sync endpoint (admin UI button)
+# ------------------------------------------------------------------
 @router.post("/sync/pull")
 def sync_pull(db: Session = Depends(get_db)):
     """
@@ -45,7 +59,7 @@ def sync_pull(db: Session = Depends(get_db)):
             "updated_registrations": results["updated_registrations"],
             "forms_processed": results["forms_processed"],
             "errors": len(results["errors"]),
-            "error_details": results["errors"][:10],  # Cap at 10 for readability
+            "error_details": results["errors"][:10],
         }
     except Exception as e:
         logger.error(f"Sync failed: {e}", exc_info=True)
@@ -76,14 +90,149 @@ def sync_pull_one(registration_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ------------------------------------------------------------------
+# SportsEngine webhook (receives POST from SportsEngine servers)
+# ------------------------------------------------------------------
+@router.post("/sportsengine/webhook")
+async def sportsengine_webhook(request: Request, db: Session = Depends(get_db)):
+    """
+    Receive webhook notifications from SportsEngine.
+    SportsEngine POSTs here when registrations are created/updated.
+    """
+    from app.services.sportsengine import is_configured, process_webhook
+
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    logger.info(f"SportsEngine webhook received: {payload}")
+
+    if not is_configured():
+        logger.warning("Webhook received but SportsEngine not configured")
+        return {"status": "ignored", "reason": "not configured"}
+
+    try:
+        result = process_webhook(payload, db)
+        return {"status": "ok", "result": result}
+    except Exception as e:
+        logger.error(f"Webhook processing error: {e}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "detail": str(e)},
+        )
+
+
+# ------------------------------------------------------------------
+# SportsEngine status / registrations / sync (used by sportsengine.html)
+# ------------------------------------------------------------------
+@router.get("/sportsengine/status")
+def sportsengine_status():
+    """Check SportsEngine connection status."""
+    from app.services.sportsengine import is_configured
+
+    client_id = os.getenv("SPORTSENGINE_CLIENT_ID")
+    client_secret = os.getenv("SPORTSENGINE_CLIENT_SECRET")
+    org_id = os.getenv("SPORTSENGINE_ORG_ID")
+
+    result = {
+        "configured": is_configured(),
+        "client_id_set": bool(client_id),
+        "client_secret_set": bool(client_secret),
+        "org_id": org_id,
+        "authenticated": False,
+        "auth_error": None,
+    }
+
+    if is_configured():
+        try:
+            from app.services.sportsengine import get_access_token
+            get_access_token()
+            result["authenticated"] = True
+        except Exception as e:
+            result["auth_error"] = str(e)
+
+    return result
+
+
+@router.get("/sportsengine/registrations")
+def sportsengine_registrations():
+    """List available registration forms from SportsEngine."""
+    from app.services.sportsengine import is_configured, get_all_registrations, extract_sport_from_registration_name
+
+    if not is_configured():
+        return JSONResponse(
+            status_code=400,
+            content={"status": "error", "detail": "SportsEngine not configured"},
+        )
+
+    try:
+        forms = get_all_registrations()
+        for form in forms:
+            form["sport"] = extract_sport_from_registration_name(form["name"])
+            form["resultsCompleted"] = form.get("count", 0)
+        return {"status": "success", "registrations": forms}
+    except Exception as e:
+        logger.error(f"Failed to load registrations: {e}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "detail": str(e)},
+        )
+
+
+@router.post("/sportsengine/sync")
+async def sportsengine_sync(request: Request, db: Session = Depends(get_db)):
+    """
+    Sync endpoint used by the sportsengine.html management page.
+    Accepts optional { "registration_id": "..." } to sync a single form.
+    """
+    from app.services.sportsengine import is_configured, sync_all_registrations, sync_registration
+
+    if not is_configured():
+        return JSONResponse(
+            status_code=400,
+            content={"status": "error", "detail": "SportsEngine not configured"},
+        )
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    reg_id = body.get("registration_id")
+
+    try:
+        if reg_id:
+            results = sync_registration(reg_id, db)
+        else:
+            results = sync_all_registrations(db)
+
+        return {
+            "status": "success",
+            "created": results["new_players"],
+            "updated": results["existing_players"],
+            "new_registrations": results["new_registrations"],
+            "updated_registrations": results["updated_registrations"],
+            "errors": len(results["errors"]),
+            "error_details": results["errors"][:10],
+        }
+    except Exception as e:
+        logger.error(f"Sync failed: {e}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "detail": str(e)},
+        )
+
+
+# ------------------------------------------------------------------
+# Debug endpoints
+# ------------------------------------------------------------------
 @router.get("/api/debug/player-lookup")
 def debug_player_lookup(name: str = "", email: str = "", db: Session = Depends(get_db)):
     """
     Debug endpoint: look up a player by name or email and show ALL their data.
     Usage: /api/debug/player-lookup?name=John  or  ?email=parent@example.com
     """
-    from fastapi.responses import HTMLResponse
-
     query = db.query(Player)
     if name:
         query = query.filter(Player.full_name.ilike(f"%{name}%"))
@@ -106,9 +255,7 @@ def debug_player_lookup(name: str = "", email: str = "", db: Session = Depends(g
         )
         lines.append(f"<h3>{p.full_name} (ID: {p.id})</h3>")
         lines.append("<table border='1' cellpadding='5'>")
-        lines.append(
-            "<tr><th>Field</th><th>Value</th></tr>"
-        )
+        lines.append("<tr><th>Field</th><th>Value</th></tr>")
         lines.append(f"<tr><td>birth_year</td><td>{p.birth_year}</td></tr>")
         lines.append(f"<tr><td>jersey_number</td><td>{p.jersey_number}</td></tr>")
         lines.append(f"<tr><td>parent_email</td><td>{p.parent_email}</td></tr>")
@@ -136,7 +283,6 @@ def debug_player_lookup(name: str = "", email: str = "", db: Session = Depends(g
 
         lines.append("<hr>")
 
-    # Also show any potential duplicates (case differences, etc.)
     if name and players:
         all_similar = (
             db.query(Player)
@@ -158,14 +304,9 @@ def debug_player_lookup(name: str = "", email: str = "", db: Session = Depends(g
 
 @router.get("/api/debug/sport-season-mismatches")
 def debug_sport_season_mismatches(db: Session = Depends(get_db)):
-    """
-    Debug endpoint: find registrations with inconsistent sport casing
-    or season format issues.
-    """
-    from fastapi.responses import HTMLResponse
+    """Find registrations with inconsistent sport casing or season format issues."""
     from sqlalchemy import text
 
-    # Sport casing inconsistencies
     sport_rows = db.execute(text("""
         SELECT sport, COUNT(*) as cnt
         FROM registrations
@@ -173,7 +314,6 @@ def debug_sport_season_mismatches(db: Session = Depends(get_db)):
         ORDER BY LOWER(sport), sport
     """)).fetchall()
 
-    # Season format inconsistencies
     season_rows = db.execute(text("""
         SELECT season, sport, COUNT(*) as cnt
         FROM registrations
