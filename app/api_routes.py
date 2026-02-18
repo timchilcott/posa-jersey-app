@@ -297,6 +297,12 @@ def send_player_email(player_id: int, db: Session = Depends(get_db)):
     """
     Send confirmation email to a player.
     Can resend even if already sent.
+
+    FIX (Feb 2026):
+    - Siblings who have EVER received a confirmation email (any season)
+      are excluded entirely — they already have a jersey.
+    - Promo code is based only on the players listed in THIS email.
+    - Exclude "Unknown" sport entries and deduplicate players.
     """
     from app.email import (
         send_confirmation_email,
@@ -308,7 +314,7 @@ def send_player_email(player_id: int, db: Session = Depends(get_db)):
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
     
-    # Get ALL registrations (including already sent ones - allow resending)
+    # Get this player's registrations
     registrations = db.query(Registration).filter(
         Registration.player_id == player_id
     ).all()
@@ -319,55 +325,105 @@ def send_player_email(player_id: int, db: Session = Depends(get_db)):
             'message': 'No registrations found'
         }
     
-    # Separate Pines HS vs standard registrations
+    # ---- Determine the target season from the most recent registration ----
+    latest_reg = max(registrations, key=lambda r: r.created_at or datetime.min)
+    target_season = latest_reg.season
+    
+    # Separate Pines HS vs standard registrations (scoped to target season)
     pines_division = "Pend Oreille Pines (High School Club Team)"
-    standard_regs = [r for r in registrations if r.division != pines_division]
-    pines_regs = [r for r in registrations if r.division == pines_division]
+    season_regs = [r for r in registrations if r.season == target_season]
+    standard_regs = [r for r in season_regs if r.division != pines_division]
+    pines_regs = [r for r in season_regs if r.division == pines_division]
     
     emails_sent = 0
     
     try:
         # Send standard confirmation for youth divisions
         if standard_regs:
-            # Find all players with same parent email to get correct promo code
+            # Find all players with same parent email (siblings)
             sibling_players = db.query(Player).filter(
                 Player.parent_email == player.parent_email
             ).all()
-            sibling_ids = {p.id for p in sibling_players}
             
-            # Get all standard registrations for this family
+            # ---- KEY FIX: Exclude siblings who have EVER received a
+            #      confirmation email (any season). They already have a
+            #      jersey and should not appear in this email. ----
+            new_siblings = []
+            already_have_jersey = []
+            for sib in sibling_players:
+                all_sib_regs = db.query(Registration).filter(
+                    Registration.player_id == sib.id
+                ).all()
+                ever_confirmed = any(r.confirmation_sent for r in all_sib_regs)
+                if ever_confirmed:
+                    already_have_jersey.append(sib)
+                else:
+                    new_siblings.append(sib)
+            
+            # Mark current-season registrations for skipped siblings as
+            # sent so they don't keep showing up as "needs email"
+            if already_have_jersey:
+                skipped_ids = {p.id for p in already_have_jersey}
+                skipped_regs = db.query(Registration).filter(
+                    Registration.player_id.in_(skipped_ids),
+                    Registration.season == target_season,
+                    Registration.confirmation_sent == False,
+                ).all()
+                for sr in skipped_regs:
+                    sr.confirmation_sent = True
+            
+            new_sibling_ids = {p.id for p in new_siblings}
+            
+            # Get registrations only for never-confirmed siblings,
+            # scoped to the target season, excluding Pines and Unknown sport
             family_standard_regs = db.query(Registration).filter(
-                Registration.player_id.in_(sibling_ids),
-                Registration.division != pines_division
-            ).all()
+                Registration.player_id.in_(new_sibling_ids),
+                Registration.division != pines_division,
+                Registration.season == target_season,
+                Registration.sport != 'Unknown',
+                Registration.sport != 'unknown',
+                Registration.sport != '',
+            ).all() if new_sibling_ids else []
             
-            # Build player list for email (all siblings with standard regs)
-            players_data = []
+            # Build player list for email — deduplicate by player_id
             family_reg_map = {}  # player_id -> list of regs
             for reg in family_standard_regs:
                 family_reg_map.setdefault(reg.player_id, []).append(reg)
             
-            for sib in sibling_players:
+            players_data = []
+            seen_player_ids = set()
+            for sib in new_siblings:
+                if sib.id in seen_player_ids:
+                    continue
                 sib_regs = family_reg_map.get(sib.id, [])
                 if sib_regs:
-                    # Use most recent sport for display
-                    latest_reg = max(sib_regs, key=lambda r: r.created_at or datetime.min)
+                    seen_player_ids.add(sib.id)
+                    # Use most recent registration's sport for display
+                    latest_sib_reg = max(sib_regs, key=lambda r: r.created_at or datetime.min)
                     players_data.append({
                         'name': sib.full_name,
                         'jersey_number': sib.jersey_number,
-                        'sport': latest_reg.sport or 'Unknown'
+                        'sport': latest_sib_reg.sport or 'Unknown'
                     })
             
-            promo_code = PROMO_CODES.get(len(players_data))
+            # Safety filter: drop any remaining Unknown sport entries
+            players_data = [
+                p for p in players_data
+                if p['sport'].lower() != 'unknown'
+            ]
             
-            send_confirmation_email(
-                to_email=player.parent_email,
-                players=players_data,
-                promo_code=promo_code,
-                registrations=family_standard_regs,
-                db=db
-            )
-            emails_sent += 1
+            # Promo code is based ONLY on players in this email
+            if players_data:
+                promo_code = PROMO_CODES.get(len(players_data))
+                
+                send_confirmation_email(
+                    to_email=player.parent_email,
+                    players=players_data,
+                    promo_code=promo_code,
+                    registrations=family_standard_regs,
+                    db=db
+                )
+                emails_sent += 1
         
         # Send Pines confirmation for HS Club Team
         if pines_regs:
@@ -377,16 +433,23 @@ def send_player_email(player_id: int, db: Session = Depends(get_db)):
                 'sport': reg.sport or 'Unknown'
             } for reg in pines_regs]
             
-            send_pines_confirmation_email(
-                to_email=player.parent_email,
-                players=players_data,
-                registrations=pines_regs,
-                db=db
-            )
-            emails_sent += 1
+            # Filter out Unknown sport
+            players_data = [
+                p for p in players_data
+                if p['sport'].lower() != 'unknown'
+            ]
+            
+            if players_data:
+                send_pines_confirmation_email(
+                    to_email=player.parent_email,
+                    players=players_data,
+                    registrations=pines_regs,
+                    db=db
+                )
+                emails_sent += 1
         
-        # Mark all as sent (in case the email functions didn't already)
-        for reg in registrations:
+        # Mark registrations in this season as sent
+        for reg in season_regs:
             reg.confirmation_sent = True
         db.commit()
         
