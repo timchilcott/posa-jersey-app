@@ -40,7 +40,10 @@ def sync_pull(db: Session = Depends(get_db)):
     """
     from app.services.sportsengine import is_configured, sync_all_registrations
 
+    print("SYNC_PULL: Endpoint called", flush=True)
+
     if not is_configured():
+        print("SYNC_PULL: Not configured!", flush=True)
         return JSONResponse(
             status_code=400,
             content={
