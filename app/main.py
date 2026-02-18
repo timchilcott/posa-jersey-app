@@ -40,7 +40,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
                     <img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-8">
-                    <h1 class="text-xl font-bold text-gray-900">Jersey Admin</h1>
+                    <h1 class="text-xl font-bold text-gray-900">Admin</h1>
                 </div>
                 <div class="flex items-center space-x-3">
                     <a href="/admin/volunteers" class="text-pines-500 hover:text-pines-700 px-3 py-2 text-sm font-medium">Volunteers</a>
@@ -260,7 +260,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             // Extract the year portion from a season string like "Fall 2025" -> 2025, or "2025" -> 2025
             getSeasonYear(season) {
                 if (!season) return '';
-                const match = season.match(/\\d{4}/);
+                const match = season.match(/\d{4}/);
                 return match ? match[0] : '';
             },
             
@@ -387,8 +387,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             
             rowClass(player) {
                 if (this.duplicateJerseys.has(player.id)) return 'bg-red-50 hover:bg-red-100';
-                if (player.birthYear && this.birthYearColorMap[player.birthYear]) return 'bg-white hover:bg-gray-50';
-                return 'bg-gray-50 hover:bg-gray-100';
+                return 'bg-white hover:bg-gray-50';
             },
             
             sportEmoji(sport) {
@@ -419,8 +418,8 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             sortedRegs(regs) {
                 const seasonOrder = { 'winter': 4, 'fall': 3, 'summer': 2, 'spring': 1 };
                 return [...regs].sort((a, b) => {
-                    const yearA = parseInt((a.season || '').match(/\\d{4}/)?.[0] || a.year || 0);
-                    const yearB = parseInt((b.season || '').match(/\\d{4}/)?.[0] || b.year || 0);
+                    const yearA = parseInt((a.season || '').match(/\d{4}/)?.[0] || a.year || 0);
+                    const yearB = parseInt((b.season || '').match(/\d{4}/)?.[0] || b.year || 0);
                     if (yearB !== yearA) return yearB - yearA;
                     const wordA = (a.season || '').split(' ')[0].toLowerCase();
                     const wordB = (b.season || '').split(' ')[0].toLowerCase();
