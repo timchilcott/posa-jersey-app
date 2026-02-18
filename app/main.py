@@ -7,10 +7,12 @@ from sqlalchemy import func
 from app.database import get_db, engine
 from app.models import Base, Player, Registration
 from app.api_routes import router as admin_api_router
+from app.sync_routes import router as sync_router
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="POSA Jersey Management")
 app.include_router(admin_api_router)
+app.include_router(sync_router)
 
 ADMIN_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
