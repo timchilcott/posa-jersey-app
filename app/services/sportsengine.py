@@ -3,11 +3,18 @@ SportsEngine API Integration Service
 
 Handles OAuth authentication, GraphQL queries, and syncing registrations
 from SportsEngine to the local database.
+
+FIXES APPLIED:
+- extract_sport_from_registration_name returns Title Case (matching UI)
+- extract_season_from_registration_name returns "Spring 2026" not just "2026"
+- process_single_registration uses year-fallback matching for seasons
+- Sport stored in Title Case consistently
 """
 
 import os
 import logging
 import requests
+import re
 import time
 from datetime import datetime, timedelta
 from typing import Optional
@@ -119,7 +126,6 @@ def get_all_registrations() -> list:
     if not org_id:
         raise ValueError("SPORTSENGINE_ORG_ID must be set")
     
-    # SportsEngine uses a different query structure
     query = """
     query GetOrganization($orgId: Int!) {
         organization(id: $orgId) {
@@ -151,7 +157,7 @@ def get_all_registrations() -> list:
             "id": reg["id"],
             "name": reg["name"],
             "status": reg.get("status", "UNKNOWN"),
-            "count": 0  # Registration count not available in this query
+            "count": 0
         }
         for reg in registrations
     ]
@@ -235,11 +241,10 @@ def get_registration_results(registration_id: str, cursor: str = None) -> dict:
     for i, profile in enumerate(profiles):
         profile_id = profile.get("id")
         
-        # Add delay between API calls to avoid rate limiting (max ~60 calls/min)
+        # Add delay between API calls to avoid rate limiting
         if i > 0:
-            time.sleep(1.5)  # 1.5 seconds between calls
+            time.sleep(1.5)
         
-        # Query individual profile for registration results
         detail_query = """
         query GetProfileDetails($profileId: Int!, $orgId: Int!) {
             profile(id: $profileId, organizationId: $orgId) {
@@ -318,7 +323,6 @@ def get_registration_results(registration_id: str, cursor: str = None) -> dict:
             
         except Exception as e:
             logger.warning(f"Failed to get details for profile {profile_id}: {e}")
-            # Fall back to basic profile data
             results.append({
                 "id": profile.get("id"),
                 "registrant": {
@@ -333,7 +337,6 @@ def get_registration_results(registration_id: str, cursor: str = None) -> dict:
                 "updatedAt": None
             })
     
-    # Return in expected format
     has_next = page < page_info.get("pages", 1)
     return {
         "registrationForm": {
@@ -356,53 +359,64 @@ def get_registration_results(registration_id: str, cursor: str = None) -> dict:
 def extract_sport_from_registration_name(registration_name: str) -> str:
     """
     Extract sport from registration form name.
+    Returns Title Case to match the rest of the app (UI, email templates, etc.).
+
     Examples:
-        "2025 Spring Soccer" -> "soccer"
-        "Fall 2025 Basketball Registration" -> "basketball"
-        "Pines Volleyball 2025" -> "volleyball"
+        "2025 Spring Soccer"              -> "Soccer"
+        "Fall 2025 Basketball Registration" -> "Basketball"
+        "Pines Volleyball 2025"           -> "Volleyball"
+        "2026 Flag Football"              -> "Flag Football"
     """
     name_lower = registration_name.lower()
-    
-    sports = ["soccer", "basketball", "baseball", "softball", "volleyball", "flag football", "flag"]
-    
-    for sport in sports:
-        if sport in name_lower:
-            return sport
-    
-    # Default fallback
+
+    # Order matters: check multi-word sports first
+    sports = [
+        ("flag football", "Flag Football"),
+        ("flag", "Flag Football"),
+        ("soccer", "Soccer"),
+        ("basketball", "Basketball"),
+        ("baseball", "Baseball"),
+        ("softball", "Softball"),
+        ("volleyball", "Volleyball"),
+    ]
+
+    for keyword, title_case in sports:
+        if keyword in name_lower:
+            return title_case
+
     logger.warning(f"Could not extract sport from registration name: {registration_name}")
-    return "unknown"
+    return "Unknown"
 
 
 def extract_season_from_registration_name(registration_name: str) -> str:
     """
-    Extract season/year from registration form name.
+    Extract season from registration form name.
+    Returns "Season Year" format (e.g. "Spring 2026") to match existing data.
+
     Examples:
-        "2025 Spring Soccer" -> "2025"
-        "Fall 2025 Basketball" -> "2025"
+        "2025 Spring Soccer"       -> "Spring 2025"
+        "Fall 2025 Basketball"     -> "Fall 2025"
+        "Pines Volleyball 2025"    -> "2025" (no season keyword)
+        "2026 Spring Soccer Reg"   -> "Spring 2026"
     """
-    import re
-    
-    # Look for 4-digit year
-    match = re.search(r'20\d{2}', registration_name)
-    if match:
-        return match.group(0)
-    
-    # Default to current year
-    return str(datetime.now().year)
+    name_lower = registration_name.lower()
+
+    # Find the year
+    year_match = re.search(r'(20\d{2})', registration_name)
+    year = year_match.group(1) if year_match else str(datetime.now().year)
+
+    # Find season keyword
+    for keyword in ["spring", "fall", "winter", "summer"]:
+        if keyword in name_lower:
+            return f"{keyword.capitalize()} {year}"
+
+    # No season keyword — return just the year
+    return year
 
 
 def extract_division(answers: list) -> str:
     """
     Extract division from registration answers.
-    
-    Looks for a field labeled "Division" (case-insensitive) and returns
-    its value directly. If not found, returns "Waiting Room".
-    
-    The Division field in SportsEngine is typically a dropdown with values like:
-    - U4, U6, U8, U10, U12, U14
-    - High School
-    - Pend Oreille Pines (High School Club Team)
     """
     if not answers:
         return "Waiting Room"
@@ -412,30 +426,21 @@ def extract_division(answers: list) -> str:
         label = (question.get("label") or "").strip().lower()
         value = (answer.get("value") or "").strip()
         
-        # Check for Division field (case-insensitive)
         if label in ["division", "age division", "player division", "age group"]:
             if value:
-                # Normalize common variations
                 value_upper = value.upper()
                 if value_upper in ["U3", "U4", "U5", "U6", "U8", "U10", "U12", "U14"]:
                     return value_upper
                 if "high school" in value.lower() or "hs" in value.lower():
                     return "Pend Oreille Pines (High School Club Team)"
-                # Return as-is if it looks valid
                 return value
     
-    # No division found
     logger.info("No Division field found in registration answers, placing in Waiting Room")
     return "Waiting Room"
 
 
 def extract_grade(answers: list) -> Optional[str]:
-    """
-    Extract grade from registration answers.
-    
-    Looks for a field labeled "Grade" (case-insensitive) and returns
-    its value. Returns None if not found.
-    """
+    """Extract grade from registration answers."""
     if not answers:
         return None
     
@@ -444,7 +449,6 @@ def extract_grade(answers: list) -> Optional[str]:
         label = (question.get("label") or "").strip().lower()
         value = (answer.get("value") or "").strip()
         
-        # Check for Grade field (case-insensitive)
         if label in ["grade", "school grade", "current grade", "grade level"]:
             if value:
                 return value
@@ -459,12 +463,9 @@ def extract_birth_year(registrant: dict) -> Optional[int]:
         return None
     
     try:
-        # Handle various date formats
         if isinstance(dob, str):
-            # Try ISO format first (YYYY-MM-DD)
             if "-" in dob:
                 return int(dob.split("-")[0])
-            # Try MM/DD/YYYY format
             if "/" in dob:
                 parts = dob.split("/")
                 if len(parts) == 3:
@@ -478,10 +479,7 @@ def extract_birth_year(registrant: dict) -> Optional[int]:
 
 
 def extract_parent_email(registration: dict) -> str:
-    """
-    Extract parent/guardian email from registration.
-    Prefers guardian email, falls back to registrant email.
-    """
+    """Extract parent/guardian email from registration."""
     guardian = registration.get("guardian", {})
     if guardian and guardian.get("email"):
         return guardian["email"].lower().strip()
@@ -501,13 +499,51 @@ def extract_player_name(registrant: dict) -> str:
 
 
 # ---------------------------------------------------------------------
+# Season matching helper
+# ---------------------------------------------------------------------
+def _find_existing_registration(db, player_id: int, sport: str, season: str):
+    """
+    Find an existing registration for a player+sport, handling season format
+    mismatches (e.g. "2026" vs "Spring 2026").
+
+    Returns the Registration object or None.
+    """
+    from app.models import Registration
+    from sqlalchemy import func
+
+    # Try exact match first
+    existing = db.query(Registration).filter(
+        Registration.player_id == player_id,
+        func.lower(Registration.sport) == sport.lower(),
+        Registration.season == season
+    ).first()
+
+    if existing:
+        return existing
+
+    # Fallback: match on just the year component
+    year_match = re.search(r'(20\d{2})', season)
+    if year_match:
+        year_str = year_match.group(1)
+        existing = db.query(Registration).filter(
+            Registration.player_id == player_id,
+            func.lower(Registration.sport) == sport.lower(),
+            Registration.season.contains(year_str)
+        ).first()
+        if existing:
+            logger.info(
+                f"SYNC: Matched via year fallback: DB has '{existing.season}', "
+                f"sync has '{season}' for player_id={player_id} sport={sport}"
+            )
+    return existing
+
+
+# ---------------------------------------------------------------------
 # Sync Logic
 # ---------------------------------------------------------------------
 def sync_registration(registration_id: str, db: Session) -> dict:
     """
     Sync all results from a specific SportsEngine registration form.
-    
-    Returns summary of actions taken.
     """
     from app.models import Player, Registration
     from app.services.assign import assign_jersey_number
@@ -534,18 +570,19 @@ def sync_registration(registration_id: str, db: Session) -> dict:
         nodes = registrations_data.get("nodes", [])
         page_info = registrations_data.get("pageInfo", {})
         
-        # Extract sport and season from registration form name
+        # Extract sport (Title Case) and season ("Spring 2026") from form name
         sport = extract_sport_from_registration_name(registration_name)
         season = extract_season_from_registration_name(registration_name)
+
+        logger.info(f"SYNC: Processing form '{registration_name}' -> sport='{sport}', season='{season}'")
         
         for reg in nodes:
             try:
                 process_single_registration(reg, sport, season, registration_name, db, results)
             except Exception as e:
-                logger.error(f"Error processing registration {reg.get('id')}: {e}")
+                logger.error(f"Error processing registration {reg.get('id')}: {e}", exc_info=True)
                 results["errors"].append(str(e))
         
-        # Handle pagination
         if page_info.get("hasNextPage"):
             cursor = page_info.get("endCursor")
         else:
@@ -567,9 +604,9 @@ def process_single_registration(
     """
     Process a single registration from SportsEngine.
     
-    Logic:
-    - New player: Create player, assign jersey, create registration, confirmation_sent=False
-    - Existing player: Keep jersey, create/update registration, confirmation_sent=True
+    - Sport is stored in Title Case (e.g. "Soccer", "Basketball")
+    - Season is stored as "Spring 2026", "Fall 2025", etc.
+    - Matching uses year-fallback to handle format mismatches
     """
     from app.models import Player, Registration
     from app.services.assign import assign_jersey_number
@@ -587,10 +624,8 @@ def process_single_registration(
     grade = extract_grade(reg.get("answers", []))
     order_number = reg.get("orderNumber")
     
-    # Log extracted data for debugging
     logger.info(f"SYNC: Processing {player_name} for {sport}/{season}")
     logger.info(f"SYNC: Division extracted: '{division}', Grade: '{grade}'")
-    logger.info(f"SYNC: Answers received: {reg.get('answers', [])}")
     
     # Parse created_at for order_date
     order_date = None
@@ -601,15 +636,13 @@ def process_single_registration(
         except:
             pass
     
-    # Normalize player name for matching (lowercase, single spaces)
+    # Normalize player name for matching
     normalized_name = " ".join(player_name.lower().split())
     
-    # Import func for case-insensitive queries
     from sqlalchemy import func
     from sqlalchemy.exc import IntegrityError
     
-    # Check if player already exists - use NAME matching ONLY
-    # Email matching causes siblings to be merged incorrectly
+    # Check if player already exists — NAME matching ONLY
     existing_player = None
     match_method = None
     
@@ -626,13 +659,8 @@ def process_single_registration(
         if existing_player:
             match_method = "case_insensitive_name"
     
-    # NOTE: We intentionally do NOT match by email to avoid merging siblings
-    # If "Jaxsyn Smith" and "Jaxson Smith" are different entries, they'll be
-    # created as separate players. Admin can merge duplicates manually if needed.
-    
     if existing_player:
-        logger.info(f"SYNC: Found existing player via {match_method}: {existing_player.full_name} (ID: {existing_player.id}, incoming: {player_name})")
-        # EXISTING PLAYER
+        logger.info(f"SYNC: Found existing player via {match_method}: {existing_player.full_name} (ID: {existing_player.id})")
         results["existing_players"] += 1
         player = existing_player
         
@@ -644,22 +672,15 @@ def process_single_registration(
         if parent_email != "unknown@example.com" and player.parent_email == "unknown@example.com":
             player.parent_email = parent_email
         
-        # Update grade if we have it (always use latest)
+        # Update grade if we have it
         if grade:
             player.grade = grade
         
-        # Get all current registrations for this player
-        current_regs = db.query(Registration).filter(Registration.player_id == player.id).all()
-        
-        # Check if they already have this sport+season combination
-        existing_reg = db.query(Registration).filter(
-            Registration.player_id == player.id,
-            func.lower(Registration.sport) == sport.lower(),
-            Registration.season == season
-        ).first()
+        # Check if they already have this sport+season (with year fallback)
+        existing_reg = _find_existing_registration(db, player.id, sport, season)
         
         if existing_reg:
-            # Registration exists - just update division if needed
+            # Registration exists — update division if needed
             if division != "Waiting Room" and existing_reg.division != division:
                 logger.info(f"SYNC: Updating division for {player.full_name} ({sport}): '{existing_reg.division}' -> '{division}'")
                 existing_reg.division = division
@@ -667,14 +688,14 @@ def process_single_registration(
             else:
                 logger.info(f"SYNC: {player.full_name} ({sport}/{season}) already current")
         else:
-            # New sport/season for this player - add it
+            # New sport/season for this player
             try:
                 new_reg = Registration(
                     player_id=player.id,
                     program=program_name,
                     division=division,
-                    sport=sport.lower(),
-                    season=season,
+                    sport=sport,          # Title Case
+                    season=season,        # "Spring 2026" format
                     order_number=order_number,
                     order_date=order_date,
                     confirmation_sent=True
@@ -685,30 +706,22 @@ def process_single_registration(
                 results["new_registrations"] += 1
             except IntegrityError:
                 db.rollback()
-                # Registration was added by another process, just update it
-                existing_reg = db.query(Registration).filter(
-                    Registration.player_id == player.id,
-                    func.lower(Registration.sport) == sport.lower(),
-                    Registration.season == season
-                ).first()
+                existing_reg = _find_existing_registration(db, player.id, sport, season)
                 if existing_reg and division != "Waiting Room":
                     existing_reg.division = division
                     results["updated_registrations"] += 1
                 logger.info(f"SYNC: Registration already existed for {player.full_name} ({sport}), updated")
     
     else:
-        # NEW PLAYER - all matching strategies failed, this is truly a new person
+        # NEW PLAYER
         results["new_players"] += 1
         
-        # Normalize the name to Title Case for consistency
         normalized_player_name = " ".join(word.capitalize() for word in player_name.split())
         
-        # Assign jersey number based on birth year (if we have it)
         jersey_number = None
         if birth_year:
             jersey_number = assign_jersey_number(db, birth_year)
         
-        # If missing critical data, put in Waiting Room for manual triage
         final_division = division
         if not birth_year or not jersey_number:
             final_division = "Waiting Room"
@@ -716,27 +729,25 @@ def process_single_registration(
         
         logger.info(f"SYNC: Creating NEW player: {normalized_player_name} (email: {parent_email})")
         
-        # Create new player - ALWAYS capture, never reject
         player = Player(
             full_name=normalized_player_name,
-            birth_year=birth_year,  # May be None
-            grade=grade,  # May be None
-            jersey_number=jersey_number,  # May be None
+            birth_year=birth_year,
+            grade=grade,
+            jersey_number=jersey_number,
             parent_email=parent_email
         )
         db.add(player)
-        db.flush()  # Get player ID
+        db.flush()
         
-        # Create registration - ALWAYS capture
         new_reg = Registration(
             player_id=player.id,
             program=program_name,
             division=final_division,
-            sport=sport.lower(),
-            season=season,
+            sport=sport,          # Title Case
+            season=season,        # "Spring 2026" format
             order_number=order_number,
             order_date=order_date,
-            confirmation_sent=False  # New player, needs email
+            confirmation_sent=False
         )
         db.add(new_reg)
         results["new_registrations"] += 1
@@ -745,9 +756,7 @@ def process_single_registration(
 
 
 def sync_all_registrations(db: Session) -> dict:
-    """
-    Sync all active registration forms from SportsEngine.
-    """
+    """Sync all active registration forms from SportsEngine."""
     all_results = {
         "forms_processed": 0,
         "new_players": 0,
@@ -760,7 +769,6 @@ def sync_all_registrations(db: Session) -> dict:
     forms = get_all_registrations()
     
     for form in forms:
-        # Only sync active/open registrations
         if form.get("status") in ["ACTIVE", "OPEN", "CLOSED"]:
             try:
                 result = sync_registration(form["id"], db)
@@ -780,17 +788,6 @@ def sync_all_registrations(db: Session) -> dict:
 def process_webhook(payload: dict, db: Session) -> dict:
     """
     Process a webhook notification from SportsEngine.
-    
-    When we receive a registrationResult webhook, we query for recently
-    created registration results and only process those (not everyone).
-    
-    Webhook payload format:
-    {
-        "organizationId": 12345,
-        "resourceOperation": "create" | "update" | "delete",
-        "resourceId": "uuid-string",
-        "resourceType": "registrationResult" | "event" | etc.
-    }
     """
     resource_type = payload.get("resourceType")
     operation = payload.get("resourceOperation")
@@ -799,7 +796,6 @@ def process_webhook(payload: dict, db: Session) -> dict:
     
     logger.info(f"Webhook received: {operation} {resource_type} (id: {resource_id}, org: {webhook_org_id})")
     
-    # Only process registrationResult create/update
     if resource_type != "registrationResult":
         return {"action": "ignored", "reason": f"Not registrationResult: {resource_type}"}
     
@@ -812,7 +808,6 @@ def process_webhook(payload: dict, db: Session) -> dict:
         
         env_org_id = os.getenv("SPORTSENGINE_ORG_ID")
         
-        # Get active registrations
         registrations = get_all_registrations()
         active_regs = [r for r in registrations if r.get("status") == 1]
         
@@ -825,8 +820,6 @@ def process_webhook(payload: dict, db: Session) -> dict:
             reg_id = reg["id"]
             reg_name = reg["name"]
             
-            # Query profiles for this registration, sorted by most recent first
-            # We only want profiles who registered in the last 10 minutes
             query = """
             query GetRecentProfiles($orgId: Int!, $regId: String!) {
                 profiles(
@@ -876,33 +869,28 @@ def process_webhook(payload: dict, db: Session) -> dict:
             
             profiles = data.get("profiles", {}).get("results", [])
             
-            # Process each profile
             for profile in profiles:
-                # Check if this profile has a recent registration result for this form
                 reg_results = profile.get("registrationResults", {}).get("results", [])
                 
                 for rr in reg_results:
                     if str(rr.get("registrationId")) != str(reg_id):
                         continue
                     
-                    # Check if this was created recently (within last 10 minutes)
                     created = rr.get("created")
                     if created:
-                        from datetime import datetime, timedelta, timezone
+                        from datetime import timezone
                         try:
                             created_dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
                             now = datetime.now(timezone.utc)
                             if now - created_dt > timedelta(minutes=10):
-                                # Not recent, skip
                                 continue
                         except:
                             pass
                     
-                    # This is a recent registration - process it
                     result = process_webhook_profile(profile, rr, reg_name, db)
                     if result:
                         processed.append(result)
-                    break  # Only process first matching result per profile
+                    break
         
         if processed:
             return {"action": "processed", "results": processed}
@@ -923,7 +911,6 @@ def process_webhook_profile(profile: dict, reg_result: dict, reg_name: str, db: 
     from app.services.assign import assign_jersey_number
     from sqlalchemy import func
     
-    # Extract data
     player_name = f"{profile.get('firstName', '')} {profile.get('lastName', '')}".strip()
     
     birth_year = None
@@ -936,7 +923,7 @@ def process_webhook_profile(profile: dict, reg_result: dict, reg_name: str, db: 
     
     parent_email = (profile.get("email") or "unknown@example.com").lower().strip()
     
-    # Extract division from answers
+    # Extract division and grade from answers
     division = "Waiting Room"
     grade = None
     for ans in reg_result.get("answers", []):
@@ -954,39 +941,31 @@ def process_webhook_profile(profile: dict, reg_result: dict, reg_name: str, db: 
             if val:
                 grade = str(val)
     
-    # Extract sport and season from registration name
-    sport = extract_sport_from_registration_name(reg_name).lower()
+    # Title Case sport, "Spring 2026" season
+    sport = extract_sport_from_registration_name(reg_name)
     season = extract_season_from_registration_name(reg_name)
     
     logger.info(f"Webhook processing: {player_name} for {sport}/{season}, division: {division}, grade: {grade}")
     
-    # Use same matching logic as sync - NAME ONLY to avoid merging siblings
+    # NAME ONLY matching
     existing_player = None
     normalized_name = " ".join(player_name.lower().split())
     
-    # Strategy 1: Exact name match
     existing_player = db.query(Player).filter(Player.full_name == player_name).first()
     
-    # Strategy 2: Case-insensitive name match
     if not existing_player:
         existing_player = db.query(Player).filter(
             func.lower(Player.full_name) == normalized_name
         ).first()
     
     if existing_player:
-        # EXISTING PLAYER - update grade if we have it
         if grade:
             existing_player.grade = grade
         
-        # Check if sport+season exists, update division
-        existing_reg = db.query(Registration).filter(
-            Registration.player_id == existing_player.id,
-            func.lower(Registration.sport) == sport,
-            Registration.season == season
-        ).first()
+        # Use year-fallback matching
+        existing_reg = _find_existing_registration(db, existing_player.id, sport, season)
         
         if existing_reg:
-            # Registration exists - just update division if needed
             if division != "Waiting Room" and existing_reg.division != division:
                 existing_reg.division = division
                 db.commit()
@@ -995,15 +974,14 @@ def process_webhook_profile(profile: dict, reg_result: dict, reg_name: str, db: 
             else:
                 return {"action": "already_current", "player": existing_player.full_name}
         else:
-            # Add new sport/season
             try:
                 from sqlalchemy.exc import IntegrityError
                 new_reg = Registration(
                     player_id=existing_player.id,
                     program=reg_name,
                     division=division,
-                    sport=sport,
-                    season=season,
+                    sport=sport,      # Title Case
+                    season=season,    # "Spring 2026"
                     confirmation_sent=True
                 )
                 db.add(new_reg)
@@ -1016,14 +994,13 @@ def process_webhook_profile(profile: dict, reg_result: dict, reg_name: str, db: 
                 return {"action": "already_exists", "player": existing_player.full_name}
     
     else:
-        # NEW PLAYER - ALWAYS capture, never reject
+        # NEW PLAYER
         normalized_player_name = " ".join(word.capitalize() for word in player_name.split())
         
         jersey_number = None
         if birth_year:
             jersey_number = assign_jersey_number(db, birth_year)
         
-        # If missing critical data, put in Waiting Room for manual triage
         final_division = division
         if not birth_year or not jersey_number:
             final_division = "Waiting Room"
@@ -1031,9 +1008,9 @@ def process_webhook_profile(profile: dict, reg_result: dict, reg_name: str, db: 
         
         new_player = Player(
             full_name=normalized_player_name,
-            birth_year=birth_year,  # May be None
-            grade=grade,  # May be None
-            jersey_number=jersey_number,  # May be None
+            birth_year=birth_year,
+            grade=grade,
+            jersey_number=jersey_number,
             parent_email=parent_email
         )
         db.add(new_player)
@@ -1043,9 +1020,9 @@ def process_webhook_profile(profile: dict, reg_result: dict, reg_name: str, db: 
             player_id=new_player.id,
             program=reg_name,
             division=final_division,
-            sport=sport,
-            season=season,
-            confirmation_sent=False  # New player needs email
+            sport=sport,          # Title Case
+            season=season,        # "Spring 2026"
+            confirmation_sent=False
         )
         db.add(new_reg)
         db.commit()
