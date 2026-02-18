@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------
 # Configuration  (ORIGINAL URLs — do NOT change)
 # ---------------------------------------------------------------------
-SPORTSENGINE_AUTH_URL = "https://oauth.sportsengine.com/oauth/token"
+SPORTSENGINE_AUTH_URL = "https://user.sportngin.com/oauth/token"
 SPORTSENGINE_GRAPHQL_URL = "https://api.sportsengine.com/platform/graphql"
 
 # Cache for access token
