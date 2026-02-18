@@ -758,11 +758,22 @@ def sync_all_registrations(db: Session) -> dict:
     }
     
     forms = get_all_registrations()
-    logger.info(f"SYNC: Found {len(forms)} total forms, filtering for ACTIVE/OPEN/CLOSED")
+    logger.info(f"SYNC: Found {len(forms)} total forms")
+    for f in forms:
+        logger.info(f"SYNC: Form '{f.get('name')}' status={repr(f.get('status'))}")
+    
+    processed_any = False
     
     for form in forms:
-        if form.get("status") in ["ACTIVE", "OPEN", "CLOSED"]:
-            logger.info(f"SYNC: Syncing form '{form['name']}' (status={form['status']}, count={form.get('count', '?')})")
+        status = form.get("status")
+        # API may return numeric (1=active) or string ("ACTIVE"/"OPEN"/"CLOSED")
+        is_active = (
+            status in ["ACTIVE", "OPEN", "CLOSED"]
+            or status in [1, "1", True]
+        )
+        if is_active:
+            processed_any = True
+            logger.info(f"SYNC: Syncing form '{form['name']}' (status={repr(status)}, count={form.get('count', '?')})")
             try:
                 result = sync_registration(form["id"], db)
                 all_results["forms_processed"] += 1
@@ -775,7 +786,23 @@ def sync_all_registrations(db: Session) -> dict:
                 logger.error(f"Error syncing form {form['id']}: {e}", exc_info=True)
                 all_results["errors"].append(f"Form {form['name']}: {str(e)}")
         else:
-            logger.info(f"SYNC: Skipping form '{form['name']}' (status={form['status']})")
+            logger.info(f"SYNC: Skipping form '{form['name']}' (status={repr(status)})")
+    
+    # Fallback: if no forms matched the status filter, sync ALL forms
+    if not processed_any and forms:
+        logger.warning(f"SYNC: No forms matched status filter! Processing ALL {len(forms)} forms as fallback.")
+        for form in forms:
+            try:
+                result = sync_registration(form["id"], db)
+                all_results["forms_processed"] += 1
+                all_results["new_players"] += result["new_players"]
+                all_results["existing_players"] += result["existing_players"]
+                all_results["new_registrations"] += result["new_registrations"]
+                all_results["updated_registrations"] += result["updated_registrations"]
+                all_results["errors"].extend(result["errors"])
+            except Exception as e:
+                logger.error(f"Error syncing form {form['id']}: {e}", exc_info=True)
+                all_results["errors"].append(f"Form {form['name']}: {str(e)}")
     
     logger.info(f"SYNC: All forms complete: {all_results}")
     return all_results
