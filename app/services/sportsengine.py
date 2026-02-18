@@ -21,6 +21,13 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+# Ensure messages actually appear in Render logs
+if not logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setLevel(logging.DEBUG)
+    _handler.setFormatter(logging.Formatter('%(asctime)s [%(name)s] %(levelname)s: %(message)s'))
+    logger.addHandler(_handler)
 
 # ---------------------------------------------------------------------
 # Configuration  (ORIGINAL URLs — do NOT change)
@@ -575,6 +582,7 @@ def sync_registration(registration_id: str, db: Session) -> dict:
         sport = extract_sport_from_registration_name(registration_name)
         season = extract_season_from_registration_name(registration_name)
         
+        print(f"SYNC: Processing form '{registration_name}' -> sport='{sport}', season='{season}', {len(nodes)} registrants", flush=True)
         logger.info(f"SYNC: Processing form '{registration_name}' -> sport='{sport}', season='{season}', {len(nodes)} registrants")
         
         for reg in nodes:
@@ -629,6 +637,7 @@ def process_single_registration(
     grade = extract_grade(reg.get("answers", []))
     order_number = reg.get("orderNumber")
     
+    print(f"SYNC: Processing {player_name} for {sport}/{season}, division='{division}'", flush=True)
     logger.info(f"SYNC: Processing {player_name} for {sport}/{season}, division='{division}'")
     
     # Parse created_at for order_date
@@ -714,6 +723,7 @@ def process_single_registration(
             final_division = "Waiting Room"
             logger.info(f"SYNC: Missing data for {normalized_player_name} (birth_year={birth_year}) - placing in Waiting Room")
         
+        print(f"SYNC: Creating NEW player: {normalized_player_name} (email: {parent_email})", flush=True)
         logger.info(f"SYNC: Creating NEW player: {normalized_player_name} (email: {parent_email})")
         
         player_kwargs = dict(
@@ -758,9 +768,10 @@ def sync_all_registrations(db: Session) -> dict:
     }
     
     forms = get_all_registrations()
-    logger.info(f"SYNC: Found {len(forms)} total forms")
+    print(f"SYNC: Found {len(forms)} total forms", flush=True)
     for f in forms:
-        logger.info(f"SYNC: Form '{f.get('name')}' status={repr(f.get('status'))}")
+        print(f"SYNC: Form '{f.get('name')}' status={repr(f.get('status'))}", flush=True)
+    logger.info(f"SYNC: Found {len(forms)} total forms")
     
     processed_any = False
     
@@ -790,6 +801,7 @@ def sync_all_registrations(db: Session) -> dict:
     
     # Fallback: if no forms matched the status filter, sync ALL forms
     if not processed_any and forms:
+        print(f"SYNC: No forms matched status filter! Processing ALL {len(forms)} forms as fallback.", flush=True)
         logger.warning(f"SYNC: No forms matched status filter! Processing ALL {len(forms)} forms as fallback.")
         for form in forms:
             try:
