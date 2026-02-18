@@ -19,7 +19,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POSA Jersey Admin</title>
+    <title>POSA Jersey</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
     tailwind.config = {
@@ -40,7 +40,6 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
                     <img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-8">
-                    <h1 class="text-xl font-bold text-gray-900">Admin</h1>
                 </div>
                 <div class="flex items-center space-x-3">
                     <a href="/admin/volunteers" class="text-pines-500 hover:text-pines-700 px-3 py-2 text-sm font-medium">Volunteers</a>
