@@ -156,10 +156,10 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                                         <div class="flex flex-wrap gap-1">
                                             <template x-for="reg in item.registrations" :key="reg.id">
                                                 <span class="inline-flex items-center px-1.5 py-0.5 text-xs rounded cursor-default"
-                                                      :class="reg.sport === 'Soccer' ? 'bg-green-50 text-green-700' : reg.sport === 'Basketball' ? 'bg-orange-50 text-orange-700' : reg.sport === 'Flag Football' ? 'bg-yellow-50 text-yellow-700' : reg.sport === 'Volleyball' ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'"
-                                                      :title="reg.division">
-                                                    <span x-text="reg.sport"></span>
-                                                    <span class="ml-1 opacity-60" x-text="reg.season"></span>
+                                                      :class="sportColor(reg.sport)"
+                                                      :title="reg.sport + ' \\u2013 ' + reg.season + ' (' + reg.division + ')'">
+                                                    <span x-text="sportEmoji(reg.sport)"></span>
+                                                    <span class="ml-0.5" x-text="shortSeason(reg.season)"></span>
                                                 </span>
                                             </template>
                                         </div>
@@ -260,7 +260,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             // Extract the year portion from a season string like "Fall 2025" -> 2025, or "2025" -> 2025
             getSeasonYear(season) {
                 if (!season) return '';
-                const match = season.match(/\d{4}/);
+                const match = season.match(/\\d{4}/);
                 return match ? match[0] : '';
             },
             
@@ -389,6 +389,31 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                 if (this.duplicateJerseys.has(player.id)) return 'bg-red-50 hover:bg-red-100';
                 if (player.birthYear && this.birthYearColorMap[player.birthYear]) return 'bg-white hover:bg-gray-50';
                 return 'bg-gray-50 hover:bg-gray-100';
+            },
+            
+            sportEmoji(sport) {
+                const map = { 'Soccer': '⚽', 'Basketball': '🏀', 'Flag Football': '🏈', 'Volleyball': '🏐', 'Baseball': '⚾', 'Softball': '🥎' };
+                return map[sport] || '🏃';
+            },
+            
+            shortSeason(season) {
+                if (!season) return '';
+                const abbrevs = { 'spring': 'Spr', 'summer': 'Sum', 'fall': 'Fall', 'winter': 'Win' };
+                const parts = season.split(' ');
+                if (parts.length === 2) {
+                    const word = parts[0].toLowerCase();
+                    const yr = parts[1].length === 4 ? "'" + parts[1].slice(2) : parts[1];
+                    return (abbrevs[word] || parts[0]) + ' ' + yr;
+                }
+                return season;
+            },
+            
+            sportColor(sport) {
+                if (sport === 'Soccer') return 'bg-green-50 text-green-700';
+                if (sport === 'Basketball') return 'bg-orange-50 text-orange-700';
+                if (sport === 'Flag Football') return 'bg-yellow-50 text-yellow-700';
+                if (sport === 'Volleyball') return 'bg-purple-50 text-purple-700';
+                return 'bg-blue-50 text-blue-700';
             },
             
             clearFilters() {
