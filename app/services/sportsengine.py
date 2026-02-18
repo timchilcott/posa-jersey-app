@@ -10,6 +10,10 @@ TARGETED FIXES (Feb 2026):
 - process_single_registration uses case-insensitive name matching
 - process_single_registration uses year-fallback matching for seasons
 - Added is_configured() helper for sync_routes.py
+
+FIX (Feb 18, 2026):
+- Nickname-aware player matching: "Emeryn (emmy) Miskin" matches "Emeryn Miskin"
+- Parent/guardian detection: skip registrants with no DOB or adult DOB
 """
 
 import os
@@ -209,7 +213,6 @@ def get_registration_results(registration_id: str, cursor: str = None) -> dict:
                 value: "true"
                 source: REGISTRATIONS
                 sourceId: $regId
-                operator: EQUAL
             }
             page: $page
             perPage: 50
@@ -513,7 +516,33 @@ def extract_player_name(registrant: dict) -> str:
 
 
 # ---------------------------------------------------------------------
-# Season matching helper  (NEW — handles format mismatches)
+# Name normalization helpers  (NEW — Feb 18, 2026)
+# ---------------------------------------------------------------------
+def _strip_nickname(name: str) -> str:
+    """
+    Remove parenthetical nicknames from a name.
+
+    'Emeryn (emmy) Miskin'  -> 'Emeryn Miskin'
+    'Robert (Bob) Jones Jr' -> 'Robert Jones Jr'
+    'Plain Name'            -> 'Plain Name'
+    """
+    stripped = re.sub(r'\s*\([^)]*\)\s*', ' ', name)
+    return " ".join(stripped.split())  # collapse whitespace
+
+
+def _is_likely_adult(birth_year: Optional[int]) -> bool:
+    """
+    Return True if birth_year suggests an adult (parent), not a youth player.
+    Youth players in POSA are roughly born 2008-2023.
+    Anyone born before 2005 is almost certainly a parent.
+    """
+    if birth_year is None:
+        return False  # can't tell — let other checks handle it
+    return birth_year < 2005
+
+
+# ---------------------------------------------------------------------
+# Season matching helper  (handles format mismatches)
 # ---------------------------------------------------------------------
 def _find_existing_registration(db, player_id: int, sport: str, season: str):
     """
@@ -553,6 +582,79 @@ def _find_existing_registration(db, player_id: int, sport: str, season: str):
 
 
 # ---------------------------------------------------------------------
+# Player matching helper  (NEW — Feb 18, 2026)
+# ---------------------------------------------------------------------
+def _find_existing_player(db, player_name: str):
+    """
+    Find an existing Player by name, with progressive fuzzy matching:
+      1. Exact match
+      2. Case-insensitive match
+      3. Match after stripping parenthetical nicknames from BOTH sides
+
+    Returns the Player object or None.
+    """
+    from app.models import Player
+    from sqlalchemy import func
+
+    # 1. Exact match
+    player = db.query(Player).filter(Player.full_name == player_name).first()
+    if player:
+        return player
+
+    # 2. Case-insensitive match
+    normalized = " ".join(player_name.lower().split())
+    player = db.query(Player).filter(
+        func.lower(Player.full_name) == normalized
+    ).first()
+    if player:
+        return player
+
+    # 3. Strip nicknames from the incoming name and try matching
+    stripped_incoming = _strip_nickname(player_name)
+    if stripped_incoming != player_name:
+        # Try exact match on stripped name
+        player = db.query(Player).filter(Player.full_name == stripped_incoming).first()
+        if player:
+            logger.info(
+                f"SYNC: Nickname match: incoming '{player_name}' matched "
+                f"existing '{player.full_name}' via stripped form '{stripped_incoming}'"
+            )
+            return player
+
+        # Try case-insensitive match on stripped name
+        stripped_lower = " ".join(stripped_incoming.lower().split())
+        player = db.query(Player).filter(
+            func.lower(Player.full_name) == stripped_lower
+        ).first()
+        if player:
+            logger.info(
+                f"SYNC: Nickname match (ci): incoming '{player_name}' matched "
+                f"existing '{player.full_name}'"
+            )
+            return player
+
+    # 4. Strip nicknames from DB names and compare to incoming stripped name
+    #    This handles the reverse case: DB has "Emeryn (emmy) Miskin",
+    #    incoming is "Emeryn Miskin"
+    stripped_lower = " ".join(stripped_incoming.lower().split())
+    all_candidates = db.query(Player).filter(
+        Player.full_name.ilike(f"%{stripped_incoming.split()[0]}%")
+    ).all() if stripped_incoming.split() else []
+
+    for candidate in all_candidates:
+        candidate_stripped = _strip_nickname(candidate.full_name).lower()
+        candidate_stripped = " ".join(candidate_stripped.split())
+        if candidate_stripped == stripped_lower:
+            logger.info(
+                f"SYNC: Reverse nickname match: incoming '{player_name}' matched "
+                f"DB player '{candidate.full_name}' (both strip to '{stripped_incoming}')"
+            )
+            return candidate
+
+    return None
+
+
+# ---------------------------------------------------------------------
 # Sync Logic
 # ---------------------------------------------------------------------
 def sync_registration(registration_id: str, db: Session) -> dict:
@@ -567,6 +669,7 @@ def sync_registration(registration_id: str, db: Session) -> dict:
         "existing_players": 0,
         "new_registrations": 0,
         "updated_registrations": 0,
+        "skipped_parents": 0,
         "errors": []
     }
     
@@ -622,8 +725,10 @@ def process_single_registration(
     Changes from original:
     - Sport stored in Title Case
     - Season stored as "Spring 2026" format
-    - Case-insensitive player name matching
+    - Nickname-aware player name matching via _find_existing_player
     - Year-fallback season matching via _find_existing_registration
+    - Parent/guardian detection: skip adults (born before 2005) with no
+      division or Unknown sport
     """
     from app.models import Player, Registration
     from app.services.assign import assign_jersey_number
@@ -643,6 +748,31 @@ def process_single_registration(
     grade = extract_grade(reg.get("answers", []))
     order_number = reg.get("orderNumber")
     
+    # ------------------------------------------------------------------
+    # FIX: Parent/guardian detection
+    # Skip registrants who are clearly adults (not youth players).
+    # An adult is someone born before 2005, OR someone with no DOB whose
+    # division is Waiting Room and sport is Unknown — they're almost
+    # certainly a parent who got pulled in as a profile.
+    # ------------------------------------------------------------------
+    if _is_likely_adult(birth_year):
+        logger.info(
+            f"SYNC: Skipping likely parent/adult: {player_name} "
+            f"(birth_year={birth_year})"
+        )
+        results["skipped_parents"] = results.get("skipped_parents", 0) + 1
+        return
+
+    if (birth_year is None
+            and division == "Waiting Room"
+            and sport == "Unknown"):
+        logger.info(
+            f"SYNC: Skipping likely parent (no DOB, no division, unknown sport): "
+            f"{player_name}"
+        )
+        results["skipped_parents"] = results.get("skipped_parents", 0) + 1
+        return
+    
     print(f"SYNC: Processing {player_name} for {sport}/{season}, division='{division}'", flush=True)
     logger.info(f"SYNC: Processing {player_name} for {sport}/{season}, division='{division}'")
     
@@ -655,15 +785,8 @@ def process_single_registration(
         except:
             pass
     
-    # ---- Player matching: case-insensitive name ----
-    normalized_name = " ".join(player_name.lower().split())
-    
-    existing_player = db.query(Player).filter(Player.full_name == player_name).first()
-    
-    if not existing_player:
-        existing_player = db.query(Player).filter(
-            func.lower(Player.full_name) == normalized_name
-        ).first()
+    # ---- Player matching: nickname-aware ----
+    existing_player = _find_existing_player(db, player_name)
     
     if existing_player:
         # EXISTING PLAYER
@@ -692,6 +815,15 @@ def process_single_registration(
             logger.info(f"SYNC: Updated registration for existing player: {player_name}")
         else:
             try:
+                # If this player has ever been sent a confirmation,
+                # they already have a jersey — auto-confirm the new season.
+                # Otherwise leave False so they appear in "needs email".
+                ever_confirmed = any(
+                    r.confirmation_sent
+                    for r in db.query(Registration).filter(
+                        Registration.player_id == player.id
+                    ).all()
+                )
                 new_reg = Registration(
                     player_id=player.id,
                     program=program_name,
@@ -700,7 +832,7 @@ def process_single_registration(
                     season=season,
                     order_number=order_number,
                     order_date=order_date,
-                    confirmation_sent=True
+                    confirmation_sent=ever_confirmed
                 )
                 db.add(new_reg)
                 db.flush()
@@ -718,7 +850,11 @@ def process_single_registration(
         # NEW PLAYER
         results["new_players"] += 1
         
-        normalized_player_name = " ".join(word.capitalize() for word in player_name.split())
+        # Use the stripped (no-nickname) version as the canonical name
+        normalized_player_name = _strip_nickname(player_name)
+        normalized_player_name = " ".join(
+            word.capitalize() for word in normalized_player_name.split()
+        )
         
         jersey_number = None
         if birth_year:
@@ -770,6 +906,7 @@ def sync_all_registrations(db: Session) -> dict:
         "existing_players": 0,
         "new_registrations": 0,
         "updated_registrations": 0,
+        "skipped_parents": 0,
         "errors": []
     }
     
@@ -798,6 +935,7 @@ def sync_all_registrations(db: Session) -> dict:
                 all_results["existing_players"] += result["existing_players"]
                 all_results["new_registrations"] += result["new_registrations"]
                 all_results["updated_registrations"] += result["updated_registrations"]
+                all_results["skipped_parents"] += result.get("skipped_parents", 0)
                 all_results["errors"].extend(result["errors"])
             except Exception as e:
                 print(f"SYNC ERROR: Form '{form['name']}': {e}", flush=True)
@@ -819,6 +957,7 @@ def sync_all_registrations(db: Session) -> dict:
                 all_results["existing_players"] += result["existing_players"]
                 all_results["new_registrations"] += result["new_registrations"]
                 all_results["updated_registrations"] += result["updated_registrations"]
+                all_results["skipped_parents"] += result.get("skipped_parents", 0)
                 all_results["errors"].extend(result["errors"])
             except Exception as e:
                 print(f"SYNC ERROR (fallback): Form '{form['name']}': {e}", flush=True)
