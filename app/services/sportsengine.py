@@ -127,88 +127,231 @@ def get_all_registrations() -> list:
         raise ValueError("SPORTSENGINE_ORG_ID must be set")
     
     query = """
-    query GetRegistrations($orgId: ID!) {
+    query GetOrganization($orgId: Int!) {
         organization(id: $orgId) {
-            registrationForms(first: 100) {
-                nodes {
+            id
+            name
+            registrations(perPage: 100, page: 1) {
+                pageInformation {
+                    pages
+                    count
+                    page
+                    perPage
+                }
+                results {
                     id
                     name
                     status
-                    registrationCount
                 }
             }
         }
     }
     """
     
-    data = graphql_query(query, {"orgId": org_id})
-    forms = data.get("organization", {}).get("registrationForms", {}).get("nodes", [])
+    data = graphql_query(query, {"orgId": int(org_id)})
+    org = data.get("organization", {})
+    registrations = org.get("registrations", {}).get("results", [])
     
-    logger.info(f"SYNC: Found {len(forms)} registration forms")
+    logger.info(f"SYNC: Found {len(registrations)} registration forms")
     
     return [
         {
-            "id": form["id"],
-            "name": form["name"],
-            "status": form["status"],
-            "count": form.get("registrationCount", 0)
+            "id": reg["id"],
+            "name": reg["name"],
+            "status": reg.get("status", "UNKNOWN"),
+            "count": 0
         }
-        for form in forms
+        for reg in registrations
     ]
 
 
 def get_registration_results(registration_id: str, cursor: str = None) -> dict:
     """
     Get all registration results (athletes) for a specific registration form.
-    Handles pagination via cursor.
+    Uses the profile-based query approach that matches this API's schema.
     """
-    query = """
-    query GetRegistrationResults($registrationId: ID!, $after: String) {
-        registrationForm(id: $registrationId) {
+    org_id = os.getenv("SPORTSENGINE_ORG_ID")
+    
+    page = 1 if not cursor else int(cursor)
+    
+    # First, get the registration name
+    reg_name_query = """
+    query GetRegistration($regId: ID!, $orgId: Int!) {
+        registration(id: $regId, organizationId: $orgId) {
             id
             name
-            registrations(first: 100, after: $after) {
-                pageInfo {
-                    hasNextPage
-                    endCursor
-                }
-                nodes {
-                    id
-                    createdAt
-                    updatedAt
-                    status
-                    orderNumber
-                    registrant {
-                        id
-                        firstName
-                        lastName
-                        dateOfBirth
-                        email
-                    }
-                    guardian {
-                        id
-                        firstName
-                        lastName
-                        email
-                    }
-                    answers {
-                        question {
-                            id
-                            label
-                        }
-                        value
-                    }
-                }
+        }
+    }
+    """
+    
+    registration_name = "Unknown"
+    try:
+        reg_data = graphql_query(reg_name_query, {"regId": str(registration_id), "orgId": int(org_id)})
+        registration_name = reg_data.get("registration", {}).get("name", "Unknown")
+        logger.info(f"SYNC: Registration name: {registration_name}")
+    except Exception as e:
+        logger.warning(f"Could not fetch registration name for {registration_id}: {e}")
+    
+    # Get profiles who submitted this registration
+    list_query = """
+    query GetRegistrationProfiles($orgId: Int!, $regId: String!, $page: Int!) {
+        profiles(
+            organizationId: $orgId
+            filter: {
+                key: REGISTRATION_SUBMITTED
+                value: "true"
+                source: REGISTRATIONS
+                sourceId: $regId
+                operator: EQUAL
+            }
+            page: $page
+            perPage: 50
+        ) {
+            pageInformation {
+                pages
+                count
+                page
+                perPage
+            }
+            results {
+                id
+                firstName
+                lastName
+                dateOfBirth
+                email
             }
         }
     }
     """
     
-    variables = {"registrationId": registration_id}
-    if cursor:
-        variables["after"] = cursor
+    variables = {
+        "orgId": int(org_id),
+        "regId": str(registration_id),
+        "page": page
+    }
     
-    return graphql_query(query, variables)
+    data = graphql_query(list_query, variables)
+    
+    profiles_data = data.get("profiles", {})
+    page_info = profiles_data.get("pageInformation", {})
+    profiles = profiles_data.get("results", [])
+    
+    # For each profile, get their registration answers
+    results = []
+    for i, profile in enumerate(profiles):
+        profile_id = profile.get("id")
+        
+        # Rate limit protection
+        if i > 0:
+            import time
+            time.sleep(1.5)
+        
+        detail_query = """
+        query GetProfileDetails($profileId: Int!, $orgId: Int!) {
+            profile(id: $profileId, organizationId: $orgId) {
+                id
+                firstName
+                lastName
+                dateOfBirth
+                email
+                registrationResults(perPage: 100) {
+                    results {
+                        id
+                        registrationId
+                        registrationName
+                        created
+                        updated
+                        answers {
+                            name
+                            format
+                            ...on StringRegistrationResultAnswer {
+                                stringValue: value
+                            }
+                            ...on ArrayRegistrationResultAnswer {
+                                arrayValue: value
+                            }
+                            ...on NumberRegistrationResultAnswer {
+                                numberValue: value
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        """
+        
+        try:
+            profile_data = graphql_query(detail_query, {
+                "profileId": int(profile_id),
+                "orgId": int(org_id)
+            })
+            
+            full_profile = profile_data.get("profile", {})
+            reg_results = full_profile.get("registrationResults", {}).get("results", [])
+            
+            # Find matching registration result
+            matching_result = None
+            for rr in reg_results:
+                if str(rr.get("registrationId")) == str(registration_id):
+                    matching_result = rr
+                    break
+            
+            # Build answers list
+            answers = []
+            if matching_result:
+                for ans in matching_result.get("answers", []):
+                    value = ans.get("stringValue") or ans.get("arrayValue") or ans.get("numberValue") or ""
+                    if isinstance(value, list):
+                        value = ", ".join(str(v) for v in value)
+                    answers.append({
+                        "question": {"label": ans.get("name", "")},
+                        "value": str(value)
+                    })
+            
+            results.append({
+                "id": full_profile.get("id"),
+                "registrant": {
+                    "id": full_profile.get("id"),
+                    "firstName": full_profile.get("firstName"),
+                    "lastName": full_profile.get("lastName"),
+                    "dateOfBirth": full_profile.get("dateOfBirth"),
+                    "email": full_profile.get("email")
+                },
+                "answers": answers,
+                "createdAt": matching_result.get("created") if matching_result else None,
+                "updatedAt": matching_result.get("updated") if matching_result else None
+            })
+            
+        except Exception as e:
+            logger.warning(f"Failed to get details for profile {profile_id}: {e}")
+            results.append({
+                "id": profile.get("id"),
+                "registrant": {
+                    "id": profile.get("id"),
+                    "firstName": profile.get("firstName"),
+                    "lastName": profile.get("lastName"),
+                    "dateOfBirth": profile.get("dateOfBirth"),
+                    "email": profile.get("email")
+                },
+                "answers": [],
+                "createdAt": None,
+                "updatedAt": None
+            })
+    
+    has_next = page < page_info.get("pages", 1)
+    return {
+        "registrationForm": {
+            "id": registration_id,
+            "name": registration_name,
+            "registrations": {
+                "pageInfo": {
+                    "hasNextPage": has_next,
+                    "endCursor": str(page + 1) if has_next else None
+                },
+                "nodes": results
+            }
+        }
+    }
 
 
 # ---------------------------------------------------------------------
