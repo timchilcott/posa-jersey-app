@@ -1,5 +1,4 @@
 import os
-from contextlib import asynccontextmanager
 from datetime import datetime
 from fastapi import FastAPI, Request, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -9,20 +8,9 @@ from app.database import get_db, engine
 from app.models import Base, Player, Registration
 from app.api_routes import router as admin_api_router
 from app.sync_routes import router as sync_router
-from app.scheduler import start_scheduler, stop_scheduler
 
 Base.metadata.create_all(bind=engine)
-
-
-@asynccontextmanager
-async def lifespan(app):
-    """Start background sync on boot, stop on shutdown."""
-    start_scheduler()
-    yield
-    stop_scheduler()
-
-
-app = FastAPI(title="POSA Jersey Management", lifespan=lifespan)
+app = FastAPI(title="POSA Jersey Management")
 app.include_router(admin_api_router)
 app.include_router(sync_router)
 
@@ -168,7 +156,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                                             <template x-for="reg in sortedRegs(item.registrations)" :key="reg.id">
                                                 <span class="inline-flex items-center px-1.5 py-0.5 text-xs rounded cursor-default"
                                                       :class="sportColor(reg.sport)"
-                                                      :title="reg.sport + ' \\u2013 ' + reg.season + ' (' + reg.division + ')'">
+                                                      :title="reg.sport + ' \u2013 ' + reg.season + ' (' + reg.division + ')'">
                                                     <span x-text="sportEmoji(reg.sport)"></span>
                                                     <span class="ml-0.5" x-text="shortSeason(reg.season)"></span>
                                                 </span>
@@ -272,18 +260,13 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                 }
             },
             
-            // Extract the year portion from a season string like "Fall 2025" -> 2025, or "2025" -> 2025
             getSeasonYear(season) {
                 if (!season) return '';
-                const match = season.match(/\\d{4}/);
+                const match = season.match(/\d{4}/);
                 return match ? match[0] : '';
             },
             
-            // Recompute available options for each dropdown based on all OTHER active filters.
-            // This is "faceted search" — each dropdown shows only values that would produce results.
             updateAvailableOptions() {
-                // Collect all registrations from players that pass player-level filters (search, status)
-                // Then for each dropdown, apply all reg-level filters EXCEPT that dropdown's own filter.
                 const playerFiltered = this.allPlayers.filter(p => {
                     if (this.filters.search) {
                         const s = this.filters.search.toLowerCase();
@@ -295,7 +278,6 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     return true;
                 });
                 
-                // Flatten to registration-level rows, carrying birthYear along
                 const allRegs = [];
                 playerFiltered.forEach(p => {
                     p.registrations.forEach(r => {
@@ -303,7 +285,6 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     });
                 });
                 
-                // Helper: filter regs by all reg-level filters except one
                 const matchExcept = (regs, exclude) => regs.filter(r => {
                     if (exclude !== 'sport' && this.filters.sport && r.sport !== this.filters.sport) return false;
                     if (exclude !== 'year' && this.filters.year && String(r.year) !== String(this.filters.year)) return false;
@@ -317,7 +298,6 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                 this.availableSeasons = [...new Set(matchExcept(allRegs, 'season').map(r => r.season).filter(Boolean))].filter(s => s.toLowerCase() !== 'unknown' && /[a-z]/i.test(s)).sort();
                 this.availableBirthYears = [...new Set(matchExcept(allRegs, 'birthYear').map(r => r.birthYear).filter(Boolean))].sort((a, b) => b - a);
                 
-                // Auto-clear stale selections (value no longer in available options)
                 if (this.filters.sport && !this.availableSports.includes(this.filters.sport)) this.filters.sport = '';
                 if (this.filters.year && !this.availableYears.map(String).includes(String(this.filters.year))) this.filters.year = '';
                 if (this.filters.season && !this.availableSeasons.includes(this.filters.season)) this.filters.season = '';
@@ -364,12 +344,10 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             },
             
             buildRowMeta() {
-                // Birth year alternating colors
                 const years = [...new Set(this.filteredPlayers.map(p => p.birthYear).filter(Boolean))].sort((a, b) => b - a);
                 this.birthYearColorMap = {};
                 years.forEach((y, i) => { this.birthYearColorMap[y] = i % 2 === 0; });
                 
-                // Duplicate jersey detection within birth year
                 this.duplicateJerseys = new Set();
                 const byYear = {};
                 this.filteredPlayers.forEach(p => {
@@ -384,7 +362,6 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     }
                 });
                 
-                // Build display list with year headers
                 this.displayList = [];
                 let lastYear = null;
                 const yearCounts = {};
@@ -431,14 +408,16 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             },
             
             sortedRegs(regs) {
-                const seasonOrder = { 'winter': 4, 'fall': 3, 'summer': 2, 'spring': 1 };
+                // Sort newest first. Within same year, named seasons sort by
+                // calendar position: spring(5) > summer(4) > [no keyword](3) > fall(2) > winter(1)
+                const seasonOrder = { 'spring': 5, 'summer': 4, 'fall': 2, 'winter': 1 };
                 return [...regs].sort((a, b) => {
-                    const yearA = parseInt((a.season || '').match(/\\d{4}/)?.[0] || a.year || 0);
-                    const yearB = parseInt((b.season || '').match(/\\d{4}/)?.[0] || b.year || 0);
+                    const yearA = parseInt((a.season || '').match(/\d{4}/)?.[0] || a.year || 0);
+                    const yearB = parseInt((b.season || '').match(/\d{4}/)?.[0] || b.year || 0);
                     if (yearB !== yearA) return yearB - yearA;
                     const wordA = (a.season || '').split(' ')[0].toLowerCase();
                     const wordB = (b.season || '').split(' ')[0].toLowerCase();
-                    return (seasonOrder[wordB] || 0) - (seasonOrder[wordA] || 0);
+                    return (seasonOrder[wordB] || 3) - (seasonOrder[wordA] || 3);
                 });
             },
             
@@ -503,7 +482,6 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     const data = await response.json();
                     if (data.success) {
                         alert(`Email sent to ${player.email}`);
-                        // Reload players to update email status
                         await this.loadPlayers();
                     } else {
                         alert(`Failed: ${data.message || data.error}`);
@@ -750,7 +728,6 @@ async def update_player(player_id: int, request: Request, db: Session = Depends(
     if "jersey_number" in data and data["jersey_number"] is not None:
         player.jersey_number = int(data["jersey_number"])
     
-    # Auto-assign jersey if needed
     if "birth_year" in data and data["birth_year"]:
         if not player.jersey_number or player.jersey_number == 0:
             max_jersey = db.query(func.max(Player.jersey_number)).filter(
@@ -823,7 +800,6 @@ async def cleanup_registrations(db: Session = Depends(get_db)):
     from sqlalchemy import text
     
     fixes = [
-        # Soccer '2026' → 'Spring 2026' (61 rows from manual entry)
         ("UPDATE registrations SET season = 'Spring 2026' WHERE LOWER(sport) = 'soccer' AND TRIM(season) = '2026'", "soccer '2026' → 'Spring 2026'"),
     ]
     
