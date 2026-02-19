@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 from datetime import datetime
 from fastapi import FastAPI, Request, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -8,9 +9,20 @@ from app.database import get_db, engine
 from app.models import Base, Player, Registration
 from app.api_routes import router as admin_api_router
 from app.sync_routes import router as sync_router
+from app.scheduler import start_scheduler, stop_scheduler
 
 Base.metadata.create_all(bind=engine)
-app = FastAPI(title="POSA Jersey Management")
+
+
+@asynccontextmanager
+async def lifespan(app):
+    """Start background sync on boot, stop on shutdown."""
+    start_scheduler()
+    yield
+    stop_scheduler()
+
+
+app = FastAPI(title="POSA Jersey Management", lifespan=lifespan)
 app.include_router(admin_api_router)
 app.include_router(sync_router)
 
@@ -263,7 +275,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             // Extract the year portion from a season string like "Fall 2025" -> 2025, or "2025" -> 2025
             getSeasonYear(season) {
                 if (!season) return '';
-                const match = season.match(/\d{4}/);
+                const match = season.match(/\\d{4}/);
                 return match ? match[0] : '';
             },
             
@@ -421,8 +433,8 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             sortedRegs(regs) {
                 const seasonOrder = { 'winter': 4, 'fall': 3, 'summer': 2, 'spring': 1 };
                 return [...regs].sort((a, b) => {
-                    const yearA = parseInt((a.season || '').match(/\d{4}/)?.[0] || a.year || 0);
-                    const yearB = parseInt((b.season || '').match(/\d{4}/)?.[0] || b.year || 0);
+                    const yearA = parseInt((a.season || '').match(/\\d{4}/)?.[0] || a.year || 0);
+                    const yearB = parseInt((b.season || '').match(/\\d{4}/)?.[0] || b.year || 0);
                     if (yearB !== yearA) return yearB - yearA;
                     const wordA = (a.season || '').split(' ')[0].toLowerCase();
                     const wordB = (b.season || '').split(' ')[0].toLowerCase();
