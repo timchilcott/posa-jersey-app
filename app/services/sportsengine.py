@@ -16,8 +16,8 @@ FIX (Feb 18, 2026):
 - Parent/guardian detection: skip registrants with no DOB or adult DOB
 
 FIX (Feb 19, 2026):
-- Added required `operator: EQUALS` to GraphQL FilterOption in profiles query
-  (SportsEngine made FilterOption.operator a required field)
+- Fixed GraphQL FilterOption.operator: `operator: EQUAL` (required field)
+- Incremental sync: skip expensive detail queries for profiles already in DB
 """
 
 import os
@@ -180,12 +180,19 @@ def get_all_registrations() -> list:
     ]
 
 
-def get_registration_results(registration_id: str, cursor: str = None) -> dict:
+def get_registration_results(registration_id: str, cursor: str = None, known_names: set = None) -> dict:
     """
     Get all registration results (athletes) for a specific registration form.
     Uses the profile-based query approach that matches this API's schema.
+    
+    known_names: optional set of lowercased player names already in our DB
+    for this sport+season. Detail queries are skipped for these profiles
+    (incremental sync optimisation).
     """
     org_id = os.getenv("SPORTSENGINE_ORG_ID")
+    
+    if known_names is None:
+        known_names = set()
     
     page = 1 if not cursor else int(cursor)
     
@@ -208,7 +215,7 @@ def get_registration_results(registration_id: str, cursor: str = None) -> dict:
         print(f"SYNC: Could not fetch registration name for {registration_id}: {e}", flush=True)
     
     # Get profiles who submitted this registration
-    # FIX (Feb 19, 2026): Added `operator: EQUALS` — now a required field
+    # FIX (Feb 19, 2026): operator: EQUAL — required field, correct enum value
     list_query = """
     query GetRegistrationProfiles($orgId: Int!, $regId: String!, $page: Int!) {
         profiles(
@@ -259,12 +266,44 @@ def get_registration_results(registration_id: str, cursor: str = None) -> dict:
     print(f"SYNC: Found {len(profiles)} profiles for registration {registration_id} (page {page}, total pages: {page_info.get('pages', '?')})", flush=True)
     
     # For each profile, get their registration answers
+    # OPTIMIZATION: skip detail query for profiles already in our DB
     results = []
+    skipped_count = 0
+    fetched_count = 0
     for i, profile in enumerate(profiles):
         profile_id = profile.get("id")
+        first = (profile.get("firstName") or "").strip()
+        last = (profile.get("lastName") or "").strip()
+        full_name_lower = f"{first} {last}".strip().lower()
+        
+        # Also check without nicknames
+        stripped_lower = re.sub(r'\s*\([^)]*\)\s*', ' ', full_name_lower)
+        stripped_lower = " ".join(stripped_lower.split())
+        
+        # --- Incremental sync: skip profiles we already have ---
+        if full_name_lower in known_names or stripped_lower in known_names:
+            skipped_count += 1
+            # Still return basic info so process_single_registration can
+            # update existing records (e.g. division changes)
+            results.append({
+                "id": profile.get("id"),
+                "registrant": {
+                    "id": profile.get("id"),
+                    "firstName": profile.get("firstName"),
+                    "lastName": profile.get("lastName"),
+                    "dateOfBirth": profile.get("dateOfBirth"),
+                    "email": profile.get("email")
+                },
+                "answers": [],
+                "createdAt": None,
+                "updatedAt": None
+            })
+            continue
+        
+        fetched_count += 1
         
         # Rate limit protection
-        if i > 0:
+        if fetched_count > 1:
             import time
             time.sleep(1.5)
         
@@ -359,6 +398,9 @@ def get_registration_results(registration_id: str, cursor: str = None) -> dict:
                 "createdAt": None,
                 "updatedAt": None
             })
+    
+    if skipped_count > 0:
+        print(f"SYNC: Skipped {skipped_count} existing profiles, fetched details for {fetched_count} new profiles", flush=True)
     
     has_next = page < page_info.get("pages", 1)
     return {
@@ -661,6 +703,33 @@ def _find_existing_player(db, player_name: str):
 
 
 # ---------------------------------------------------------------------
+# Helper: build set of known player names for a form (incremental sync)
+# ---------------------------------------------------------------------
+def _get_known_names_for_form(db, sport: str, season: str) -> set:
+    """
+    Return a set of lowercased player full_names that already have a
+    registration for this sport+season.  Used to skip expensive
+    per-profile detail API calls on subsequent syncs.
+    """
+    from app.models import Player, Registration
+    from sqlalchemy import func
+
+    year_match = re.search(r'(20\d{2})', season)
+    year_str = year_match.group(1) if year_match else season
+
+    rows = (
+        db.query(func.lower(Player.full_name))
+        .join(Registration, Registration.player_id == Player.id)
+        .filter(
+            func.lower(Registration.sport) == sport.lower(),
+            Registration.season.contains(year_str)
+        )
+        .all()
+    )
+    return {r[0] for r in rows}
+
+
+# ---------------------------------------------------------------------
 # Sync Logic
 # ---------------------------------------------------------------------
 def sync_registration(registration_id: str, db: Session) -> dict:
@@ -681,9 +750,10 @@ def sync_registration(registration_id: str, db: Session) -> dict:
     
     cursor = None
     registration_name = None
+    known_names = None
     
     while True:
-        data = get_registration_results(registration_id, cursor)
+        data = get_registration_results(registration_id, cursor, known_names=known_names)
         form_data = data.get("registrationForm", {})
         
         if not registration_name:
@@ -696,6 +766,12 @@ def sync_registration(registration_id: str, db: Session) -> dict:
         # Extract sport (Title Case) and season ("Spring 2026") from form name
         sport = extract_sport_from_registration_name(registration_name)
         season = extract_season_from_registration_name(registration_name)
+        
+        # Build known-names set once for incremental skip logic
+        if known_names is None:
+            known_names = _get_known_names_for_form(db, sport, season)
+            if known_names:
+                print(f"SYNC: {len(known_names)} players already in DB for {sport}/{season}", flush=True)
         
         print(f"SYNC: Processing form '{registration_name}' -> sport='{sport}', season='{season}', {len(nodes)} registrants", flush=True)
         logger.info(f"SYNC: Processing form '{registration_name}' -> sport='{sport}', season='{season}', {len(nodes)} registrants")
