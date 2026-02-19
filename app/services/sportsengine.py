@@ -566,6 +566,181 @@ def extract_player_name(registrant: dict) -> str:
 # ---------------------------------------------------------------------
 # Name normalization helpers  (NEW — Feb 18, 2026)
 # ---------------------------------------------------------------------
+
+# Common first-name variants: maps short/nickname forms to canonical names
+# and vice versa.  Used by _find_existing_player to match "Sam" ↔ "Samuel".
+_NAME_VARIANTS = {
+    "sam": ["samuel", "samantha"],
+    "samuel": ["sam"],
+    "samantha": ["sam"],
+    "mike": ["michael"],
+    "michael": ["mike"],
+    "matt": ["matthew"],
+    "matthew": ["matt"],
+    "will": ["william"],
+    "william": ["will", "bill", "billy"],
+    "bill": ["william"],
+    "billy": ["william"],
+    "bob": ["robert"],
+    "robert": ["bob", "rob", "bobby", "robbie"],
+    "rob": ["robert"],
+    "bobby": ["robert"],
+    "robbie": ["robert"],
+    "jim": ["james"],
+    "jimmy": ["james"],
+    "james": ["jim", "jimmy"],
+    "joe": ["joseph"],
+    "joseph": ["joe", "joey"],
+    "joey": ["joseph"],
+    "tom": ["thomas"],
+    "thomas": ["tom", "tommy"],
+    "tommy": ["thomas"],
+    "dan": ["daniel"],
+    "danny": ["daniel"],
+    "daniel": ["dan", "danny"],
+    "dave": ["david"],
+    "david": ["dave"],
+    "steve": ["steven", "stephen"],
+    "steven": ["steve"],
+    "stephen": ["steve"],
+    "chris": ["christopher", "christian", "christina", "christine"],
+    "christopher": ["chris"],
+    "christian": ["chris"],
+    "christina": ["chris", "tina"],
+    "christine": ["chris"],
+    "tina": ["christina"],
+    "nick": ["nicholas", "nicolas"],
+    "nicholas": ["nick"],
+    "nicolas": ["nick"],
+    "tony": ["anthony"],
+    "anthony": ["tony"],
+    "ben": ["benjamin"],
+    "benjamin": ["ben"],
+    "alex": ["alexander", "alexandra", "alexis"],
+    "alexander": ["alex"],
+    "alexandra": ["alex"],
+    "alexis": ["alex"],
+    "jake": ["jacob"],
+    "jacob": ["jake"],
+    "josh": ["joshua"],
+    "joshua": ["josh"],
+    "nate": ["nathan", "nathaniel"],
+    "nathan": ["nate"],
+    "nathaniel": ["nate"],
+    "zach": ["zachary"],
+    "zachary": ["zach", "zack"],
+    "zack": ["zachary"],
+    "ed": ["edward", "edwin"],
+    "edward": ["ed", "eddie"],
+    "eddie": ["edward"],
+    "charlie": ["charles"],
+    "charles": ["charlie", "chuck"],
+    "chuck": ["charles"],
+    "rick": ["richard"],
+    "rich": ["richard"],
+    "richard": ["rick", "rich", "dick"],
+    "dick": ["richard"],
+    "pat": ["patrick", "patricia"],
+    "patrick": ["pat"],
+    "patricia": ["pat", "patty", "tricia"],
+    "patty": ["patricia"],
+    "tricia": ["patricia"],
+    "jon": ["jonathan"],
+    "jonathan": ["jon"],
+    "jack": ["john", "jackson"],
+    "john": ["jack", "johnny"],
+    "johnny": ["john"],
+    "jackson": ["jack"],
+    "kate": ["katherine", "kathryn", "kaitlyn"],
+    "katie": ["katherine", "kathryn", "kaitlyn"],
+    "katherine": ["kate", "katie", "kathy"],
+    "kathryn": ["kate", "katie", "kathy"],
+    "kathy": ["katherine", "kathryn"],
+    "kaitlyn": ["kate", "katie"],
+    "liz": ["elizabeth"],
+    "beth": ["elizabeth"],
+    "elizabeth": ["liz", "beth", "lizzy", "betsy"],
+    "lizzy": ["elizabeth"],
+    "betsy": ["elizabeth"],
+    "meg": ["megan", "margaret"],
+    "megan": ["meg"],
+    "margaret": ["meg", "maggie", "peggy"],
+    "maggie": ["margaret"],
+    "peggy": ["margaret"],
+    "jen": ["jennifer"],
+    "jenny": ["jennifer"],
+    "jennifer": ["jen", "jenny"],
+    "jess": ["jessica"],
+    "jessica": ["jess", "jessie"],
+    "jessie": ["jessica"],
+    "mandy": ["amanda"],
+    "amanda": ["mandy"],
+    "becky": ["rebecca"],
+    "rebecca": ["becky"],
+    "abby": ["abigail"],
+    "abigail": ["abby"],
+    "maddie": ["madeline", "madison"],
+    "madeline": ["maddie"],
+    "madison": ["maddie"],
+    "andy": ["andrew"],
+    "drew": ["andrew"],
+    "andrew": ["andy", "drew"],
+    "greg": ["gregory"],
+    "gregory": ["greg"],
+    "tim": ["timothy"],
+    "timothy": ["tim"],
+    "ted": ["theodore", "edward"],
+    "theodore": ["ted", "teddy"],
+    "teddy": ["theodore"],
+    "max": ["maxwell", "maximilian"],
+    "maxwell": ["max"],
+    "maximilian": ["max"],
+    "eli": ["elijah", "elias"],
+    "elijah": ["eli"],
+    "elias": ["eli"],
+    "em": ["emily", "emma"],
+    "emily": ["em"],
+    "emma": ["em"],
+    "izzy": ["isabella", "isaiah"],
+    "isabella": ["izzy", "bella"],
+    "bella": ["isabella"],
+    "isaiah": ["izzy"],
+    "gabe": ["gabriel"],
+    "gabriel": ["gabe"],
+    "abe": ["abraham"],
+    "abraham": ["abe"],
+    "vince": ["vincent"],
+    "vincent": ["vince", "vinny"],
+    "vinny": ["vincent"],
+    "ray": ["raymond"],
+    "raymond": ["ray"],
+    "larry": ["lawrence"],
+    "lawrence": ["larry"],
+    "harry": ["harold", "harrison"],
+    "harold": ["harry"],
+    "harrison": ["harry"],
+    "hank": ["henry"],
+    "henry": ["hank"],
+    "phil": ["philip", "phillip"],
+    "philip": ["phil"],
+    "phillip": ["phil"],
+    "wes": ["wesley"],
+    "wesley": ["wes"],
+    "cody": ["dakota"],  # less common but seen in youth sports
+    "ty": ["tyler", "tyson"],
+    "tyler": ["ty"],
+    "tyson": ["ty"],
+    "kat": ["katrina", "katelyn"],
+    "katrina": ["kat"],
+    "katelyn": ["kat", "kate"],
+}
+
+
+def _get_name_variants(first_name: str) -> list:
+    """Return a list of common variant first names for the given name."""
+    return _NAME_VARIANTS.get(first_name.lower(), [])
+
+
 def _strip_nickname(name: str) -> str:
     """
     Remove parenthetical nicknames from a name.
@@ -698,6 +873,26 @@ def _find_existing_player(db, player_name: str):
                 f"DB player '{candidate.full_name}' (both strip to '{stripped_incoming}')"
             )
             return candidate
+
+    # 5. Common name variant matching: "Sam Crabtree" ↔ "Samuel Crabtree"
+    parts = stripped_incoming.split()
+    if len(parts) >= 2:
+        first_name = parts[0]
+        last_parts = " ".join(parts[1:])
+        variants = _get_name_variants(first_name)
+        for variant in variants:
+            variant_full = f"{variant.capitalize()} {last_parts}"
+            # Try case-insensitive match
+            variant_lower = variant_full.lower()
+            player = db.query(Player).filter(
+                func.lower(Player.full_name) == variant_lower
+            ).first()
+            if player:
+                logger.info(
+                    f"SYNC: Name variant match: incoming '{player_name}' matched "
+                    f"existing '{player.full_name}' via variant '{variant_full}'"
+                )
+                return player
 
     return None
 
