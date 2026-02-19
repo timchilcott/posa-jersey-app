@@ -215,7 +215,7 @@ def get_registration_results(registration_id: str, cursor: str = None) -> dict:
             organizationId: $orgId
             filter: {
                 key: REGISTRATION_SUBMITTED
-                operator: EQUALS
+                operator: EQUAL
                 value: "true"
                 source: REGISTRATIONS
                 sourceId: $regId
