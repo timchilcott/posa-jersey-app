@@ -208,6 +208,10 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                         <input type="text" x-model="editingPlayer.name" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                     </div>
                     <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Jersey Number</label>
+                        <input type="number" x-model="editingPlayer.jersey" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Birth Year</label>
                         <input type="number" x-model="editingPlayer.birthYear" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                     </div>
