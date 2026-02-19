@@ -449,7 +449,8 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                         body: JSON.stringify({
                             full_name: this.editingPlayer.name,
                             parent_email: this.editingPlayer.email,
-                            birth_year: this.editingPlayer.birthYear
+                            birth_year: this.editingPlayer.birthYear,
+                            jersey_number: this.editingPlayer.jersey
                         })
                     });
                     const data = await response.json();
@@ -734,6 +735,8 @@ async def update_player(player_id: int, request: Request, db: Session = Depends(
         player.parent_email = data["parent_email"]
     if "birth_year" in data:
         player.birth_year = data["birth_year"]
+    if "jersey_number" in data and data["jersey_number"] is not None:
+        player.jersey_number = int(data["jersey_number"])
     
     # Auto-assign jersey if needed
     if "birth_year" in data and data["birth_year"]:
