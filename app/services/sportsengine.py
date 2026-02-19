@@ -18,6 +18,9 @@ FIX (Feb 18, 2026):
 FIX (Feb 19, 2026):
 - Fixed GraphQL FilterOption.operator: `operator: EQUAL` (required field)
 - Incremental sync: skip expensive detail queries for profiles already in DB
+- Fixed process_webhook: always trigger sync on any incoming webhook POST
+  (previous version filtered on resourceType/resourceOperation which didn't
+  match SportsEngine's actual payload format)
 """
 
 import os
@@ -1249,28 +1252,25 @@ def sync_all_registrations(db: Session) -> dict:
 def process_webhook(payload: dict, db: Session) -> dict:
     """
     Process a webhook notification from SportsEngine.
-    
-    Webhook payload format:
-    {
-        "organizationId": 12345,
-        "resourceOperation": "create" | "update" | "delete",
-        "resourceId": "uuid",
-        "resourceType": "registration" | "event" | etc.
-    }
+
+    Always triggers a full sync on any incoming webhook POST, regardless
+    of payload structure.  SportsEngine's actual payload format varies
+    and filtering on specific field names (resourceType, resourceOperation)
+    caused missed syncs.  A full sync is cheap thanks to the incremental
+    known_names optimization.
     """
-    resource_type = payload.get("resourceType")
-    operation = payload.get("resourceOperation")
-    resource_id = payload.get("resourceId")
-    
-    logger.info(f"Webhook received: {operation} {resource_type} {resource_id}")
-    
-    if resource_type == "registration" and operation in ["create", "update"]:
-        # Trigger a full sync to pick up any new/changed registrations
-        try:
-            results = sync_all_registrations(db)
-            return {"action": "synced", "results": results}
-        except Exception as e:
-            logger.error(f"Webhook sync failed: {e}", exc_info=True)
-            return {"action": "error", "message": str(e)}
-    
-    return {"action": "ignored", "reason": f"Unhandled: {operation} {resource_type}"}
+    # Log whatever we got for debugging
+    resource_type = payload.get("resourceType") or payload.get("type") or "unknown"
+    operation = payload.get("resourceOperation") or payload.get("operation") or payload.get("action") or "unknown"
+    resource_id = payload.get("resourceId") or payload.get("id") or "unknown"
+
+    logger.info(f"WEBHOOK: Received — operation={operation} type={resource_type} id={resource_id}")
+    logger.info(f"WEBHOOK: Full payload: {payload}")
+
+    # Always sync — don't filter on resource type or operation
+    try:
+        results = sync_all_registrations(db)
+        return {"action": "synced", "results": results}
+    except Exception as e:
+        logger.error(f"WEBHOOK: Sync failed: {e}", exc_info=True)
+        return {"action": "error", "message": str(e)}
