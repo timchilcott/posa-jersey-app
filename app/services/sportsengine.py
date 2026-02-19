@@ -14,6 +14,10 @@ TARGETED FIXES (Feb 2026):
 FIX (Feb 18, 2026):
 - Nickname-aware player matching: "Emeryn (emmy) Miskin" matches "Emeryn Miskin"
 - Parent/guardian detection: skip registrants with no DOB or adult DOB
+
+FIX (Feb 19, 2026):
+- Added required `operator: EQUALS` to GraphQL FilterOption in profiles query
+  (SportsEngine made FilterOption.operator a required field)
 """
 
 import os
@@ -204,12 +208,14 @@ def get_registration_results(registration_id: str, cursor: str = None) -> dict:
         print(f"SYNC: Could not fetch registration name for {registration_id}: {e}", flush=True)
     
     # Get profiles who submitted this registration
+    # FIX (Feb 19, 2026): Added `operator: EQUALS` — now a required field
     list_query = """
     query GetRegistrationProfiles($orgId: Int!, $regId: String!, $page: Int!) {
         profiles(
             organizationId: $orgId
             filter: {
                 key: REGISTRATION_SUBMITTED
+                operator: EQUALS
                 value: "true"
                 source: REGISTRATIONS
                 sourceId: $regId
