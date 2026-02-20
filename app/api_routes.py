@@ -1,6 +1,7 @@
 """
 New Admin API Routes for Drill-Down Interface
 """
+import re
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -26,6 +27,14 @@ def is_volunteer_division(division):
         return False
     d = division.lower()
     return any(v.lower() in d for v in VOLUNTEER_DIVISIONS)
+
+
+def _season_year(reg):
+    """Extract year from season string like '2026' or 'Spring 2026', fall back to created_at."""
+    m = re.search(r'20\d{2}', reg.season or '')
+    if m:
+        return int(m.group())
+    return reg.created_at.year if reg.created_at else None
 
 
 @router.get("/birth-year-groups")
@@ -268,7 +277,7 @@ def get_filtered_players(
                 'id': reg.id,
                 'sport': reg.sport,
                 'division': reg.division,
-                'year': reg.created_at.year if reg.created_at else None,
+                'year': _season_year(reg),
                 'season': reg.season,
                 'emailSent': reg.confirmation_sent
             } for reg in registrations]
