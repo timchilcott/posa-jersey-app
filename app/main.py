@@ -316,17 +316,15 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                         if (!matchesName && !matchesEmail && !matchesJersey) return false;
                     }
                     if (this.filters.birthYear && player.birthYear != this.filters.birthYear) return false;
-                    if (this.filters.sport) {
-                        const hasSport = player.registrations.some(r => r.sport === this.filters.sport);
-                        if (!hasSport) return false;
-                    }
-                    if (this.filters.year) {
-                        const hasYear = player.registrations.some(r => r.year == this.filters.year);
-                        if (!hasYear) return false;
-                    }
-                    if (this.filters.season) {
-                        const hasSeason = player.registrations.some(r => r.season === this.filters.season);
-                        if (!hasSeason) return false;
+                    // Combined registration filter: sport + year + season must match the SAME registration
+                    if (this.filters.sport || this.filters.year || this.filters.season) {
+                        const matchingReg = player.registrations.some(r => {
+                            if (this.filters.sport && r.sport !== this.filters.sport) return false;
+                            if (this.filters.year && r.year != this.filters.year) return false;
+                            if (this.filters.season && r.season !== this.filters.season) return false;
+                            return true;
+                        });
+                        if (!matchingReg) return false;
                     }
                     
                     if (this.filters.status === 'needsEmail' && player.emailSent) return false;
