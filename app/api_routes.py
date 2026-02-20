@@ -5,7 +5,7 @@ import re
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import func, extract
+from sqlalchemy import func, extract, cast, Integer
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from app.database import get_db
@@ -37,6 +37,11 @@ def _season_year(reg):
     return reg.created_at.year if reg.created_at else None
 
 
+def _season_contains_year(year):
+    """SQLAlchemy filter: season field contains the given year (e.g. '2026' matches '2026', 'Spring 2026', 'Fall 2026')."""
+    return Registration.season.ilike(f'%{year}%')
+
+
 @router.get("/birth-year-groups")
 def get_birth_year_groups(db: Session = Depends(get_db)):
     """
@@ -56,12 +61,12 @@ def get_birth_year_groups(db: Session = Depends(get_db)):
         if not birth_year:
             continue
             
-        # Count players active in current year (have registrations in 2026)
+        # Count players active in current year (have registrations with season containing 2026)
         active_2026 = db.query(func.count(Player.id.distinct())).join(
             Registration
         ).filter(
             Player.birth_year == birth_year,
-            extract('year', Registration.created_at) == current_year
+            _season_contains_year(current_year)
         ).scalar() or 0
         
         # Count players needing emails
@@ -70,7 +75,7 @@ def get_birth_year_groups(db: Session = Depends(get_db)):
         ).filter(
             Player.birth_year == birth_year,
             Registration.confirmation_sent == False,
-            extract('year', Registration.created_at) == current_year
+            _season_contains_year(current_year)
         ).scalar() or 0
         
         groups.append({
@@ -105,7 +110,7 @@ def get_birth_year_stats(birth_year: int, db: Session = Depends(get_db)):
         Registration
     ).filter(
         Player.birth_year == birth_year,
-        extract('year', Registration.created_at) == 2026
+        _season_contains_year(2026)
     ).scalar() or 0
     
     # Multi-sport athletes (players with >1 registration in 2026)
@@ -113,7 +118,7 @@ def get_birth_year_stats(birth_year: int, db: Session = Depends(get_db)):
         Registration
     ).filter(
         Player.birth_year == birth_year,
-        extract('year', Registration.created_at) == 2026
+        _season_contains_year(2026)
     ).group_by(Player.id).having(func.count(Registration.id) > 1).count()
     
     # Needs email
@@ -122,18 +127,32 @@ def get_birth_year_stats(birth_year: int, db: Session = Depends(get_db)):
     ).filter(
         Player.birth_year == birth_year,
         Registration.confirmation_sent == False,
-        extract('year', Registration.created_at) == 2026
+        _season_contains_year(2026)
     ).scalar() or 0
     
-    # Available years (years with registrations for this birth year)
-    years = db.query(
-        extract('year', Registration.created_at).label('year'),
-        func.count(Player.id.distinct()).label('count')
+    # Available years - extract year from season field using regex
+    # Get all distinct seasons for this birth year, then extract years in Python
+    seasons = db.query(
+        Registration.season
     ).join(Player).filter(
         Player.birth_year == birth_year
-    ).group_by('year').all()
+    ).distinct().all()
     
-    available_years = [{'value': int(year), 'count': count} for year, count in years if year]
+    year_counts = {}
+    for (season,) in seasons:
+        m = re.search(r'20\d{2}', season or '')
+        if m:
+            y = int(m.group())
+            # Count distinct players for this year
+            cnt = db.query(func.count(Player.id.distinct())).join(
+                Registration
+            ).filter(
+                Player.birth_year == birth_year,
+                _season_contains_year(y)
+            ).scalar() or 0
+            year_counts[y] = cnt
+    
+    available_years = [{'value': y, 'count': c} for y, c in year_counts.items()]
     available_years.sort(key=lambda x: x['value'], reverse=True)
     
     # Available sports
@@ -193,7 +212,7 @@ def get_filtered_players(
         query = query.filter(Player.birth_year == birth_year)
     
     if year:
-        query = query.filter(extract('year', Registration.created_at) == year)
+        query = query.filter(_season_contains_year(year))
     
     if sport:
         # Normalize sport name
@@ -252,7 +271,7 @@ def get_filtered_players(
         reg_query = db.query(Registration).filter(Registration.player_id == player.id)
         
         if year:
-            reg_query = reg_query.filter(extract('year', Registration.created_at) == year)
+            reg_query = reg_query.filter(Registration.season.ilike(f'%{year}%'))
         if sport:
             sport_name = sport.replace('_', ' ').title()
             reg_query = reg_query.filter(Registration.sport == sport_name)
@@ -511,7 +530,7 @@ def get_admin_summary(db: Session = Depends(get_db)):
     
     active_2026 = db.query(func.count(Player.id.distinct())).join(
         Registration
-    ).filter(extract('year', Registration.created_at) == 2026).scalar() or 0
+    ).filter(_season_contains_year(2026)).scalar() or 0
     
     return {
         'totalPlayers': total_players,
