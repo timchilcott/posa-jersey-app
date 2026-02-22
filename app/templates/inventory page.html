@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POSA Equipment Inventory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    pines: { 50: '#f0f7f0', 100: '#d9edd9', 200: '#b3dbb3', 300: '#7fc07f', 400: '#5aa55a', 500: '#3C7939', 600: '#2f6130', 700: '#254d26', 800: '#1c3a1d', 900: '#142914' }
+                }
+            }
+        }
+    }
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .low-stock-pulse { animation: pulse-warn 2s ease-in-out infinite; }
+        @keyframes pulse-warn {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50" x-data="inventoryApp()" x-init="init()" x-cloak>
+
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-8">
+                    <span class="text-lg font-bold text-gray-900">Equipment Inventory</span>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <a href="/admin" class="text-pines-500 hover:text-pines-700 px-3 py-2 text-sm font-medium">&larr; Players</a>
+                    <button @click="openAddModal()" class="bg-pines-500 hover:bg-pines-600 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Add Item</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Stats Cards -->
+    <div class="max-w-7xl mx-auto px-4 py-4">
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+                <div class="text-2xl font-bold text-gray-900" x-text="summary.totalItems">0</div>
+                <div class="text-xs text-gray-500 mt-1">Item Types</div>
+            </div>
+            <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+                <div class="text-2xl font-bold text-gray-900" x-text="summary.totalUnits">0</div>
+                <div class="text-xs text-gray-500 mt-1">Total Units</div>
+            </div>
+            <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+                <div class="text-2xl font-bold text-pines-600" x-text="summary.availableUnits">0</div>
+                <div class="text-xs text-gray-500 mt-1">Available</div>
+            </div>
+            <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+                <div class="text-2xl font-bold text-blue-600" x-text="summary.checkedOut">0</div>
+                <div class="text-xs text-gray-500 mt-1">Checked Out</div>
+            </div>
+            <div class="bg-white rounded-lg border border-gray-200 p-4 text-center cursor-pointer" @click="filters.lowStock = !filters.lowStock; applyFilters()" :class="filters.lowStock ? 'ring-2 ring-orange-400 bg-orange-50' : ''">
+                <div class="text-2xl font-bold" :class="summary.lowStock > 0 ? 'text-orange-500 low-stock-pulse' : 'text-gray-400'" x-text="summary.lowStock">0</div>
+                <div class="text-xs text-gray-500 mt-1">Low Stock</div>
+            </div>
+            <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+                <div class="text-2xl font-bold" :class="summary.poorCondition > 0 ? 'text-red-500' : 'text-gray-400'" x-text="summary.poorCondition">0</div>
+                <div class="text-xs text-gray-500 mt-1">Needs Replace</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 py-3">
+            <div class="flex flex-wrap gap-3 items-end">
+                <div class="flex-1 min-w-48">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Search</label>
+                    <input type="search" x-model="filters.search" @input.debounce.300ms="applyFilters()" placeholder="Name, location, notes..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm">
+                </div>
+                <div class="w-36">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Category</label>
+                    <select x-model="filters.category" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
+                        <option value="">All</option>
+                        <template x-for="cat in categories" :key="cat.name">
+                            <option :value="cat.name" x-text="cat.emoji + ' ' + cat.name"></option>
+                        </template>
+                    </select>
+                </div>
+                <div class="w-36">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Sport</label>
+                    <select x-model="filters.sport" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
+                        <option value="">All</option>
+                        <option value="Soccer">⚽ Soccer</option>
+                        <option value="Basketball">🏀 Basketball</option>
+                        <option value="Flag Football">🏈 Flag Football</option>
+                        <option value="Volleyball">🏐 Volleyball</option>
+                        <option value="Baseball">⚾ Baseball</option>
+                        <option value="Softball">🥎 Softball</option>
+                        <option value="General">🏃 General</option>
+                    </select>
+                </div>
+                <div class="w-28">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Condition</label>
+                    <select x-model="filters.condition" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
+                        <option value="">All</option>
+                        <option value="New">New</option>
+                        <option value="Good">Good</option>
+                        <option value="Fair">Fair</option>
+                        <option value="Poor">Poor</option>
+                        <option value="Replace">Replace</option>
+                    </select>
+                </div>
+                <button @click="clearFilters()" class="px-3 py-2 text-gray-500 hover:text-gray-700 text-sm">Clear</button>
+            </div>
+            <div class="mt-2 text-sm text-gray-500">
+                Showing <span class="font-medium" x-text="filteredItems.length"></span> of <span x-text="allItems.length"></span> items
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Cards View (when no filter) -->
+    <div class="max-w-7xl mx-auto px-4 py-6" x-show="!hasActiveFilter() && summary.categories.length > 0">
+        <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">By Category</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            <template x-for="cat in summary.categories" :key="cat.name">
+                <div class="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer" @click="filters.category = cat.name; applyFilters()">
+                    <div class="text-2xl mb-1" x-text="cat.emoji"></div>
+                    <div class="text-sm font-semibold text-gray-900" x-text="cat.name"></div>
+                    <div class="flex items-baseline space-x-2 mt-2">
+                        <span class="text-lg font-bold text-gray-900" x-text="cat.totalUnits"></span>
+                        <span class="text-xs text-gray-400">total</span>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">
+                        <span x-text="cat.availableUnits"></span> available &middot;
+                        <span x-text="cat.itemCount"></span> types
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Items Table -->
+    <main class="max-w-7xl mx-auto px-4 py-4">
+        <div x-show="loading" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pines-500"></div>
+            <p class="mt-2 text-gray-500 text-sm">Loading inventory...</p>
+        </div>
+
+        <div x-show="!loading" class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 table-fixed">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="w-64 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                            <th class="w-24 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                            <th class="w-24 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Available</th>
+                            <th class="w-24 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Out</th>
+                            <th class="w-24 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Condition</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                            <th class="w-40 px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <template x-for="item in filteredItems" :key="item.id">
+                            <tr class="hover:bg-gray-50" :class="item.lowStock ? 'bg-orange-50' : ''">
+                                <!-- Item info -->
+                                <td class="px-4 py-3">
+                                    <div class="flex items-start space-x-2">
+                                        <span class="text-lg" x-text="categoryEmoji(item.category)"></span>
+                                        <div>
+                                            <div class="text-sm font-semibold text-gray-900" x-text="item.name"></div>
+                                            <div class="flex items-center space-x-2 mt-0.5">
+                                                <span class="text-xs text-gray-400" x-text="item.category"></span>
+                                                <template x-if="item.sport">
+                                                    <span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600" x-text="item.sport"></span>
+                                                </template>
+                                            </div>
+                                            <template x-if="item.notes">
+                                                <div class="text-xs text-gray-400 mt-0.5 truncate max-w-xs" x-text="item.notes"></div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </td>
+                                <!-- Total -->
+                                <td class="px-3 py-3 text-center">
+                                    <span class="text-sm font-bold text-gray-800" x-text="item.quantityTotal"></span>
+                                </td>
+                                <!-- Available -->
+                                <td class="px-3 py-3 text-center">
+                                    <span class="text-sm font-bold" :class="item.lowStock ? 'text-orange-600' : 'text-pines-600'" x-text="item.quantityAvailable"></span>
+                                    <template x-if="item.lowStock">
+                                        <span class="block text-xs text-orange-500">Low!</span>
+                                    </template>
+                                </td>
+                                <!-- Checked Out -->
+                                <td class="px-3 py-3 text-center">
+                                    <span class="text-sm" :class="item.checkedOut > 0 ? 'text-blue-600 font-medium' : 'text-gray-300'" x-text="item.checkedOut"></span>
+                                </td>
+                                <!-- Condition -->
+                                <td class="px-3 py-3 text-center">
+                                    <span class="px-2 py-0.5 text-xs font-medium rounded-full" :class="conditionClass(item.condition)" x-text="item.condition || '-'"></span>
+                                </td>
+                                <!-- Location -->
+                                <td class="px-3 py-3">
+                                    <span class="text-sm text-gray-600" x-text="item.location || '-'"></span>
+                                </td>
+                                <!-- Actions -->
+                                <td class="px-3 py-3 text-right">
+                                    <div class="flex items-center justify-end space-x-1">
+                                        <button @click="quickCheckout(item)" class="p-1.5 rounded hover:bg-blue-50 text-blue-500" title="Check out" :disabled="item.quantityAvailable <= 0">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                                        </button>
+                                        <button @click="quickReturn(item)" class="p-1.5 rounded hover:bg-green-50 text-green-500" title="Return" :disabled="item.checkedOut <= 0">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                                        </button>
+                                        <button @click="openEditModal(item)" class="p-1.5 rounded hover:bg-gray-100 text-pines-500" title="Edit">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                        </button>
+                                        <button @click="deleteItem(item)" class="p-1.5 rounded hover:bg-red-50 text-red-400" title="Delete">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+            <div x-show="filteredItems.length === 0 && !loading" class="text-center py-12">
+                <div class="text-gray-400 text-5xl mb-3">📦</div>
+                <h3 class="text-lg font-medium text-gray-900 mb-1">No equipment found</h3>
+                <p class="text-gray-500 text-sm">Add your first item or adjust filters</p>
+                <button @click="openAddModal()" class="mt-4 bg-pines-500 hover:bg-pines-600 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Add Item</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add/Edit Modal -->
+    <div x-show="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showModal = false" x-transition>
+        <div class="bg-white rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-xl">
+            <h3 class="text-lg font-bold text-gray-900 mb-4" x-text="editingItem ? 'Edit Item' : 'Add Equipment'"></h3>
+
+            <div class="space-y-4">
+                <!-- Name -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Name *</label>
+                    <input type="text" x-model="form.name" placeholder="e.g. Size 4 Soccer Balls" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm">
+                </div>
+
+                <!-- Category + Sport row -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Category *</label>
+                        <select x-model="form.category" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
+                            <option value="">Select...</option>
+                            <template x-for="cat in categories" :key="cat.name">
+                                <option :value="cat.name" x-text="cat.emoji + ' ' + cat.name"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Sport</label>
+                        <select x-model="form.sport" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
+                            <option value="">General</option>
+                            <option value="Soccer">Soccer</option>
+                            <option value="Basketball">Basketball</option>
+                            <option value="Flag Football">Flag Football</option>
+                            <option value="Volleyball">Volleyball</option>
+                            <option value="Baseball">Baseball</option>
+                            <option value="Softball">Softball</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Quantities row -->
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Total Qty *</label>
+                        <input type="number" x-model.number="form.quantity_total" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Available</label>
+                        <input type="number" x-model.number="form.quantity_available" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Min Alert</label>
+                        <input type="number" x-model.number="form.min_quantity" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
+                    </div>
+                </div>
+
+                <!-- Condition + Location row -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Condition</label>
+                        <select x-model="form.condition" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
+                            <option value="New">New</option>
+                            <option value="Good">Good</option>
+                            <option value="Fair">Fair</option>
+                            <option value="Poor">Poor</option>
+                            <option value="Replace">Replace</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Location</label>
+                        <input type="text" x-model="form.location" placeholder="e.g. Shed A, Bin 3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
+                    </div>
+                </div>
+
+                <!-- Cost -->
+                <div class="w-1/2">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Cost per Unit ($)</label>
+                    <input type="number" x-model.number="form.cost_per_unit" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
+                </div>
+
+                <!-- Notes -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Notes</label>
+                    <textarea x-model="form.notes" rows="2" placeholder="Any extra details..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm"></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+                <button @click="showModal = false" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">Cancel</button>
+                <button @click="saveItem()" class="px-4 py-2 bg-pines-500 text-white rounded-lg hover:bg-pines-600 text-sm font-medium">
+                    <span x-text="editingItem ? 'Save Changes' : 'Add Item'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function inventoryApp() {
+        return {
+            loading: true,
+            showModal: false,
+            editingItem: null,
+            allItems: [],
+            filteredItems: [],
+            categories: [],
+            summary: { totalItems: 0, totalUnits: 0, availableUnits: 0, checkedOut: 0, lowStock: 0, poorCondition: 0, categories: [] },
+            filters: { search: '', category: '', sport: '', condition: '', lowStock: false },
+            form: {
+                name: '', category: '', sport: '', quantity_total: 0, quantity_available: 0,
+                condition: 'Good', location: '', notes: '', min_quantity: 0, cost_per_unit: null
+            },
+
+            async init() {
+                await Promise.all([this.loadCategories(), this.loadItems(), this.loadSummary()]);
+                this.loading = false;
+            },
+
+            async loadCategories() {
+                try {
+                    const res = await fetch('/api/inventory/categories');
+                    const data = await res.json();
+                    this.categories = data.categories;
+                } catch (e) { console.error('Failed to load categories:', e); }
+            },
+
+            async loadItems() {
+                try {
+                    const res = await fetch('/api/inventory/items');
+                    const data = await res.json();
+                    this.allItems = data.items;
+                    this.applyFilters();
+                } catch (e) { console.error('Failed to load items:', e); }
+            },
+
+            async loadSummary() {
+                try {
+                    const res = await fetch('/api/inventory/summary');
+                    this.summary = await res.json();
+                } catch (e) { console.error('Failed to load summary:', e); }
+            },
+
+            applyFilters() {
+                this.filteredItems = this.allItems.filter(item => {
+                    if (this.filters.search) {
+                        const s = this.filters.search.toLowerCase();
+                        if (!item.name.toLowerCase().includes(s) && !(item.location || '').toLowerCase().includes(s) && !(item.notes || '').toLowerCase().includes(s)) return false;
+                    }
+                    if (this.filters.category && item.category !== this.filters.category) return false;
+                    if (this.filters.sport && (item.sport || '') !== this.filters.sport) return false;
+                    if (this.filters.condition && item.condition !== this.filters.condition) return false;
+                    if (this.filters.lowStock && !item.lowStock) return false;
+                    return true;
+                });
+            },
+
+            hasActiveFilter() {
+                return this.filters.search || this.filters.category || this.filters.sport || this.filters.condition || this.filters.lowStock;
+            },
+
+            clearFilters() {
+                this.filters = { search: '', category: '', sport: '', condition: '', lowStock: false };
+                this.applyFilters();
+            },
+
+            resetForm() {
+                this.form = { name: '', category: '', sport: '', quantity_total: 0, quantity_available: 0, condition: 'Good', location: '', notes: '', min_quantity: 0, cost_per_unit: null };
+            },
+
+            openAddModal() {
+                this.editingItem = null;
+                this.resetForm();
+                this.showModal = true;
+            },
+
+            openEditModal(item) {
+                this.editingItem = item;
+                this.form = {
+                    name: item.name,
+                    category: item.category,
+                    sport: item.sport || '',
+                    quantity_total: item.quantityTotal,
+                    quantity_available: item.quantityAvailable,
+                    condition: item.condition || 'Good',
+                    location: item.location || '',
+                    notes: item.notes || '',
+                    min_quantity: item.minQuantity || 0,
+                    cost_per_unit: item.costPerUnit
+                };
+                this.showModal = true;
+            },
+
+            async saveItem() {
+                if (!this.form.name || !this.form.category) {
+                    alert('Name and category are required'); return;
+                }
+                try {
+                    const url = this.editingItem
+                        ? `/api/inventory/items/${this.editingItem.id}`
+                        : '/api/inventory/items';
+                    const method = this.editingItem ? 'PUT' : 'POST';
+                    const res = await fetch(url, {
+                        method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(this.form)
+                    });
+                    if (res.ok) {
+                        this.showModal = false;
+                        await Promise.all([this.loadItems(), this.loadSummary()]);
+                    } else {
+                        const err = await res.json();
+                        alert(err.detail || 'Failed to save');
+                    }
+                } catch (e) { alert('Error saving item'); console.error(e); }
+            },
+
+            async deleteItem(item) {
+                if (!confirm(`Delete "${item.name}"? This cannot be undone.`)) return;
+                try {
+                    await fetch(`/api/inventory/items/${item.id}`, { method: 'DELETE' });
+                    await Promise.all([this.loadItems(), this.loadSummary()]);
+                } catch (e) { alert('Failed to delete'); }
+            },
+
+            async quickCheckout(item) {
+                if (item.quantityAvailable <= 0) return;
+                const qty = prompt(`Check out how many "${item.name}"? (${item.quantityAvailable} available)`, '1');
+                if (!qty) return;
+                try {
+                    const res = await fetch(`/api/inventory/items/${item.id}/checkout`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ quantity: parseInt(qty) })
+                    });
+                    if (res.ok) {
+                        await Promise.all([this.loadItems(), this.loadSummary()]);
+                    } else {
+                        const err = await res.json();
+                        alert(err.detail || 'Failed');
+                    }
+                } catch (e) { alert('Error'); }
+            },
+
+            async quickReturn(item) {
+                if (item.checkedOut <= 0) return;
+                const qty = prompt(`Return how many "${item.name}"? (${item.checkedOut} checked out)`, '1');
+                if (!qty) return;
+                try {
+                    const res = await fetch(`/api/inventory/items/${item.id}/return`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ quantity: parseInt(qty) })
+                    });
+                    if (res.ok) {
+                        await Promise.all([this.loadItems(), this.loadSummary()]);
+                    } else {
+                        const err = await res.json();
+                        alert(err.detail || 'Failed');
+                    }
+                } catch (e) { alert('Error'); }
+            },
+
+            categoryEmoji(category) {
+                const cat = this.categories.find(c => c.name === category);
+                return cat ? cat.emoji : '📦';
+            },
+
+            conditionClass(condition) {
+                const map = {
+                    'New': 'bg-blue-100 text-blue-700',
+                    'Good': 'bg-green-100 text-green-700',
+                    'Fair': 'bg-yellow-100 text-yellow-700',
+                    'Poor': 'bg-orange-100 text-orange-700',
+                    'Replace': 'bg-red-100 text-red-700'
+                };
+                return map[condition] || 'bg-gray-100 text-gray-600';
+            }
+        }
+    }
+    </script>
+</body>
+</html>
