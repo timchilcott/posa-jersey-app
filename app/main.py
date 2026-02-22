@@ -8,11 +8,13 @@ from app.database import get_db, engine
 from app.models import Base, Player, Registration
 from app.api_routes import router as admin_api_router
 from app.sync_routes import router as sync_router
+from app.inventory_routes import router as inventory_router
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="POSA Jersey Management")
 app.include_router(admin_api_router)
 app.include_router(sync_router)
+app.include_router(inventory_router)
 
 ADMIN_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
@@ -43,6 +45,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                 </div>
                 <div class="flex items-center space-x-3">
                     <a href="/admin/volunteers" class="text-pines-500 hover:text-pines-700 px-3 py-2 text-sm font-medium">Volunteers</a>
+                    <a href="/inventory" class="text-pines-500 hover:text-pines-700 px-3 py-2 text-sm font-medium">Inventory</a>
                     <button @click="syncSportsEngine()" class="bg-pines-500 hover:bg-pines-600 text-white px-4 py-2 rounded-lg text-sm font-medium">Sync SportsEngine</button>
                 </div>
             </div>
@@ -546,6 +549,7 @@ VOLUNTEER_TEMPLATE = """<!DOCTYPE html>
                 </div>
                 <div class="flex items-center space-x-3">
                     <a href="/admin" class="text-pines-500 hover:text-pines-700 px-3 py-2 text-sm font-medium">&larr; Players</a>
+                    <a href="/inventory" class="text-pines-500 hover:text-pines-700 px-3 py-2 text-sm font-medium">Inventory</a>
                 </div>
             </div>
         </div>
@@ -696,6 +700,11 @@ VOLUNTEER_TEMPLATE = """<!DOCTYPE html>
 @app.get("/admin/volunteers", response_class=HTMLResponse)
 async def admin_volunteers(request: Request):
     return HTMLResponse(VOLUNTEER_TEMPLATE)
+
+@app.get("/inventory", response_class=HTMLResponse)
+async def inventory_page():
+    with open("inventory_page.html", "r") as f:
+        return HTMLResponse(f.read())
 
 @app.post("/api/players/{player_id}/set-volunteer")
 async def set_volunteer(player_id: int, request: Request, db: Session = Depends(get_db)):
