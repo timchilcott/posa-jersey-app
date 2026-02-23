@@ -187,21 +187,8 @@
             <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pines-500"></div>
         </div>
 
-        <!-- Category cards -->
-        <div x-show="!loading && !hasActiveFilters() && summary.categories" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-            <template x-for="cat in summary.categories" :key="cat.name">
-                <div @click="filters.category = cat.name; applyFilters()" class="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:border-pines-300 hover:shadow-sm transition-all">
-                    <div class="text-2xl mb-1" x-text="cat.emoji"></div>
-                    <div class="text-sm font-medium text-gray-900" x-text="cat.name"></div>
-                    <div class="text-xs text-gray-500 mt-1">
-                        <span x-text="cat.itemCount"></span> types · <span x-text="cat.availableUnits"></span>/<span x-text="cat.totalUnits"></span> avail
-                    </div>
-                </div>
-            </template>
-        </div>
-
         <!-- Items table -->
-        <div x-show="!loading && hasActiveFilters()" class="bg-white rounded-lg shadow overflow-hidden">
+        <div x-show="!loading" class="bg-white rounded-lg shadow overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
@@ -268,7 +255,7 @@
             </div>
             <div x-show="filteredItems.length === 0" class="text-center py-12">
                 <div class="text-gray-400 text-4xl mb-2">📦</div>
-                <p class="text-gray-500">No items match your filters</p>
+                <p class="text-gray-500" x-text="hasActiveFilters() ? 'No items match your filters' : 'No items yet — click + Add Item to get started'"></p>
             </div>
         </div>
     </main>
