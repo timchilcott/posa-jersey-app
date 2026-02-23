@@ -124,7 +124,7 @@
                 <tbody class="divide-y divide-gray-200 bg-white">
                     <template x-for="item in filteredItems" :key="item.id">
                         <template x-for="(row, rowIdx) in inventoryRows(item)" :key="row._key">
-                            <tr>
+                            <tr :class="row._type === 'item' ? 'bg-pines-50' : 'hover:bg-gray-50'">
                                 <!-- ITEM GROUP HEADER — like "Birth Year 2022  9 players" -->
                                 <template x-if="row._type === 'item'">
                                     <td class="px-3 py-2" colspan="4">
