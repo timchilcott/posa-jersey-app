@@ -335,14 +335,16 @@
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Sport</label>
-                    <select x-model="form.sport" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
-                        <option value="">None</option>
-                        <option value="Basketball">Basketball</option>
-                        <option value="Soccer">Soccer</option>
-                        <option value="Flag Football">Flag Football</option>
-                        <option value="Volleyball">Volleyball</option>
-                        <option value="POSA">POSA</option>
-                    </select>
+                    <div class="flex flex-wrap gap-2 mt-1">
+                        <template x-for="sp in ['Basketball','Soccer','Flag Football','Volleyball','POSA']" :key="sp">
+                            <label class="inline-flex items-center px-2.5 py-1.5 rounded-lg border text-xs font-medium cursor-pointer"
+                                   :class="form.sports.includes(sp) ? 'bg-pines-50 border-pines-400 text-pines-700' : 'bg-white border-gray-300 text-gray-500 hover:border-gray-400'">
+                                <input type="checkbox" :value="sp" :checked="form.sports.includes(sp)"
+                                       @change="toggleFormSport(sp)" class="sr-only">
+                                <span x-text="sp"></span>
+                            </label>
+                        </template>
+                    </div>
                 </div>
             </div>
             <div class="mb-3">
@@ -498,7 +500,7 @@
             checkoutDisplayList: [],
             totalCheckedOut: 0,
             filters: { search: '', category: '', sport: '', divisions: [], condition: '', lowStock: false },
-            form: { name: '', category: '', sport: '', divisions: [], quantity_total: 0, quantity_available: 0, conditions: [{condition: 'New', quantity: 0}], location: '', notes: '', min_quantity: 0, cost_per_unit: null },
+            form: { name: '', category: '', sports: [], divisions: [], quantity_total: 0, quantity_available: 0, conditions: [{condition: 'New', quantity: 0}], location: '', notes: '', min_quantity: 0, cost_per_unit: null },
             divisionInput: '',
             checkoutItem: null,
             checkoutForm: { person_name: '', quantity: 1, notes: '' },
@@ -547,7 +549,7 @@
                 this.filteredItems = this.items.filter(item => {
                     if (this.filters.search) { const s = this.filters.search.toLowerCase(); if (!item.name.toLowerCase().includes(s) && !(item.location||'').toLowerCase().includes(s) && !(item.notes||'').toLowerCase().includes(s)) return false; }
                     if (this.filters.category && item.category !== this.filters.category) return false;
-                    if (this.filters.sport && (item.sport||'') !== this.filters.sport) return false;
+                    if (this.filters.sport) { const itemSports = (item.sport||'').split(',').map(s => s.trim()); if (!itemSports.includes(this.filters.sport)) return false; }
                     if (this.filters.divisions.length > 0) { const itemDivs = (item.division||'').split(',').map(d => d.trim()); if (!this.filters.divisions.some(fd => itemDivs.includes(fd))) return false; }
                     if (this.filters.condition) {
                         const conds = this.itemConditions(item);
@@ -560,7 +562,7 @@
             hasActiveFilters() { return this.filters.search || this.filters.category || this.filters.sport || this.filters.divisions.length > 0 || this.filters.condition || this.filters.lowStock; },
             clearFilters() { this.filters = { search: '', category: '', sport: '', divisions: [], condition: '', lowStock: false }; this.applyFilters(); },
 
-            openAddModal() { this.editingId = null; this.divisionInput = ''; this.form = { name: '', category: '', sport: '', divisions: [], quantity_total: 0, quantity_available: 0, conditions: [{condition: 'New', quantity: 0}], location: '', notes: '', min_quantity: 0, cost_per_unit: null }; this.showModal = true; },
+            openAddModal() { this.editingId = null; this.divisionInput = ''; this.form = { name: '', category: '', sports: [], divisions: [], quantity_total: 0, quantity_available: 0, conditions: [{condition: 'New', quantity: 0}], location: '', notes: '', min_quantity: 0, cost_per_unit: null }; this.showModal = true; },
             editItem(item) {
                 this.editingId = item.id;
                 const conds = (item.conditions && item.conditions.length > 0)
@@ -568,13 +570,15 @@
                     : [{condition: item.condition || 'Good', quantity: item.quantityTotal}];
                 const divs = (item.division||'').split(',').map(d => d.trim()).filter(Boolean);
                 this.divisionInput = '';
-                this.form = { name: item.name, category: item.category, sport: item.sport||'', divisions: divs, quantity_total: item.quantityTotal, quantity_available: item.quantityAvailable, conditions: conds, location: item.location||'', notes: item.notes||'', min_quantity: item.minQuantity||0, cost_per_unit: item.costPerUnit };
+                const sports = (item.sport||'').split(',').map(s => s.trim()).filter(Boolean);
+                this.form = { name: item.name, category: item.category, sports: sports, divisions: divs, quantity_total: item.quantityTotal, quantity_available: item.quantityAvailable, conditions: conds, location: item.location||'', notes: item.notes||'', min_quantity: item.minQuantity||0, cost_per_unit: item.costPerUnit };
                 this.showModal = true;
             },
             async saveItem() {
                 if (!this.form.name || !this.form.category) { alert('Name and category are required'); return; }
-                const payload = { ...this.form, division: this.form.divisions.join(', ') };
+                const payload = { ...this.form, division: this.form.divisions.join(', '), sport: this.form.sports.join(', ') };
                 delete payload.divisions;
+                delete payload.sports;
                 const url = this.editingId ? `/api/inventory/items/${this.editingId}` : '/api/inventory/items';
                 try { await fetch(url, { method: this.editingId ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) }); this.showModal = false; await this.refresh(); } catch(e) { alert('Failed to save'); }
             },
@@ -652,6 +656,11 @@
             },
 
             getCategoryEmoji(catName) { const cat = this.categories.find(c => c.name === catName); return cat ? cat.emoji : '📦'; },
+            toggleFormSport(sp) {
+                const idx = this.form.sports.indexOf(sp);
+                if (idx >= 0) { this.form.sports.splice(idx, 1); }
+                else { this.form.sports.push(sp); }
+            },
             addDivisionsFromInput() {
                 const parts = this.divisionInput.split(',').map(d => d.trim()).filter(Boolean);
                 parts.forEach(val => {
