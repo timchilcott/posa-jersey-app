@@ -158,7 +158,7 @@
     <div x-show="showCheckoutsView">
         <!-- Same filter-area spacing for consistency -->
         <div class="max-w-7xl mx-auto px-4 pt-4">
-            <div class="text-sm text-gray-500" x-text="totalCheckedOut + ' active checkout' + (totalCheckedOut !== 1 ? 's' : '')"></div>
+            <div class="text-sm text-gray-500" x-text="totalCheckedOut + ' ' + (totalCheckedOut !== 1 ? 'people have' : 'person has') + ' equipment checked out'"></div>
         </div>
 
         <div class="max-w-7xl mx-auto px-4 py-4">
@@ -402,7 +402,7 @@
                     const res = await fetch('/api/inventory/checkouts/by-person');
                     const data = await res.json();
                     this.checkoutPeople = data.people;
-                    this.totalCheckedOut = this.checkoutPeople.reduce((sum, p) => sum + p.items.length, 0);
+                    this.totalCheckedOut = this.checkoutPeople.length;
                     this.checkoutDisplayList = [];
                     this.checkoutPeople.forEach(person => {
                         this.checkoutDisplayList.push({ _isHeader: true, _key: 'h-' + person.personName, _personName: person.personName, _totalItems: person.totalItems });
