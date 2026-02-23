@@ -17,167 +17,54 @@
     }
     </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <style>
-        [x-cloak] { display: none !important; }
-        .low-stock-pulse { animation: pulse-warn 2s ease-in-out infinite; }
-        @keyframes pulse-warn { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
-    </style>
+    <style>[x-cloak] { display: none !important; }</style>
 </head>
 <body class="bg-gray-50" x-data="inventoryApp()" x-init="init()" x-cloak>
 
-    <!-- Header -->
+    <!-- Header — matches jersey app -->
     <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div class="max-w-7xl mx-auto px-4 py-3">
             <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-8">
-                    <span class="text-lg font-bold text-gray-900">Equipment Inventory</span>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <a href="/admin" class="text-pines-500 hover:text-pines-700 px-3 py-2 text-sm font-medium">&larr; Players</a>
-                    <button @click="showCheckoutsView = !showCheckoutsView"
-                            class="relative px-3 py-2 text-sm font-medium rounded-lg"
-                            :class="showCheckoutsView ? 'bg-pines-100 text-pines-700' : 'text-pines-500 hover:text-pines-700'">>
+                <img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-8">
+                <div class="flex items-center space-x-4">
+                    <a href="/admin" class="text-gray-600 hover:text-gray-900 text-sm font-medium">Players</a>
+                    <button @click="showCheckoutsView = false; showInventoryView = true"
+                            class="text-sm font-medium"
+                            :class="!showCheckoutsView ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900'">Inventory</button>
+                    <button @click="showCheckoutsView = true"
+                            class="relative text-sm font-medium"
+                            :class="showCheckoutsView ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900'">
                         Checked Out
-                        <span x-show="totalCheckedOut > 0" class="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center" x-text="totalCheckedOut"></span>
+                        <span x-show="totalCheckedOut > 0" class="absolute -top-2 -right-4 bg-orange-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center" style="font-size:10px" x-text="totalCheckedOut"></span>
                     </button>
-                    <button @click="openBulkCheckout()" class="bg-pines-500 hover:bg-pines-600 text-white px-3 py-2 rounded-lg text-sm font-medium">Equipment Checkout</button>
-                    <button @click="openAddModal()" class="bg-pines-500 hover:bg-pines-600 text-white px-3 py-2 rounded-lg text-sm font-medium">+ Add Item</button>
+                    <button @click="openBulkCheckout()" class="bg-pines-500 hover:bg-pines-600 text-white px-4 py-2 rounded-lg text-sm font-medium">Equipment Checkout</button>
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- Stats Cards -->
-    <div class="max-w-7xl mx-auto px-4 py-4">
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
-                <div class="text-2xl font-bold text-gray-900" x-text="summary.totalItems || 0"></div>
-                <div class="text-xs text-gray-500 mt-1">Item Types</div>
-            </div>
-            <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
-                <div class="text-2xl font-bold text-gray-900" x-text="summary.totalUnits || 0"></div>
-                <div class="text-xs text-gray-500 mt-1">Total Units</div>
-            </div>
-            <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
-                <div class="text-2xl font-bold text-pines-600" x-text="summary.availableUnits || 0"></div>
-                <div class="text-xs text-gray-500 mt-1">Available</div>
-            </div>
-            <div class="bg-white rounded-lg border border-gray-200 p-4 text-center cursor-pointer" @click="showCheckoutsView = true">
-                <div class="text-2xl font-bold text-blue-600" x-text="summary.checkedOut || 0"></div>
-                <div class="text-xs text-gray-500 mt-1">Checked Out</div>
-            </div>
-            <div class="bg-white rounded-lg border p-4 text-center" :class="(summary.lowStock || 0) > 0 ? 'border-orange-300 bg-orange-50 low-stock-pulse' : 'border-gray-200'">
-                <div class="text-2xl font-bold" :class="(summary.lowStock || 0) > 0 ? 'text-orange-600' : 'text-gray-900'" x-text="summary.lowStock || 0"></div>
-                <div class="text-xs text-gray-500 mt-1">Low Stock</div>
-            </div>
-            <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
-                <div class="text-2xl font-bold text-red-600" x-text="summary.poorCondition || 0"></div>
-                <div class="text-xs text-gray-500 mt-1">Needs Replace</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ==================== CHECKED OUT BY PERSON VIEW ==================== -->
-    <div x-show="showCheckoutsView" class="max-w-7xl mx-auto px-4 pb-6">
-
-        <div x-show="checkoutPeople.length === 0" class="bg-white rounded-lg shadow p-12 text-center">
-            <div class="text-4xl mb-2">✅</div>
-            <p class="text-gray-500">No equipment currently checked out</p>
-        </div>
-
-        <div x-show="checkoutPeople.length > 0" class="bg-white rounded-lg shadow overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200 table-fixed">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="w-52 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
-                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                            <th class="w-16 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
-                            <th class="w-36 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Checked Out</th>
-                            <th class="w-24 px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                        <template x-for="row in checkoutDisplayList" :key="row._key">
-                            <tr :class="row._isHeader ? 'bg-pines-50 border-t-2 border-pines-200' : 'bg-white hover:bg-gray-50'">
-                                <template x-if="row._isHeader">
-                                    <td colspan="5" class="px-3 py-2">
-                                        <span class="text-sm font-bold text-pines-700" x-text="row._personName"></span>
-                                        <span class="ml-2 text-xs text-pines-500" x-text="row._totalItems + ' unit' + (row._totalItems !== 1 ? 's' : '')"></span>
-                                    </td>
-                                </template>
-                                <template x-if="row._isHeader">
-                                    <td class="px-3 py-2 text-right">
-                                        <button @click="returnAllForPerson(row._personName)"
-                                                class="text-xs px-2 py-1 bg-pines-100 text-pines-700 rounded hover:bg-pines-200 font-medium">
-                                            Return All
-                                        </button>
-                                    </td>
-                                </template>
-                                <template x-if="!row._isHeader">
-                                    <td class="px-3 py-3">
-                                        <div class="text-sm font-medium text-gray-900" x-text="row.itemName"></div>
-                                    </td>
-                                </template>
-                                <template x-if="!row._isHeader">
-                                    <td class="px-3 py-3">
-                                        <span class="text-xs text-gray-500" x-text="row.itemCategory"></span>
-                                    </td>
-                                </template>
-                                <template x-if="!row._isHeader">
-                                    <td class="px-3 py-3 text-center">
-                                        <span class="px-2 py-0.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded" x-text="row.quantity"></span>
-                                    </td>
-                                </template>
-                                <template x-if="!row._isHeader">
-                                    <td class="px-3 py-3">
-                                        <span class="text-xs text-gray-400 italic" x-text="row.notes || '-'"></span>
-                                    </td>
-                                </template>
-                                <template x-if="!row._isHeader">
-                                    <td class="px-3 py-3">
-                                        <span class="text-xs text-gray-500" x-text="formatDate(row.checkedOutAt)"></span>
-                                    </td>
-                                </template>
-                                <template x-if="!row._isHeader">
-                                    <td class="px-3 py-3 text-right">
-                                        <button @click="returnCheckoutRecord(row.itemId, row.id, row._personName, row.quantity)"
-                                                class="p-1 rounded hover:bg-gray-100 text-green-600" title="Return">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                        </button>
-                                    </td>
-                                </template>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
     <!-- ==================== INVENTORY VIEW ==================== -->
-    <!-- Filters -->
-    <div class="bg-white border-b border-gray-200" x-show="!showCheckoutsView">
-        <div class="max-w-7xl mx-auto px-4 py-3">
-            <div class="flex flex-wrap gap-3 items-end">
+    <div x-show="!showCheckoutsView">
+        <!-- Filters — matches jersey app layout -->
+        <div class="max-w-7xl mx-auto px-4 pt-4">
+            <div class="flex flex-wrap gap-4 items-end">
                 <div class="flex-1 min-w-48">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Search</label>
-                    <input type="search" x-model="filters.search" @input.debounce.300ms="applyFilters()" placeholder="Name, location..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm">
+                    <input type="search" x-model="filters.search" @input.debounce.300ms="applyFilters()" placeholder="Name, location..."
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm">
                 </div>
-                <div class="w-36">
+                <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Category</label>
-                    <select x-model="filters.category" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
+                    <select x-model="filters.category" @change="applyFilters()" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
                         <option value="">All</option>
                         <template x-for="cat in categories" :key="cat.id">
                             <option :value="cat.name" x-text="cat.emoji + ' ' + cat.name"></option>
                         </template>
                     </select>
                 </div>
-                <div class="w-36">
+                <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Sport</label>
-                    <select x-model="filters.sport" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
+                    <select x-model="filters.sport" @change="applyFilters()" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
                         <option value="">All</option>
                         <option value="Basketball">🏀 Basketball</option>
                         <option value="Soccer">⚽ Soccer</option>
@@ -186,9 +73,9 @@
                         <option value="POSA">🌲 POSA</option>
                     </select>
                 </div>
-                <div class="w-32">
+                <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Condition</label>
-                    <select x-model="filters.condition" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
+                    <select x-model="filters.condition" @change="applyFilters()" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
                         <option value="">All</option>
                         <option value="New">New</option>
                         <option value="Good">Good</option>
@@ -197,92 +84,154 @@
                         <option value="Replace">Replace</option>
                     </select>
                 </div>
-                <label class="flex items-center space-x-2 pb-1">
-                    <input type="checkbox" x-model="filters.lowStock" @change="applyFilters()" class="rounded text-pines-500 focus:ring-pines-500">
-                    <span class="text-sm text-gray-700">Low Stock</span>
-                </label>
                 <button @click="clearFilters()" x-show="hasActiveFilters()" class="px-3 py-2 text-sm text-gray-500 hover:text-gray-700">Clear</button>
+            </div>
+            <div class="text-sm text-gray-500 mt-2" x-text="'Showing ' + filteredItems.length + ' of ' + items.length + ' items'"></div>
+        </div>
+
+        <!-- Items table — flat like jersey app -->
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div x-show="loading" class="text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pines-500"></div>
+            </div>
+            <table x-show="!loading && filteredItems.length > 0" class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                        <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                        <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Avail</th>
+                        <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Out</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Condition</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                        <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white">
+                    <template x-for="item in filteredItems" :key="item.id">
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-3 py-3">
+                                <div class="text-sm font-medium text-gray-900" x-text="item.name"></div>
+                                <div class="flex items-center space-x-1 mt-0.5">
+                                    <span class="text-xs text-gray-400" x-text="item.category"></span>
+                                    <template x-if="item.sport">
+                                        <span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600" x-text="item.sport"></span>
+                                    </template>
+                                </div>
+                                <!-- Checkout badges inline -->
+                                <div x-show="item.checkouts && item.checkouts.length > 0" class="flex flex-wrap gap-1 mt-1">
+                                    <template x-for="co in item.checkouts" :key="co.id">
+                                        <span class="inline-flex items-center text-xs px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                            <span x-text="co.personName"></span>
+                                            <span class="ml-1 font-semibold" x-text="'×' + co.quantity"></span>
+                                            <button @click="returnCheckoutRecord(item.id, co.id, co.personName, co.quantity)"
+                                                    class="ml-1 text-green-600 hover:text-green-800 font-bold" title="Return">✓</button>
+                                        </span>
+                                    </template>
+                                </div>
+                            </td>
+                            <td class="px-3 py-3 text-center text-sm" x-text="item.quantityTotal"></td>
+                            <td class="px-3 py-3 text-center text-sm font-semibold text-pines-600" x-text="item.quantityAvailable"></td>
+                            <td class="px-3 py-3 text-center text-sm" :class="item.checkedOut > 0 ? 'text-orange-600 font-semibold' : 'text-gray-400'" x-text="item.checkedOut"></td>
+                            <td class="px-3 py-3">
+                                <span class="text-xs px-2 py-0.5 rounded font-medium" :class="conditionColor(item.condition)" x-text="item.condition || '-'"></span>
+                            </td>
+                            <td class="px-3 py-3 text-sm text-gray-500" x-text="item.location || '-'"></td>
+                            <td class="px-3 py-3 text-right">
+                                <div class="flex items-center justify-end space-x-1">
+                                    <button @click="openCheckoutModal(item)" class="p-1.5 rounded hover:bg-gray-100 text-pines-500" title="Check out" :disabled="item.quantityAvailable <= 0">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                                    </button>
+                                    <button @click="editItem(item)" class="p-1.5 rounded hover:bg-gray-100 text-pines-500" title="Edit">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                    </button>
+                                    <button @click="deleteItem(item)" class="p-1.5 rounded hover:bg-red-50 text-red-400" title="Delete">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+            <div x-show="!loading && filteredItems.length === 0" class="text-center py-12">
+                <p class="text-gray-500" x-text="hasActiveFilters() ? 'No items match your filters' : 'No items yet — add one to get started'"></p>
             </div>
         </div>
     </div>
 
-    <main class="max-w-7xl mx-auto px-4 py-6" x-show="!showCheckoutsView">
-        <div x-show="loading" class="text-center py-12">
-            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pines-500"></div>
+    <!-- ==================== CHECKED OUT VIEW ==================== -->
+    <div x-show="showCheckoutsView">
+        <!-- Same filter-area spacing for consistency -->
+        <div class="max-w-7xl mx-auto px-4 pt-4">
+            <div class="text-sm text-gray-500" x-text="totalCheckedOut + ' active checkout' + (totalCheckedOut !== 1 ? 's' : '')"></div>
         </div>
 
-        <!-- Items table -->
-        <div x-show="!loading" class="bg-white rounded-lg shadow overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
-                            <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase w-20">Total</th>
-                            <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase w-20">Avail</th>
-                            <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase w-20">Out</th>
-                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Condition</th>
-                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
-                            <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase w-40">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                        <template x-for="item in filteredItems" :key="item.id">
-                            <tr>
-                                <td class="px-3 py-3" :class="item.lowStock ? 'bg-orange-50' : ''">
-                                    <div class="flex items-center space-x-2">
-                                        <span class="text-sm" x-text="getCategoryEmoji(item.category)"></span>
-                                        <div>
-                                            <div class="text-sm font-medium text-gray-900" x-text="item.name"></div>
-                                            <div class="flex items-center space-x-1 mt-0.5">
-                                                <span class="text-xs text-gray-400" x-text="item.category"></span>
-                                                <template x-if="item.sport">
-                                                    <span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600" x-text="item.sport"></span>
-                                                </template>
-                                            </div>
-                                            <!-- Checkout badges -->
-                                            <div x-show="item.checkouts && item.checkouts.length > 0" class="flex flex-wrap gap-1 mt-1">
-                                                <template x-for="co in item.checkouts" :key="co.id">
-                                                    <span class="inline-flex items-center text-xs px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                                                        <span x-text="co.personName"></span>
-                                                        <span class="ml-1 font-semibold" x-text="'×' + co.quantity"></span>
-                                                        <button @click="returnCheckoutRecord(item.id, co.id, co.personName, co.quantity)"
-                                                                class="ml-1 text-green-600 hover:text-green-800 font-bold" title="Return">✓</button>
-                                                    </span>
-                                                </template>
-                                            </div>
-                                        </div>
-                                    </div>
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div x-show="checkoutPeople.length === 0" class="text-center py-12">
+                <p class="text-gray-500">No equipment currently checked out</p>
+            </div>
+
+            <table x-show="checkoutPeople.length > 0" class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                        <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Checked Out</th>
+                        <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white">
+                    <template x-for="row in checkoutDisplayList" :key="row._key">
+                        <tr :class="row._isHeader ? 'bg-pines-50' : 'hover:bg-gray-50'">
+                            <!-- Person header row -->
+                            <template x-if="row._isHeader">
+                                <td colspan="5" class="px-3 py-2">
+                                    <span class="text-sm font-bold text-pines-700" x-text="row._personName"></span>
+                                    <span class="ml-2 text-xs text-pines-500" x-text="row._totalItems + ' unit' + (row._totalItems !== 1 ? 's' : '')"></span>
                                 </td>
-                                <td class="px-3 py-3 text-center text-sm font-medium" :class="item.lowStock ? 'bg-orange-50' : ''" x-text="item.quantityTotal"></td>
-                                <td class="px-3 py-3 text-center text-sm font-semibold" :class="item.lowStock ? 'text-orange-600 bg-orange-50' : 'text-pines-600'" x-text="item.quantityAvailable"></td>
-                                <td class="px-3 py-3 text-center text-sm" :class="item.checkedOut > 0 ? 'text-blue-600 font-semibold' : 'text-gray-400'" x-text="item.checkedOut"></td>
-                                <td class="px-3 py-3"><span class="text-xs px-2 py-0.5 rounded font-medium" :class="conditionColor(item.condition)" x-text="item.condition || '-'"></span></td>
-                                <td class="px-3 py-3 text-sm text-gray-500" x-text="item.location || '-'"></td>
+                            </template>
+                            <template x-if="row._isHeader">
+                                <td class="px-3 py-2 text-right">
+                                    <button @click="returnAllForPerson(row._personName)"
+                                            class="text-xs px-2 py-1 bg-pines-100 text-pines-700 rounded hover:bg-pines-200 font-medium">
+                                        Return All
+                                    </button>
+                                </td>
+                            </template>
+                            <!-- Item rows -->
+                            <template x-if="!row._isHeader">
+                                <td class="px-3 py-3">
+                                    <span class="text-sm font-medium text-gray-900" x-text="row.itemName"></span>
+                                </td>
+                            </template>
+                            <template x-if="!row._isHeader">
+                                <td class="px-3 py-3 text-sm text-gray-500" x-text="row.itemCategory"></td>
+                            </template>
+                            <template x-if="!row._isHeader">
+                                <td class="px-3 py-3 text-center text-sm font-medium" x-text="row.quantity"></td>
+                            </template>
+                            <template x-if="!row._isHeader">
+                                <td class="px-3 py-3 text-xs text-gray-400 italic" x-text="row.notes || '-'"></td>
+                            </template>
+                            <template x-if="!row._isHeader">
+                                <td class="px-3 py-3 text-sm text-gray-500" x-text="formatDate(row.checkedOutAt)"></td>
+                            </template>
+                            <template x-if="!row._isHeader">
                                 <td class="px-3 py-3 text-right">
-                                    <div class="flex items-center justify-end space-x-1">
-                                        <button @click="openCheckoutModal(item)" class="p-1.5 rounded hover:bg-blue-50 text-blue-500" title="Check out" :disabled="item.quantityAvailable <= 0">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                                        </button>
-                                        <button @click="editItem(item)" class="p-1.5 rounded hover:bg-gray-100 text-pines-500" title="Edit">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                                        </button>
-                                        <button @click="deleteItem(item)" class="p-1.5 rounded hover:bg-red-50 text-red-400" title="Delete">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                        </button>
-                                    </div>
+                                    <button @click="returnCheckoutRecord(row.itemId, row.id, row._personName, row.quantity)"
+                                            class="p-1 rounded hover:bg-gray-100 text-pines-500" title="Return">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    </button>
                                 </td>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
-            </div>
-            <div x-show="filteredItems.length === 0" class="text-center py-12">
-                <div class="text-gray-400 text-4xl mb-2">📦</div>
-                <p class="text-gray-500" x-text="hasActiveFilters() ? 'No items match your filters' : 'No items yet — click + Add Item to get started'"></p>
-            </div>
+                            </template>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
         </div>
-    </main>
+    </div>
 
     <!-- ==================== ADD/EDIT ITEM MODAL ==================== -->
     <div x-show="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showModal = false">
@@ -358,27 +307,22 @@
         </div>
     </div>
 
-    <!-- ==================== BULK CHECKOUT MODAL ==================== -->
+    <!-- ==================== EQUIPMENT CHECKOUT MODAL ==================== -->
     <div x-show="showBulkModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showBulkModal = false">
         <div class="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <h3 class="text-lg font-bold mb-4">Equipment Checkout</h3>
-
-            <!-- Person name -->
             <div class="mb-4">
                 <label class="block text-xs font-medium text-gray-700 mb-1">Who is checking out? *</label>
                 <input type="text" x-model="bulkForm.person_name" x-ref="bulkPersonName"
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm"
                        placeholder="e.g. Coach Smith">
             </div>
-
-            <!-- Items already added -->
             <div x-show="bulkForm.items.length > 0" class="mb-4">
                 <label class="block text-xs font-medium text-gray-700 mb-2">Items to check out:</label>
                 <div class="space-y-2">
                     <template x-for="(bi, idx) in bulkForm.items" :key="idx">
-                        <div class="flex items-center justify-between bg-blue-50 rounded-lg px-3 py-2">
+                        <div class="flex items-center justify-between bg-pines-50 rounded-lg px-3 py-2">
                             <div class="flex items-center space-x-2">
-                                <span class="text-sm" x-text="getCategoryEmoji(bi._category)"></span>
                                 <span class="text-sm font-medium" x-text="bi._name"></span>
                                 <span class="text-xs text-gray-500" x-text="'×' + bi.quantity"></span>
                             </div>
@@ -387,8 +331,6 @@
                     </template>
                 </div>
             </div>
-
-            <!-- Add item row -->
             <div class="bg-gray-50 rounded-lg p-3 mb-4">
                 <label class="block text-xs font-medium text-gray-700 mb-2">Add an item:</label>
                 <div class="flex gap-2 items-end">
@@ -396,7 +338,7 @@
                         <select x-model="bulkAddItemId" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pines-500">
                             <option value="">Select item...</option>
                             <template x-for="item in availableForBulk" :key="item.id">
-                                <option :value="item.id" x-text="getCategoryEmoji(item.category) + ' ' + item.name + ' (' + item.quantityAvailable + ' avail)'"></option>
+                                <option :value="item.id" x-text="item.name + ' (' + item.quantityAvailable + ' avail)'"></option>
                             </template>
                         </select>
                     </div>
@@ -406,7 +348,6 @@
                     <button @click="addToBulk()" class="px-3 py-2 bg-pines-100 text-pines-700 rounded-lg hover:bg-pines-200 text-sm font-medium whitespace-nowrap">+ Add</button>
                 </div>
             </div>
-
             <div class="flex justify-end space-x-3">
                 <button @click="showBulkModal = false" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">Cancel</button>
                 <button @click="submitBulkCheckout()" :disabled="bulkForm.items.length === 0"
@@ -442,15 +383,12 @@
             bulkAddQty: 1,
 
             async init() {
-                await Promise.all([this.loadItems(), this.loadSummary(), this.loadCategories(), this.loadCheckoutPeople()]);
+                await Promise.all([this.loadItems(), this.loadCategories(), this.loadCheckoutPeople()]);
                 this.loading = false;
             },
 
             async loadItems() {
                 try { const res = await fetch('/api/inventory/items'); const data = await res.json(); this.items = data.items; this.applyFilters(); } catch (e) { console.error(e); }
-            },
-            async loadSummary() {
-                try { const res = await fetch('/api/inventory/summary'); this.summary = await res.json(); } catch (e) { console.error(e); }
             },
             async loadCategories() {
                 try { const res = await fetch('/api/inventory/categories'); const data = await res.json(); this.categories = data.categories; } catch (e) { console.error(e); }
@@ -461,28 +399,17 @@
                     const data = await res.json();
                     this.checkoutPeople = data.people;
                     this.totalCheckedOut = this.checkoutPeople.reduce((sum, p) => sum + p.items.length, 0);
-                    // Build flat display list like jersey app's displayList
                     this.checkoutDisplayList = [];
                     this.checkoutPeople.forEach(person => {
-                        this.checkoutDisplayList.push({
-                            _isHeader: true,
-                            _key: 'h-' + person.personName,
-                            _personName: person.personName,
-                            _totalItems: person.totalItems,
-                        });
+                        this.checkoutDisplayList.push({ _isHeader: true, _key: 'h-' + person.personName, _personName: person.personName, _totalItems: person.totalItems });
                         person.items.forEach(co => {
-                            this.checkoutDisplayList.push({
-                                ...co,
-                                _isHeader: false,
-                                _key: 'co-' + co.id,
-                                _personName: person.personName,
-                            });
+                            this.checkoutDisplayList.push({ ...co, _isHeader: false, _key: 'co-' + co.id, _personName: person.personName });
                         });
                     });
                 } catch (e) { console.error(e); }
             },
             async refresh() {
-                await Promise.all([this.loadItems(), this.loadSummary(), this.loadCheckoutPeople()]);
+                await Promise.all([this.loadItems(), this.loadCheckoutPeople()]);
             },
 
             applyFilters() {
@@ -498,7 +425,6 @@
             hasActiveFilters() { return this.filters.search || this.filters.category || this.filters.sport || this.filters.condition || this.filters.lowStock; },
             clearFilters() { this.filters = { search: '', category: '', sport: '', condition: '', lowStock: false }; this.applyFilters(); },
 
-            // --- Item CRUD ---
             openAddModal() { this.editingId = null; this.form = { name: '', category: '', sport: '', quantity_total: 0, quantity_available: 0, condition: 'Good', location: '', notes: '', min_quantity: 0, cost_per_unit: null }; this.showModal = true; },
             editItem(item) {
                 this.editingId = item.id;
@@ -515,7 +441,6 @@
                 try { await fetch(`/api/inventory/items/${item.id}`, {method:'DELETE'}); await this.refresh(); } catch(e) { alert('Failed'); }
             },
 
-            // --- Single checkout ---
             openCheckoutModal(item) {
                 if (item.quantityAvailable <= 0) return;
                 this.checkoutItem = item;
@@ -532,15 +457,10 @@
                 } catch(e) { alert('Failed'); }
             },
 
-            // --- Bulk checkout ---
             get availableForBulk() {
-                // Items with quantity available, minus what's already in the bulk list
                 const bulkMap = {};
                 this.bulkForm.items.forEach(bi => { bulkMap[bi.item_id] = (bulkMap[bi.item_id]||0) + bi.quantity; });
-                return this.items.filter(i => {
-                    const alreadyAdded = bulkMap[i.id] || 0;
-                    return (i.quantityAvailable - alreadyAdded) > 0;
-                });
+                return this.items.filter(i => (i.quantityAvailable - (bulkMap[i.id]||0)) > 0);
             },
             openBulkCheckout() {
                 this.bulkForm = { person_name: '', items: [] };
@@ -565,17 +485,13 @@
                 if (!this.bulkForm.person_name.trim()) { alert('Please enter a name.'); return; }
                 if (this.bulkForm.items.length === 0) { alert('Add at least one item.'); return; }
                 try {
-                    const payload = {
-                        person_name: this.bulkForm.person_name,
-                        items: this.bulkForm.items.map(bi => ({ item_id: bi.item_id, quantity: bi.quantity }))
-                    };
+                    const payload = { person_name: this.bulkForm.person_name, items: this.bulkForm.items.map(bi => ({ item_id: bi.item_id, quantity: bi.quantity })) };
                     const res = await fetch('/api/inventory/checkout-bulk', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
                     if (!res.ok) { const err = await res.json(); alert(err.detail||'Failed'); return; }
                     this.showBulkModal = false; await this.refresh();
                 } catch(e) { alert('Failed'); }
             },
 
-            // --- Returns ---
             async returnCheckoutRecord(itemId, recordId, personName, qty) {
                 if (!confirm(`Return ${qty} from ${personName}?`)) return;
                 try {
@@ -593,16 +509,13 @@
                 } catch(e) { alert('Failed'); }
             },
 
-            // --- Helpers ---
             getCategoryEmoji(catName) { const cat = this.categories.find(c => c.name === catName); return cat ? cat.emoji : '📦'; },
             conditionColor(c) { return {'New':'bg-blue-100 text-blue-700','Good':'bg-green-100 text-green-700','Fair':'bg-yellow-100 text-yellow-700','Poor':'bg-orange-100 text-orange-700','Replace':'bg-red-100 text-red-700'}[c] || 'bg-gray-100 text-gray-600'; },
             formatDate(iso) {
                 if(!iso) return '';
-                // Ensure UTC interpretation if no timezone specified
                 const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
                 const now = new Date();
-                const diffMs = now - d;
-                const diffDays = Math.floor(diffMs / 86400000);
+                const diffDays = Math.floor((now - d) / 86400000);
                 if (diffDays === 0) return 'Today, ' + d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
                 if (diffDays === 1) return 'Yesterday, ' + d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
                 return d.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ', ' + d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
