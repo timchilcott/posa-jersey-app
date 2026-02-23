@@ -37,7 +37,7 @@ DEFAULT_CATEGORIES = [
 
 CONDITIONS = ["New", "Good", "Fair", "Poor", "Replace"]
 
-SPORTS = ["Soccer", "Basketball", "Flag Football", "Volleyball", "Baseball", "Softball", "General"]
+SPORTS = ["Basketball", "Soccer", "Flag Football", "Volleyball", "POSA"]
 
 
 def _seed_categories(db: Session):
