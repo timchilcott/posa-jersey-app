@@ -118,10 +118,13 @@
                         <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200 bg-white">
+                <tbody class="bg-white">
                     <template x-for="item in filteredItems" :key="item.id">
                         <template x-for="(row, rowIdx) in inventoryRows(item)" :key="row._key">
-                            <tr :class="row._type === 'checkout' ? 'bg-gray-50' : 'hover:bg-gray-50'">
+                            <tr :class="{
+                                'border-t border-gray-200 hover:bg-gray-50': row._type === 'item',
+                                'hover:bg-gray-50': row._type === 'checkout'
+                            }">
                                 <!-- ITEM ROW -->
                                 <template x-if="row._type === 'item'">
                                     <td class="px-3 py-3">
@@ -169,25 +172,22 @@
                                 </template>
                                 <!-- CHECKOUT SUB-ROW -->
                                 <template x-if="row._type === 'checkout'">
-                                    <td class="pl-8 pr-3 py-2">
-                                        <span class="text-xs text-gray-500">↳</span>
-                                        <span class="ml-1 text-sm text-gray-700" x-text="row.personName"></span>
-                                    </td>
+                                    <td class="pl-6 pr-3 py-2 text-sm text-gray-600" x-text="row.personName"></td>
                                 </template>
                                 <template x-if="row._type === 'checkout'">
-                                    <td colspan="2" class="px-3 py-2 text-center">
-                                        <span class="text-xs px-2 py-0.5 rounded bg-orange-50 text-orange-700 font-medium" x-text="'×' + row.quantity"></span>
-                                    </td>
+                                    <td class="px-3 py-2 text-center text-sm text-gray-500" x-text="row.quantity"></td>
                                 </template>
                                 <template x-if="row._type === 'checkout'">
-                                    <td class="px-3 py-2">
-                                        <span class="text-xs text-gray-400" x-text="formatDate(row.checkedOutAt)"></span>
-                                    </td>
+                                    <td class="px-3 py-2"></td>
                                 </template>
                                 <template x-if="row._type === 'checkout'">
-                                    <td colspan="2" class="px-3 py-2">
-                                        <span class="text-xs text-gray-400 italic" x-text="row.notes || ''"></span>
-                                    </td>
+                                    <td class="px-3 py-2 text-xs text-gray-400" x-text="formatDate(row.checkedOutAt)"></td>
+                                </template>
+                                <template x-if="row._type === 'checkout'">
+                                    <td class="px-3 py-2 text-xs text-gray-400 italic" x-text="row.notes || ''"></td>
+                                </template>
+                                <template x-if="row._type === 'checkout'">
+                                    <td class="px-3 py-2"></td>
                                 </template>
                                 <template x-if="row._type === 'checkout'">
                                     <td class="px-3 py-2 text-right">
