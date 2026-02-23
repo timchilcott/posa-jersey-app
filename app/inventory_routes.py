@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.database import get_db
-from app.models_inventory import InventoryItem, InventoryCategory, CheckoutRecord
+from app.models_inventory import InventoryItem, InventoryCategory, CheckoutRecord, ConditionBreakdown
 
 router = APIRouter(prefix="/api/inventory", tags=["inventory"])
 
@@ -121,7 +121,14 @@ def list_items(
     if sport:
         query = query.filter(func.lower(InventoryItem.sport) == sport.lower())
     if condition:
-        query = query.filter(func.lower(InventoryItem.condition) == condition.lower())
+        # Match items that have this condition in their breakdown OR in the legacy field
+        breakdown_ids = db.query(ConditionBreakdown.item_id).filter(
+            func.lower(ConditionBreakdown.condition) == condition.lower()
+        ).subquery()
+        query = query.filter(
+            (func.lower(InventoryItem.condition) == condition.lower())
+            | (InventoryItem.id.in_(breakdown_ids))
+        )
     if low_stock:
         query = query.filter(InventoryItem.quantity_available <= InventoryItem.min_quantity)
     if search:
@@ -221,6 +228,17 @@ async def create_item(request: Request, db: Session = Depends(get_db)):
     db.add(item)
     db.commit()
     db.refresh(item)
+
+    # Sync condition breakdowns if provided
+    conditions = data.get("conditions")
+    if conditions and isinstance(conditions, list):
+        _sync_conditions(item.id, conditions, db)
+        # Set the primary condition to the largest breakdown
+        if conditions:
+            primary = max(conditions, key=lambda c: int(c.get("quantity", 0)))
+            item.condition = primary.get("condition", "Good")
+        db.commit()
+
     return _serialize_item(item, db)
 
 
@@ -261,6 +279,14 @@ async def update_item(item_id: int, request: Request, db: Session = Depends(get_
     if "cost_per_unit" in data:
         item.cost_per_unit = float(data["cost_per_unit"]) if data["cost_per_unit"] else None
 
+    # Sync condition breakdowns if provided
+    conditions = data.get("conditions")
+    if conditions is not None and isinstance(conditions, list):
+        _sync_conditions(item.id, conditions, db)
+        if conditions:
+            primary = max(conditions, key=lambda c: int(c.get("quantity", 0)))
+            item.condition = primary.get("condition", "Good")
+
     db.commit()
     db.refresh(item)
     return _serialize_item(item, db)
@@ -271,6 +297,7 @@ def delete_item(item_id: int, db: Session = Depends(get_db)):
     item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
     if not item:
         raise HTTPException(404, "Item not found")
+    db.query(ConditionBreakdown).filter(ConditionBreakdown.item_id == item_id).delete()
     db.delete(item)
     db.commit()
     return {"success": True}
@@ -494,8 +521,19 @@ async def physical_count(item_id: int, request: Request, db: Session = Depends(g
 # ------------------------------------------------------------------
 # Helpers
 # ------------------------------------------------------------------
+def _sync_conditions(item_id: int, conditions: list, db: Session):
+    """Replace condition breakdowns for an item."""
+    db.query(ConditionBreakdown).filter(ConditionBreakdown.item_id == item_id).delete()
+    for entry in conditions:
+        cond = entry.get("condition", "").strip()
+        qty = int(entry.get("quantity", 0))
+        if cond and qty > 0:
+            db.add(ConditionBreakdown(item_id=item_id, condition=cond, quantity=qty))
+
+
 def _serialize_item(item: InventoryItem, db: Session = None) -> dict:
     checkouts = []
+    conditions = []
     if db:
         records = db.query(CheckoutRecord).filter(
             CheckoutRecord.item_id == item.id,
@@ -511,6 +549,17 @@ def _serialize_item(item: InventoryItem, db: Session = None) -> dict:
             }
             for r in records
         ]
+        cond_rows = db.query(ConditionBreakdown).filter(
+            ConditionBreakdown.item_id == item.id
+        ).order_by(ConditionBreakdown.id).all()
+        conditions = [
+            {"condition": c.condition, "quantity": c.quantity}
+            for c in cond_rows
+        ]
+
+    # If no breakdowns exist, fall back to the single condition field
+    if not conditions and item.condition:
+        conditions = [{"condition": item.condition, "quantity": item.quantity_total}]
 
     return {
         "id": item.id,
@@ -521,6 +570,7 @@ def _serialize_item(item: InventoryItem, db: Session = None) -> dict:
         "quantityAvailable": item.quantity_available,
         "checkedOut": item.quantity_total - item.quantity_available,
         "condition": item.condition,
+        "conditions": conditions,
         "location": item.location,
         "notes": item.notes,
         "minQuantity": item.min_quantity,
