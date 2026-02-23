@@ -45,22 +45,13 @@
 
     <!-- ==================== INVENTORY VIEW ==================== -->
     <div x-show="!showCheckoutsView">
-        <!-- Filters — matches jersey app layout -->
+        <!-- Filters -->
         <div class="max-w-7xl mx-auto px-4 pt-4">
             <div class="flex flex-wrap gap-4 items-end">
                 <div class="flex-1 min-w-48">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Search</label>
                     <input type="search" x-model="filters.search" @input.debounce.300ms="applyFilters()" placeholder="Name, location..."
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Category</label>
-                    <select x-model="filters.category" @change="applyFilters()" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
-                        <option value="">All</option>
-                        <template x-for="cat in categories" :key="cat.id">
-                            <option :value="cat.name" x-text="cat.emoji + ' ' + cat.name"></option>
-                        </template>
-                    </select>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Sport</label>
@@ -71,6 +62,15 @@
                         <option value="Flag Football">🏈 Flag Football</option>
                         <option value="Volleyball">🏐 Volleyball</option>
                         <option value="POSA">🌲 POSA</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Category</label>
+                    <select x-model="filters.category" @change="applyFilters()" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
+                        <option value="">All</option>
+                        <template x-for="cat in uniqueCategories" :key="cat">
+                            <option :value="cat" x-text="cat"></option>
+                        </template>
                     </select>
                 </div>
                 <div>
@@ -101,6 +101,7 @@
                         <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                         <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Avail</th>
                         <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Out</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Checked Out To</th>
                         <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Condition</th>
                         <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                         <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -113,6 +114,16 @@
                             <td class="px-3 py-3 text-center text-sm" x-text="item.quantityTotal"></td>
                             <td class="px-3 py-3 text-center text-sm font-semibold text-pines-600" x-text="item.quantityAvailable"></td>
                             <td class="px-3 py-3 text-center text-sm" :class="item.checkedOut > 0 ? 'text-orange-600 font-semibold' : 'text-gray-400'" x-text="item.checkedOut"></td>
+                            <td class="px-3 py-3">
+                                <div class="flex flex-wrap gap-1">
+                                    <template x-for="co in (item.checkouts || [])" :key="co.id">
+                                        <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-pines-50 text-pines-700 border border-pines-200">
+                                            <span x-text="co.personName"></span>
+                                            <span class="ml-1 text-pines-500" x-text="'×' + co.quantity"></span>
+                                        </span>
+                                    </template>
+                                </div>
+                            </td>
                             <td class="px-3 py-3">
                                 <span class="text-xs px-2 py-0.5 rounded font-medium" :class="conditionColor(item.condition)" x-text="item.condition || '-'"></span>
                             </td>
@@ -225,12 +236,14 @@
             <div class="grid grid-cols-2 gap-3 mb-3">
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Category *</label>
-                    <select x-model="form.category" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
-                        <option value="">Select...</option>
-                        <template x-for="cat in categories" :key="cat.id">
-                            <option :value="cat.name" x-text="cat.emoji + ' ' + cat.name"></option>
+                    <input type="text" x-model="form.category" list="category-suggestions"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm"
+                           placeholder="e.g. Balls, Goals, Jerseys...">
+                    <datalist id="category-suggestions">
+                        <template x-for="cat in uniqueCategories" :key="cat">
+                            <option :value="cat"></option>
                         </template>
-                    </select>
+                    </datalist>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Sport</label>
@@ -351,6 +364,7 @@
             items: [],
             filteredItems: [],
             categories: [],
+            uniqueCategories: [],
             summary: {},
             checkoutPeople: [],
             checkoutDisplayList: [],
@@ -369,7 +383,13 @@
             },
 
             async loadItems() {
-                try { const res = await fetch('/api/inventory/items'); const data = await res.json(); this.items = data.items; this.applyFilters(); } catch (e) { console.error(e); }
+                try {
+                    const res = await fetch('/api/inventory/items');
+                    const data = await res.json();
+                    this.items = data.items;
+                    this.uniqueCategories = [...new Set(this.items.map(i => i.category).filter(Boolean))].sort();
+                    this.applyFilters();
+                } catch (e) { console.error(e); }
             },
             async loadCategories() {
                 try { const res = await fetch('/api/inventory/categories'); const data = await res.json(); this.categories = data.categories; } catch (e) { console.error(e); }
