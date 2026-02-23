@@ -113,21 +113,20 @@
             <table x-show="!loading && filteredItems.length > 0" class="min-w-full divide-y divide-gray-200">
                 <thead>
                     <tr>
-                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coach</th>
-                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
-                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
-                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Checked Out</th>
-                        <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th class="pl-3 pr-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[200px]">Coach</th>
+                        <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[60px]">Qty</th>
+                        <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                        <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[160px]">Checked Out</th>
+                        <th class="pl-2 pr-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[100px]">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 bg-white">
                     <template x-for="item in filteredItems" :key="item.id">
                         <template x-for="(row, rowIdx) in inventoryRows(item)" :key="row._key">
                             <tr :class="row._type === 'item' ? 'bg-pines-50' : 'hover:bg-gray-50'">
-                                <!-- ITEM GROUP HEADER — like "Birth Year 2022  9 players" -->
+                                <!-- ITEM GROUP HEADER -->
                                 <template x-if="row._type === 'item'">
-                                    <td class="px-3 py-2" colspan="4">
+                                    <td class="pl-3 pr-2 py-2" colspan="3">
                                         <span class="text-sm font-bold text-gray-900" x-text="item.name"></span>
                                         <span x-show="item.division" class="ml-2 text-sm text-gray-400" x-text="item.division"></span>
                                         <span class="ml-3 text-sm text-gray-400">
@@ -142,7 +141,10 @@
                                     </td>
                                 </template>
                                 <template x-if="row._type === 'item'">
-                                    <td class="px-3 py-2" colspan="2">
+                                    <td class="px-2 py-2"></td>
+                                </template>
+                                <template x-if="row._type === 'item'">
+                                    <td class="pl-2 pr-3 py-2 text-right">
                                         <div class="flex items-center justify-end space-x-1">
                                             <button @click="openCheckoutModal(item)" class="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-pines-600" title="Check out" :disabled="item.quantityAvailable <= 0">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
@@ -156,24 +158,21 @@
                                         </div>
                                     </td>
                                 </template>
-                                <!-- CHECKOUT ROW — like a player row in the jersey app -->
+                                <!-- CHECKOUT ROW -->
                                 <template x-if="row._type === 'checkout'">
-                                    <td class="px-3 py-3 text-sm text-gray-900" x-text="row.personName"></td>
+                                    <td class="pl-3 pr-2 py-3 text-sm text-gray-900" x-text="row.personName"></td>
                                 </template>
                                 <template x-if="row._type === 'checkout'">
-                                    <td class="px-3 py-3 text-sm text-gray-900" x-text="row.quantity"></td>
+                                    <td class="px-2 py-3 text-sm text-gray-900" x-text="row.quantity"></td>
                                 </template>
                                 <template x-if="row._type === 'checkout'">
-                                    <td class="px-3 py-3 text-sm text-gray-500" x-text="row.notes || ''"></td>
+                                    <td class="px-2 py-3 text-sm text-gray-500" x-text="row.notes || ''"></td>
                                 </template>
                                 <template x-if="row._type === 'checkout'">
-                                    <td class="px-3 py-3"></td>
+                                    <td class="px-2 py-3 text-sm text-gray-500" x-text="formatDate(row.checkedOutAt)"></td>
                                 </template>
                                 <template x-if="row._type === 'checkout'">
-                                    <td class="px-3 py-3 text-sm text-gray-500" x-text="formatDate(row.checkedOutAt)"></td>
-                                </template>
-                                <template x-if="row._type === 'checkout'">
-                                    <td class="px-3 py-3 text-right">
+                                    <td class="pl-2 pr-3 py-3 text-right">
                                         <button @click="returnCheckoutRecord(item.id, row.id, row.personName, row.quantity)"
                                                 class="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-pines-600" title="Return">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
