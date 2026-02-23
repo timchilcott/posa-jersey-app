@@ -55,6 +55,7 @@ class InventoryItem(Base):
     name = Column(String, nullable=False)                  # e.g. "Size 4 Soccer Balls"
     category = Column(String, nullable=False)              # e.g. "Balls", "Goals", "Cones"
     sport = Column(String, nullable=True)                  # e.g. "Soccer", "Basketball", or None for general
+    division = Column(String, nullable=True)               # e.g. "U10", "U12", "Varsity"
     quantity_total = Column(Integer, default=0)            # Total owned
     quantity_available = Column(Integer, default=0)        # Currently available (not checked out)
     condition = Column(String, nullable=True)              # "Good", "Fair", "Poor", "New"
