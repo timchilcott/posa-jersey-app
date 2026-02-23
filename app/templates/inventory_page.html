@@ -149,9 +149,9 @@
                                 </template>
                                 <template x-if="row._type === 'item'">
                                     <td class="px-3 py-2">
-                                        <div class="flex flex-wrap gap-1">
+                                        <div class="flex flex-nowrap gap-1">
                                             <template x-for="div in parseDivisions(item.division)" :key="div">
-                                                <span class="text-xs px-1.5 py-0.5 rounded bg-pines-50 text-pines-700" x-text="div"></span>
+                                                <span class="text-xs px-1.5 py-0.5 rounded bg-pines-50 text-pines-700 whitespace-nowrap" x-text="div"></span>
                                             </template>
                                         </div>
                                     </td>
