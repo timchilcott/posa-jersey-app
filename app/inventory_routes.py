@@ -342,6 +342,68 @@ async def return_item(item_id: int, request: Request, db: Session = Depends(get_
 # ------------------------------------------------------------------
 # Checkout records
 # ------------------------------------------------------------------
+@router.post("/checkout-bulk")
+async def bulk_checkout(request: Request, db: Session = Depends(get_db)):
+    """Check out multiple items to one person at once."""
+    data = await request.json()
+    person = (data.get("person_name") or "").strip()
+    if not person:
+        raise HTTPException(400, "Person name is required")
+    items_list = data.get("items", [])
+    if not items_list:
+        raise HTTPException(400, "At least one item is required")
+
+    created = []
+    for entry in items_list:
+        item_id = entry.get("item_id")
+        qty = int(entry.get("quantity", 1))
+        notes = entry.get("notes") or None
+
+        item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+        if not item:
+            raise HTTPException(404, f"Item {item_id} not found")
+        if qty > item.quantity_available:
+            raise HTTPException(400, f"Only {item.quantity_available} of '{item.name}' available")
+
+        item.quantity_available -= qty
+        record = CheckoutRecord(
+            item_id=item.id,
+            person_name=person,
+            quantity=qty,
+            notes=notes,
+        )
+        db.add(record)
+        created.append({"itemId": item.id, "itemName": item.name, "quantity": qty})
+
+    db.commit()
+    return {"success": True, "person": person, "items": created}
+
+
+@router.post("/return-person")
+async def return_all_for_person(request: Request, db: Session = Depends(get_db)):
+    """Return all active checkouts for a specific person."""
+    data = await request.json()
+    person = (data.get("person_name") or "").strip()
+    if not person:
+        raise HTTPException(400, "Person name is required")
+
+    records = db.query(CheckoutRecord).filter(
+        CheckoutRecord.person_name == person,
+        CheckoutRecord.returned_at.is_(None),
+    ).all()
+
+    returned_count = 0
+    for r in records:
+        item = db.query(InventoryItem).filter(InventoryItem.id == r.item_id).first()
+        if item:
+            item.quantity_available = min(item.quantity_available + r.quantity, item.quantity_total)
+        r.returned_at = datetime.utcnow()
+        returned_count += 1
+
+    db.commit()
+    return {"success": True, "person": person, "recordsReturned": returned_count}
+
+
 @router.get("/checkouts")
 def list_all_checkouts(db: Session = Depends(get_db)):
     """List all active (unreturned) checkouts across all items."""
@@ -362,6 +424,32 @@ def list_all_checkouts(db: Session = Depends(get_db)):
             "notes": r.notes,
         })
     return {"checkouts": result}
+
+
+@router.get("/checkouts/by-person")
+def checkouts_by_person(db: Session = Depends(get_db)):
+    """List all active checkouts grouped by person."""
+    records = db.query(CheckoutRecord).filter(
+        CheckoutRecord.returned_at.is_(None)
+    ).order_by(CheckoutRecord.person_name, CheckoutRecord.checked_out_at.desc()).all()
+
+    people = {}
+    for r in records:
+        if r.person_name not in people:
+            people[r.person_name] = {"personName": r.person_name, "items": [], "totalItems": 0}
+        item = db.query(InventoryItem).filter(InventoryItem.id == r.item_id).first()
+        people[r.person_name]["items"].append({
+            "id": r.id,
+            "itemId": r.item_id,
+            "itemName": item.name if item else "Unknown",
+            "itemCategory": item.category if item else "",
+            "quantity": r.quantity,
+            "checkedOutAt": r.checked_out_at.isoformat() if r.checked_out_at else None,
+            "notes": r.notes,
+        })
+        people[r.person_name]["totalItems"] += r.quantity
+
+    return {"people": sorted(people.values(), key=lambda p: p["personName"].lower())}
 
 
 @router.get("/items/{item_id}/checkouts")
