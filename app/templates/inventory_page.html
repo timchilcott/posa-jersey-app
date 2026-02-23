@@ -28,16 +28,19 @@
                 <img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-8">
                 <div class="flex items-center space-x-4">
                     <a href="/admin" class="text-gray-600 hover:text-gray-900 text-sm font-medium">Players</a>
-                    <button @click="showCheckoutsView = false; showInventoryView = true"
+                    <button @click="showCheckoutsView = false"
                             class="text-sm font-medium"
                             :class="!showCheckoutsView ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900'">Inventory</button>
-                    <button @click="showCheckoutsView = true"
-                            class="relative text-sm font-medium"
-                            :class="showCheckoutsView ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900'">
-                        Checked Out
-                        <span x-show="totalCheckedOut > 0" class="absolute -top-2 -right-4 bg-orange-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center" style="font-size:10px" x-text="totalCheckedOut"></span>
-                    </button>
+                    <span class="relative pr-3">
+                        <button @click="showCheckoutsView = true"
+                                class="text-sm font-medium"
+                                :class="showCheckoutsView ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900'">
+                            Checked Out
+                        </button>
+                        <span x-show="totalCheckedOut > 0" class="absolute -top-2 -right-0 bg-orange-500 text-white rounded-full w-4 h-4 flex items-center justify-center" style="font-size:10px" x-text="totalCheckedOut"></span>
+                    </span>
                     <button @click="openBulkCheckout()" class="bg-pines-500 hover:bg-pines-600 text-white px-4 py-2 rounded-lg text-sm font-medium">Equipment Checkout</button>
+                    <button @click="openAddModal()" class="border border-pines-500 text-pines-600 hover:bg-pines-50 px-4 py-2 rounded-lg text-sm font-medium">+ Add Item</button>
                 </div>
             </div>
         </div>
