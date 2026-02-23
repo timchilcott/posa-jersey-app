@@ -109,26 +109,7 @@
                 <tbody class="divide-y divide-gray-200 bg-white">
                     <template x-for="item in filteredItems" :key="item.id">
                         <tr class="hover:bg-gray-50">
-                            <td class="px-3 py-3">
-                                <div class="text-sm font-medium text-gray-900" x-text="item.name"></div>
-                                <div class="flex items-center space-x-1 mt-0.5">
-                                    <span class="text-xs text-gray-400" x-text="item.category"></span>
-                                    <template x-if="item.sport">
-                                        <span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600" x-text="item.sport"></span>
-                                    </template>
-                                </div>
-                                <!-- Checkout badges inline -->
-                                <div x-show="item.checkouts && item.checkouts.length > 0" class="flex flex-wrap gap-1 mt-1">
-                                    <template x-for="co in item.checkouts" :key="co.id">
-                                        <span class="inline-flex items-center text-xs px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                                            <span x-text="co.personName"></span>
-                                            <span class="ml-1 font-semibold" x-text="'×' + co.quantity"></span>
-                                            <button @click="returnCheckoutRecord(item.id, co.id, co.personName, co.quantity)"
-                                                    class="ml-1 text-green-600 hover:text-green-800 font-bold" title="Return">✓</button>
-                                        </span>
-                                    </template>
-                                </div>
-                            </td>
+                            <td class="px-3 py-3 text-sm font-medium text-gray-900" x-text="item.name"></td>
                             <td class="px-3 py-3 text-center text-sm" x-text="item.quantityTotal"></td>
                             <td class="px-3 py-3 text-center text-sm font-semibold text-pines-600" x-text="item.quantityAvailable"></td>
                             <td class="px-3 py-3 text-center text-sm" :class="item.checkedOut > 0 ? 'text-orange-600 font-semibold' : 'text-gray-400'" x-text="item.checkedOut"></td>
