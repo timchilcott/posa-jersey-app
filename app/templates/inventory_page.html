@@ -148,7 +148,13 @@
                                     <td class="px-3 py-2 text-sm" :class="item.checkedOut > 0 ? 'text-orange-600 font-semibold' : 'text-gray-400'" x-text="item.checkedOut"></td>
                                 </template>
                                 <template x-if="row._type === 'item'">
-                                    <td class="px-3 py-2 text-sm text-gray-500" x-text="item.division || ''"></td>
+                                    <td class="px-3 py-2">
+                                        <div class="flex flex-wrap gap-1">
+                                            <template x-for="div in parseDivisions(item.division)" :key="div">
+                                                <span class="text-xs px-1.5 py-0.5 rounded bg-pines-50 text-pines-700" x-text="div"></span>
+                                            </template>
+                                        </div>
+                                    </td>
                                 </template>
                                 <template x-if="row._type === 'item'">
                                     <td class="px-3 py-2">
@@ -330,10 +336,22 @@
                 </div>
             </div>
             <div class="mb-3">
-                <label class="block text-xs font-medium text-gray-700 mb-1">Division</label>
-                <input type="text" x-model="form.division" list="division-suggestions"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm"
-                       placeholder="e.g. U10, U12, Varsity...">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Divisions</label>
+                <div class="flex flex-wrap gap-1 mb-2" x-show="form.divisions.length > 0">
+                    <template x-for="(div, idx) in form.divisions" :key="idx">
+                        <span class="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-pines-50 text-pines-700 rounded">
+                            <span x-text="div"></span>
+                            <button type="button" @click="form.divisions.splice(idx, 1)" class="ml-1 text-pines-400 hover:text-pines-700">&times;</button>
+                        </span>
+                    </template>
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" x-model="divisionInput" list="division-suggestions"
+                           class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm"
+                           placeholder="e.g. U10, U12, Varsity..."
+                           @keydown.enter.prevent="addDivision()">
+                    <button type="button" @click="addDivision()" class="px-3 py-2 text-xs font-medium text-pines-600 border border-pines-300 rounded-lg hover:bg-pines-50">Add</button>
+                </div>
                 <datalist id="division-suggestions">
                     <template x-for="div in uniqueDivisions" :key="div">
                         <option :value="div"></option>
@@ -472,7 +490,8 @@
             checkoutDisplayList: [],
             totalCheckedOut: 0,
             filters: { search: '', category: '', sport: '', division: '', condition: '', lowStock: false },
-            form: { name: '', category: '', sport: '', division: '', quantity_total: 0, quantity_available: 0, conditions: [{condition: 'New', quantity: 0}], location: '', notes: '', min_quantity: 0, cost_per_unit: null },
+            form: { name: '', category: '', sport: '', divisions: [], quantity_total: 0, quantity_available: 0, conditions: [{condition: 'New', quantity: 0}], location: '', notes: '', min_quantity: 0, cost_per_unit: null },
+            divisionInput: '',
             checkoutItem: null,
             checkoutForm: { person_name: '', quantity: 1, notes: '' },
             bulkForm: { person_name: '', items: [] },
@@ -490,7 +509,7 @@
                     const data = await res.json();
                     this.items = data.items;
                     this.uniqueCategories = [...new Set(this.items.map(i => i.category).filter(Boolean))].sort();
-                    this.uniqueDivisions = [...new Set(this.items.map(i => i.division).filter(Boolean))].sort();
+                    this.uniqueDivisions = [...new Set(this.items.flatMap(i => (i.division||'').split(',').map(d => d.trim()).filter(Boolean)))].sort();
                     this.applyFilters();
                 } catch (e) { console.error(e); }
             },
@@ -521,7 +540,7 @@
                     if (this.filters.search) { const s = this.filters.search.toLowerCase(); if (!item.name.toLowerCase().includes(s) && !(item.location||'').toLowerCase().includes(s) && !(item.notes||'').toLowerCase().includes(s)) return false; }
                     if (this.filters.category && item.category !== this.filters.category) return false;
                     if (this.filters.sport && (item.sport||'') !== this.filters.sport) return false;
-                    if (this.filters.division && (item.division||'') !== this.filters.division) return false;
+                    if (this.filters.division) { const divs = (item.division||'').split(',').map(d => d.trim()); if (!divs.includes(this.filters.division)) return false; }
                     if (this.filters.condition) {
                         const hasCondition = (item.conditions || []).some(c => c.condition === this.filters.condition);
                         if (!hasCondition && item.condition !== this.filters.condition) return false;
@@ -533,19 +552,23 @@
             hasActiveFilters() { return this.filters.search || this.filters.category || this.filters.sport || this.filters.division || this.filters.condition || this.filters.lowStock; },
             clearFilters() { this.filters = { search: '', category: '', sport: '', division: '', condition: '', lowStock: false }; this.applyFilters(); },
 
-            openAddModal() { this.editingId = null; this.form = { name: '', category: '', sport: '', division: '', quantity_total: 0, quantity_available: 0, conditions: [{condition: 'New', quantity: 0}], location: '', notes: '', min_quantity: 0, cost_per_unit: null }; this.showModal = true; },
+            openAddModal() { this.editingId = null; this.divisionInput = ''; this.form = { name: '', category: '', sport: '', divisions: [], quantity_total: 0, quantity_available: 0, conditions: [{condition: 'New', quantity: 0}], location: '', notes: '', min_quantity: 0, cost_per_unit: null }; this.showModal = true; },
             editItem(item) {
                 this.editingId = item.id;
                 const conds = (item.conditions && item.conditions.length > 0)
                     ? item.conditions.map(c => ({...c}))
                     : [{condition: item.condition || 'Good', quantity: item.quantityTotal}];
-                this.form = { name: item.name, category: item.category, sport: item.sport||'', division: item.division||'', quantity_total: item.quantityTotal, quantity_available: item.quantityAvailable, conditions: conds, location: item.location||'', notes: item.notes||'', min_quantity: item.minQuantity||0, cost_per_unit: item.costPerUnit };
+                const divs = (item.division||'').split(',').map(d => d.trim()).filter(Boolean);
+                this.divisionInput = '';
+                this.form = { name: item.name, category: item.category, sport: item.sport||'', divisions: divs, quantity_total: item.quantityTotal, quantity_available: item.quantityAvailable, conditions: conds, location: item.location||'', notes: item.notes||'', min_quantity: item.minQuantity||0, cost_per_unit: item.costPerUnit };
                 this.showModal = true;
             },
             async saveItem() {
                 if (!this.form.name || !this.form.category) { alert('Name and category are required'); return; }
+                const payload = { ...this.form, division: this.form.divisions.join(', ') };
+                delete payload.divisions;
                 const url = this.editingId ? `/api/inventory/items/${this.editingId}` : '/api/inventory/items';
-                try { await fetch(url, { method: this.editingId ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(this.form) }); this.showModal = false; await this.refresh(); } catch(e) { alert('Failed to save'); }
+                try { await fetch(url, { method: this.editingId ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) }); this.showModal = false; await this.refresh(); } catch(e) { alert('Failed to save'); }
             },
             async deleteItem(item) {
                 if (!confirm(`Delete "${item.name}"?`)) return;
@@ -621,6 +644,17 @@
             },
 
             getCategoryEmoji(catName) { const cat = this.categories.find(c => c.name === catName); return cat ? cat.emoji : '📦'; },
+            addDivision() {
+                const val = this.divisionInput.trim();
+                if (val && !this.form.divisions.includes(val)) {
+                    this.form.divisions.push(val);
+                }
+                this.divisionInput = '';
+            },
+            parseDivisions(divStr) {
+                if (!divStr) return [];
+                return divStr.split(',').map(d => d.trim()).filter(Boolean);
+            },
             inventoryRows(item) {
                 const rows = [{ _type: 'item', _key: 'hdr-' + item.id }];
                 const sorted = (item.checkouts || []).slice().sort((a, b) => a.personName.localeCompare(b.personName));
