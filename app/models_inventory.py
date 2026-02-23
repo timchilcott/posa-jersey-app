@@ -35,6 +35,17 @@ class CheckoutRecord(Base):
     notes = Column(Text, nullable=True)
 
 
+class ConditionBreakdown(Base):
+    """Tracks condition split for an inventory item (e.g. 20 New, 10 Good, 6 Fair)."""
+
+    __tablename__ = "condition_breakdowns"
+
+    id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, nullable=False, index=True)
+    condition = Column(String, nullable=False)  # New, Good, Fair, Poor, Replace
+    quantity = Column(Integer, default=0)
+
+
 class InventoryItem(Base):
     """A piece of equipment tracked in inventory."""
 
