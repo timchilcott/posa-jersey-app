@@ -110,9 +110,9 @@
             <div x-show="loading" class="text-center py-12">
                 <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pines-500"></div>
             </div>
-            <table x-show="!loading && filteredItems.length > 0" class="min-w-full divide-y divide-gray-200">
+            <table x-show="!loading && filteredItems.length > 0" class="min-w-full">
                 <thead>
-                    <tr>
+                    <tr class="border-b border-gray-200">
                         <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
                         <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                         <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Available</th>
@@ -123,10 +123,10 @@
                         <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200 bg-white">
+                <tbody>
                     <template x-for="item in filteredItems" :key="item.id">
                         <template x-for="(row, rowIdx) in inventoryRows(item)" :key="row._key">
-                            <tr :class="row._type === 'item' ? 'bg-pines-50 border-t-2 border-pines-200' : ''">
+                            <tr :class="row._type === 'item' ? 'bg-pines-50 border-t-2 border-pines-200 border-b border-gray-200' : 'border-b border-gray-200'">>
                                 <!-- ITEM ROW -->
                                 <template x-if="row._type === 'item'">
                                     <td class="px-3 py-2">
