@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.database import get_db
-from app.models_inventory import InventoryItem, InventoryCategory
+from app.models_inventory import InventoryItem, InventoryCategory, CheckoutRecord
 
 router = APIRouter(prefix="/api/inventory", tags=["inventory"])
 
@@ -136,7 +136,7 @@ def list_items(
 
     return {
         "count": len(items),
-        "items": [_serialize_item(i) for i in items],
+        "items": [_serialize_item(i, db) for i in items],
     }
 
 
@@ -221,7 +221,7 @@ async def create_item(request: Request, db: Session = Depends(get_db)):
     db.add(item)
     db.commit()
     db.refresh(item)
-    return _serialize_item(item)
+    return _serialize_item(item, db)
 
 
 @router.get("/items/{item_id}")
@@ -229,7 +229,7 @@ def get_item(item_id: int, db: Session = Depends(get_db)):
     item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
     if not item:
         raise HTTPException(404, "Item not found")
-    return _serialize_item(item)
+    return _serialize_item(item, db)
 
 
 @router.put("/items/{item_id}")
@@ -263,7 +263,7 @@ async def update_item(item_id: int, request: Request, db: Session = Depends(get_
 
     db.commit()
     db.refresh(item)
-    return _serialize_item(item)
+    return _serialize_item(item, db)
 
 
 @router.delete("/items/{item_id}")
@@ -281,33 +281,108 @@ def delete_item(item_id: int, db: Session = Depends(get_db)):
 # ------------------------------------------------------------------
 @router.post("/items/{item_id}/checkout")
 async def checkout_item(item_id: int, request: Request, db: Session = Depends(get_db)):
-    """Decrease available quantity (check out equipment)."""
+    """Check out equipment to a person."""
     item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
     if not item:
         raise HTTPException(404, "Item not found")
     data = await request.json()
+    person = (data.get("person_name") or "").strip()
+    if not person:
+        raise HTTPException(400, "Person name is required")
     qty = int(data.get("quantity", 1))
     if qty > item.quantity_available:
         raise HTTPException(400, f"Only {item.quantity_available} available")
     item.quantity_available -= qty
+
+    record = CheckoutRecord(
+        item_id=item.id,
+        person_name=person,
+        quantity=qty,
+        notes=data.get("notes") or None,
+    )
+    db.add(record)
     db.commit()
-    return _serialize_item(item)
+    db.refresh(item)
+    return _serialize_item(item, db)
 
 
 @router.post("/items/{item_id}/return")
 async def return_item(item_id: int, request: Request, db: Session = Depends(get_db)):
-    """Increase available quantity (return equipment)."""
+    """Return equipment — either by checkout record id or by quantity."""
     item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
     if not item:
         raise HTTPException(404, "Item not found")
     data = await request.json()
-    qty = int(data.get("quantity", 1))
+
+    record_id = data.get("record_id")
+    if record_id:
+        # Return a specific checkout record
+        record = db.query(CheckoutRecord).filter(
+            CheckoutRecord.id == record_id,
+            CheckoutRecord.item_id == item_id,
+            CheckoutRecord.returned_at.is_(None),
+        ).first()
+        if not record:
+            raise HTTPException(404, "Active checkout record not found")
+        qty = record.quantity
+        record.returned_at = datetime.utcnow()
+    else:
+        # Fallback: return by quantity (legacy)
+        qty = int(data.get("quantity", 1))
+
     new_avail = item.quantity_available + qty
     if new_avail > item.quantity_total:
         raise HTTPException(400, f"Cannot return more than total ({item.quantity_total})")
     item.quantity_available = new_avail
     db.commit()
-    return _serialize_item(item)
+    db.refresh(item)
+    return _serialize_item(item, db)
+
+
+# ------------------------------------------------------------------
+# Checkout records
+# ------------------------------------------------------------------
+@router.get("/checkouts")
+def list_all_checkouts(db: Session = Depends(get_db)):
+    """List all active (unreturned) checkouts across all items."""
+    records = db.query(CheckoutRecord).filter(
+        CheckoutRecord.returned_at.is_(None)
+    ).order_by(CheckoutRecord.checked_out_at.desc()).all()
+    result = []
+    for r in records:
+        item = db.query(InventoryItem).filter(InventoryItem.id == r.item_id).first()
+        result.append({
+            "id": r.id,
+            "itemId": r.item_id,
+            "itemName": item.name if item else "Unknown",
+            "itemCategory": item.category if item else "",
+            "personName": r.person_name,
+            "quantity": r.quantity,
+            "checkedOutAt": r.checked_out_at.isoformat() if r.checked_out_at else None,
+            "notes": r.notes,
+        })
+    return {"checkouts": result}
+
+
+@router.get("/items/{item_id}/checkouts")
+def list_item_checkouts(item_id: int, db: Session = Depends(get_db)):
+    """List active checkouts for a specific item."""
+    records = db.query(CheckoutRecord).filter(
+        CheckoutRecord.item_id == item_id,
+        CheckoutRecord.returned_at.is_(None),
+    ).order_by(CheckoutRecord.checked_out_at.desc()).all()
+    return {
+        "checkouts": [
+            {
+                "id": r.id,
+                "personName": r.person_name,
+                "quantity": r.quantity,
+                "checkedOutAt": r.checked_out_at.isoformat() if r.checked_out_at else None,
+                "notes": r.notes,
+            }
+            for r in records
+        ]
+    }
 
 
 @router.post("/items/{item_id}/count")
@@ -325,13 +400,30 @@ async def physical_count(item_id: int, request: Request, db: Session = Depends(g
     if "condition" in data:
         item.condition = data["condition"]
     db.commit()
-    return _serialize_item(item)
+    return _serialize_item(item, db)
 
 
 # ------------------------------------------------------------------
 # Helpers
 # ------------------------------------------------------------------
-def _serialize_item(item: InventoryItem) -> dict:
+def _serialize_item(item: InventoryItem, db: Session = None) -> dict:
+    checkouts = []
+    if db:
+        records = db.query(CheckoutRecord).filter(
+            CheckoutRecord.item_id == item.id,
+            CheckoutRecord.returned_at.is_(None),
+        ).order_by(CheckoutRecord.checked_out_at.desc()).all()
+        checkouts = [
+            {
+                "id": r.id,
+                "personName": r.person_name,
+                "quantity": r.quantity,
+                "checkedOutAt": r.checked_out_at.isoformat() if r.checked_out_at else None,
+                "notes": r.notes,
+            }
+            for r in records
+        ]
+
     return {
         "id": item.id,
         "name": item.name,
@@ -352,4 +444,5 @@ def _serialize_item(item: InventoryItem) -> dict:
         "lastChecked": item.last_checked.isoformat() if item.last_checked else None,
         "createdAt": item.created_at.isoformat() if item.created_at else None,
         "updatedAt": item.updated_at.isoformat() if item.updated_at else None,
+        "checkouts": checkouts,
     }
