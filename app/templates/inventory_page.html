@@ -112,18 +112,20 @@
             </div>
             <table x-show="!loading && filteredItems.length > 0" class="min-w-full divide-y divide-gray-200">
                 <colgroup>
-                    <col style="width:22%">
-                    <col style="width:6%">
-                    <col style="width:32%">
+                    <col style="width:28%">
+                    <col style="width:8%">
+                    <col style="width:8%">
+                    <col style="width:18%">
                     <col style="width:18%">
                     <col style="width:10%">
                 </colgroup>
                 <thead>
                     <tr>
-                        <th class="pl-3 pr-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coach</th>
-                        <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                        <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
-                        <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Checked Out</th>
+                        <th class="pl-3 pr-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                        <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                        <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avail</th>
+                        <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Condition</th>
+                        <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                         <th class="pl-2 pr-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
@@ -131,32 +133,35 @@
                     <template x-for="item in filteredItems" :key="item.id">
                         <template x-for="(row, rowIdx) in inventoryRows(item)" :key="row._key">
                             <tr :class="row._type === 'item' ? 'bg-pines-50' : 'hover:bg-gray-50'">
-                                <!-- ITEM GROUP HEADER — no colspans, 5 cells -->
+                                <!-- ITEM ROW — data aligns with headers -->
                                 <template x-if="row._type === 'item'">
                                     <td class="pl-3 pr-2 py-2">
                                         <span class="text-sm font-bold text-gray-900" x-text="item.name"></span>
                                         <span x-show="item.division" class="ml-1 text-sm text-gray-400" x-text="item.division"></span>
+                                        <template x-if="item.checkedOut > 0">
+                                            <span class="ml-1 text-sm text-orange-500" x-text="item.checkedOut + ' out'"></span>
+                                        </template>
                                     </td>
                                 </template>
                                 <template x-if="row._type === 'item'">
-                                    <td class="px-2 py-2 text-sm text-gray-500" x-text="item.quantityTotal"></td>
+                                    <td class="px-2 py-2 text-sm text-gray-900" x-text="item.quantityTotal"></td>
+                                </template>
+                                <template x-if="row._type === 'item'">
+                                    <td class="px-2 py-2 text-sm font-semibold text-pines-600" x-text="item.quantityAvailable"></td>
                                 </template>
                                 <template x-if="row._type === 'item'">
                                     <td class="px-2 py-2">
-                                        <span class="text-sm"><span class="text-pines-600 font-semibold" x-text="item.quantityAvailable"></span> <span class="text-gray-400">available</span></span>
-                                        <template x-if="item.checkedOut > 0">
-                                            <span class="text-sm text-orange-500 ml-1"><span x-text="item.checkedOut"></span> out</span>
-                                        </template>
-                                        <template x-for="cb in (item.conditions || [])" :key="cb.condition">
-                                            <span class="ml-1 text-xs px-2 py-0.5 rounded font-medium" :class="conditionColor(cb.condition)">
-                                                <span x-text="cb.quantity"></span> <span x-text="cb.condition"></span>
-                                            </span>
-                                        </template>
-                                        <span x-show="item.location" class="ml-2 text-sm text-gray-400" x-text="'📍 ' + item.location"></span>
+                                        <div class="flex flex-wrap gap-1">
+                                            <template x-for="cb in (item.conditions || [])" :key="cb.condition">
+                                                <span class="text-xs px-2 py-0.5 rounded font-medium" :class="conditionColor(cb.condition)">
+                                                    <span x-text="cb.quantity"></span> <span x-text="cb.condition"></span>
+                                                </span>
+                                            </template>
+                                        </div>
                                     </td>
                                 </template>
                                 <template x-if="row._type === 'item'">
-                                    <td class="px-2 py-2"></td>
+                                    <td class="px-2 py-2 text-sm text-gray-500" x-text="item.location || ''"></td>
                                 </template>
                                 <template x-if="row._type === 'item'">
                                     <td class="pl-2 pr-3 py-2 text-right">
@@ -173,18 +178,21 @@
                                         </div>
                                     </td>
                                 </template>
-                                <!-- CHECKOUT ROW — 5 cells matching headers -->
+                                <!-- CHECKOUT SUB-ROW — secondary detail -->
                                 <template x-if="row._type === 'checkout'">
-                                    <td class="pl-3 pr-2 py-3 text-sm text-gray-900" x-text="row.personName"></td>
+                                    <td class="pl-6 pr-2 py-3 text-sm text-gray-500" x-text="row.personName"></td>
                                 </template>
                                 <template x-if="row._type === 'checkout'">
-                                    <td class="px-2 py-3 text-sm text-gray-900" x-text="row.quantity"></td>
+                                    <td class="px-2 py-3 text-sm text-gray-500" x-text="row.quantity"></td>
                                 </template>
                                 <template x-if="row._type === 'checkout'">
-                                    <td class="px-2 py-3 text-sm text-gray-500" x-text="row.notes || ''"></td>
+                                    <td class="px-2 py-3 text-sm text-gray-400" x-text="row.notes || ''"></td>
                                 </template>
                                 <template x-if="row._type === 'checkout'">
-                                    <td class="px-2 py-3 text-sm text-gray-500" x-text="formatDate(row.checkedOutAt)"></td>
+                                    <td class="px-2 py-3 text-sm text-gray-400" x-text="formatDate(row.checkedOutAt)"></td>
+                                </template>
+                                <template x-if="row._type === 'checkout'">
+                                    <td class="px-2 py-3"></td>
                                 </template>
                                 <template x-if="row._type === 'checkout'">
                                     <td class="pl-2 pr-3 py-3 text-right">
