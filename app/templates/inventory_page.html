@@ -111,12 +111,11 @@
             <table x-show="!loading && filteredItems.length > 0" class="min-w-full">
                 <thead>
                     <tr class="border-b border-gray-200">
-                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
-                        <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                        <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Avail</th>
-                        <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Out</th>
-                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Condition</th>
-                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coach</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Checked Out</th>
                         <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
@@ -124,74 +123,57 @@
                     <template x-for="item in filteredItems" :key="item.id">
                         <template x-for="(row, rowIdx) in inventoryRows(item)" :key="row._key">
                             <tr class="border-b border-gray-200">
-                                <!-- ITEM ROW -->
+                                <!-- ITEM GROUP HEADER — like "Birth Year 2022  9 players" -->
                                 <template x-if="row._type === 'item'">
-                                    <td class="px-3 py-3">
-                                        <span class="text-sm font-medium text-gray-900" x-text="item.name"></span>
-                                        <span x-show="item.division" class="ml-2 text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500" x-text="item.division"></span>
+                                    <td class="px-3 py-2" colspan="4">
+                                        <span class="text-sm font-bold text-gray-900" x-text="item.name"></span>
+                                        <span x-show="item.division" class="ml-2 text-sm text-gray-400" x-text="item.division"></span>
+                                        <span class="ml-3 text-sm text-gray-400">
+                                            <span x-text="item.quantityTotal"></span> total, <span class="text-pines-600 font-semibold" x-text="item.quantityAvailable"></span> available<template x-if="item.checkedOut > 0"><span class="text-orange-500">, <span x-text="item.checkedOut"></span> out</span></template>
+                                        </span>
+                                        <template x-for="cb in (item.conditions || [])" :key="cb.condition">
+                                            <span class="ml-1 text-xs px-2 py-0.5 rounded font-medium" :class="conditionColor(cb.condition)">
+                                                <span x-text="cb.quantity"></span> <span x-text="cb.condition"></span>
+                                            </span>
+                                        </template>
+                                        <span x-show="item.location" class="ml-3 text-sm text-gray-400" x-text="'📍 ' + item.location"></span>
                                     </td>
                                 </template>
                                 <template x-if="row._type === 'item'">
-                                    <td class="px-3 py-3 text-center text-sm" x-text="item.quantityTotal"></td>
-                                </template>
-                                <template x-if="row._type === 'item'">
-                                    <td class="px-3 py-3 text-center text-sm font-semibold text-pines-600" x-text="item.quantityAvailable"></td>
-                                </template>
-                                <template x-if="row._type === 'item'">
-                                    <td class="px-3 py-3 text-center text-sm" :class="item.checkedOut > 0 ? 'text-orange-600 font-semibold' : 'text-gray-400'" x-text="item.checkedOut"></td>
-                                </template>
-                                <template x-if="row._type === 'item'">
-                                    <td class="px-3 py-3">
-                                        <div class="flex flex-wrap gap-1">
-                                            <template x-for="cb in (item.conditions || [])" :key="cb.condition">
-                                                <span class="text-xs px-2 py-0.5 rounded font-medium" :class="conditionColor(cb.condition)">
-                                                    <span x-text="cb.quantity"></span> <span x-text="cb.condition"></span>
-                                                </span>
-                                            </template>
-                                        </div>
-                                    </td>
-                                </template>
-                                <template x-if="row._type === 'item'">
-                                    <td class="px-3 py-3 text-sm text-gray-500" x-text="item.location || '-'"></td>
-                                </template>
-                                <template x-if="row._type === 'item'">
-                                    <td class="px-3 py-3 text-right">
+                                    <td class="px-3 py-2" colspan="2">
                                         <div class="flex items-center justify-end space-x-1">
-                                            <button @click="openCheckoutModal(item)" class="p-1.5 rounded hover:bg-gray-100 text-pines-500" title="Check out" :disabled="item.quantityAvailable <= 0">
+                                            <button @click="openCheckoutModal(item)" class="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-pines-600" title="Check out" :disabled="item.quantityAvailable <= 0">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                                             </button>
-                                            <button @click="editItem(item)" class="p-1.5 rounded hover:bg-gray-100 text-pines-500" title="Edit">
+                                            <button @click="editItem(item)" class="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-pines-600" title="Edit">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                             </button>
-                                            <button @click="deleteItem(item)" class="p-1.5 rounded hover:bg-red-50 text-red-400" title="Delete">
+                                            <button @click="deleteItem(item)" class="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-red-500" title="Delete">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                             </button>
                                         </div>
                                     </td>
                                 </template>
-                                <!-- CHECKOUT SUB-ROW — same padding as item rows -->
+                                <!-- CHECKOUT ROW — like a player row in the jersey app -->
                                 <template x-if="row._type === 'checkout'">
-                                    <td class="pl-8 pr-3 py-3 text-sm text-gray-500" x-text="row.personName"></td>
+                                    <td class="px-3 py-3 text-sm text-gray-900" x-text="row.personName"></td>
                                 </template>
                                 <template x-if="row._type === 'checkout'">
-                                    <td class="px-3 py-3 text-center text-sm text-gray-500" x-text="row.quantity"></td>
+                                    <td class="px-3 py-3 text-sm text-gray-900" x-text="row.quantity"></td>
                                 </template>
                                 <template x-if="row._type === 'checkout'">
-                                    <td class="px-3 py-3"></td>
-                                </template>
-                                <template x-if="row._type === 'checkout'">
-                                    <td class="px-3 py-3 text-sm text-gray-400" x-text="formatDate(row.checkedOutAt)"></td>
-                                </template>
-                                <template x-if="row._type === 'checkout'">
-                                    <td class="px-3 py-3 text-sm text-gray-400 italic" x-text="row.notes || ''"></td>
+                                    <td class="px-3 py-3 text-sm text-gray-500" x-text="row.notes || ''"></td>
                                 </template>
                                 <template x-if="row._type === 'checkout'">
                                     <td class="px-3 py-3"></td>
+                                </template>
+                                <template x-if="row._type === 'checkout'">
+                                    <td class="px-3 py-3 text-sm text-gray-500" x-text="formatDate(row.checkedOutAt)"></td>
                                 </template>
                                 <template x-if="row._type === 'checkout'">
                                     <td class="px-3 py-3 text-right">
                                         <button @click="returnCheckoutRecord(item.id, row.id, row.personName, row.quantity)"
-                                                class="p-1 rounded hover:bg-gray-100 text-pines-500" title="Return">
+                                                class="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-pines-600" title="Return">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                         </button>
                                     </td>
@@ -605,7 +587,7 @@
 
             getCategoryEmoji(catName) { const cat = this.categories.find(c => c.name === catName); return cat ? cat.emoji : '📦'; },
             inventoryRows(item) {
-                const rows = [{ _type: 'item', _key: 'item-' + item.id }];
+                const rows = [{ _type: 'item', _key: 'hdr-' + item.id }];
                 const sorted = (item.checkouts || []).slice().sort((a, b) => a.personName.localeCompare(b.personName));
                 sorted.forEach(co => {
                     rows.push({ ...co, _type: 'checkout', _key: 'co-' + co.id });
