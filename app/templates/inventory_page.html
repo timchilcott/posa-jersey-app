@@ -79,14 +79,24 @@
                             </template>
                         </select>
                     </div>
-                    <div class="w-32">
+                    <div class="w-44 relative" x-data="{ divOpen: false }">
                         <label class="block text-xs font-medium text-gray-700 mb-1">Division</label>
-                        <select x-model="filters.division" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500">
-                            <option value="">All</option>
+                        <button type="button" @click="divOpen = !divOpen" @click.outside="divOpen = false"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm text-left bg-white flex items-center justify-between">
+                            <span x-text="filters.divisions.length ? filters.divisions.join(', ') : 'All'" :class="filters.divisions.length ? 'text-gray-900' : 'text-gray-500'" class="truncate"></span>
+                            <svg class="w-4 h-4 text-gray-400 flex-shrink-0 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div x-show="divOpen" x-transition class="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                             <template x-for="div in uniqueDivisions" :key="div">
-                                <option :value="div" x-text="div"></option>
+                                <label class="flex items-center px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-sm">
+                                    <input type="checkbox" :value="div" :checked="filters.divisions.includes(div)"
+                                           @change="toggleDivisionFilter(div)"
+                                           class="rounded border-gray-300 text-pines-500 focus:ring-pines-500 mr-2">
+                                    <span x-text="div"></span>
+                                </label>
                             </template>
-                        </select>
+                            <div x-show="uniqueDivisions.length === 0" class="px-3 py-2 text-xs text-gray-400">No divisions</div>
+                        </div>
                     </div>
                     <div class="w-32">
                         <label class="block text-xs font-medium text-gray-700 mb-1">Condition</label>
@@ -122,7 +132,7 @@
                                 <th class="w-16 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                                 <th class="w-20 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Available</th>
                                 <th class="w-24 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Checked Out</th>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Division</th>
+                                <th x-show="filters.divisions.length > 0" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Division</th>
                                 <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Condition</th>
                                 <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                                 <th class="w-20 px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -148,7 +158,7 @@
                                     <td class="px-3 py-2 text-sm" :class="item.checkedOut > 0 ? 'text-orange-600 font-semibold' : 'text-gray-400'" x-text="item.checkedOut"></td>
                                 </template>
                                 <template x-if="row._type === 'item'">
-                                    <td class="px-3 py-2">
+                                    <td x-show="filters.divisions.length > 0" class="px-3 py-2">
                                         <div class="flex flex-nowrap gap-1">
                                             <template x-for="div in parseDivisions(item.division)" :key="div">
                                                 <span class="text-xs px-1.5 py-0.5 rounded bg-pines-50 text-pines-700 whitespace-nowrap" x-text="div"></span>
@@ -199,7 +209,7 @@
                                     <td class="px-3 py-3 text-sm text-gray-400" x-text="formatDate(row.checkedOutAt)"></td>
                                 </template>
                                 <template x-if="row._type === 'checkout'">
-                                    <td class="px-3 py-3"></td>
+                                    <td x-show="filters.divisions.length > 0" class="px-3 py-3"></td>
                                 </template>
                                 <template x-if="row._type === 'checkout'">
                                     <td class="px-3 py-3 text-sm text-gray-400 italic" x-text="row.notes || ''"></td>
@@ -345,13 +355,11 @@
                         </span>
                     </template>
                 </div>
-                <div class="flex gap-2">
-                    <input type="text" x-model="divisionInput" list="division-suggestions"
-                           class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm"
-                           placeholder="e.g. U10, U12, Varsity..."
-                           @keydown.enter.prevent="addDivision()">
-                    <button type="button" @click="addDivision()" class="px-3 py-2 text-xs font-medium text-pines-600 border border-pines-300 rounded-lg hover:bg-pines-50">Add</button>
-                </div>
+                <input type="text" x-model="divisionInput" list="division-suggestions"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm"
+                       placeholder="Type divisions separated by commas..."
+                       @keydown.enter.prevent="addDivisionsFromInput()"
+                       @blur="addDivisionsFromInput()">
                 <datalist id="division-suggestions">
                     <template x-for="div in uniqueDivisions" :key="div">
                         <option :value="div"></option>
@@ -489,7 +497,7 @@
             checkoutPeople: [],
             checkoutDisplayList: [],
             totalCheckedOut: 0,
-            filters: { search: '', category: '', sport: '', division: '', condition: '', lowStock: false },
+            filters: { search: '', category: '', sport: '', divisions: [], condition: '', lowStock: false },
             form: { name: '', category: '', sport: '', divisions: [], quantity_total: 0, quantity_available: 0, conditions: [{condition: 'New', quantity: 0}], location: '', notes: '', min_quantity: 0, cost_per_unit: null },
             divisionInput: '',
             checkoutItem: null,
@@ -540,7 +548,7 @@
                     if (this.filters.search) { const s = this.filters.search.toLowerCase(); if (!item.name.toLowerCase().includes(s) && !(item.location||'').toLowerCase().includes(s) && !(item.notes||'').toLowerCase().includes(s)) return false; }
                     if (this.filters.category && item.category !== this.filters.category) return false;
                     if (this.filters.sport && (item.sport||'') !== this.filters.sport) return false;
-                    if (this.filters.division) { const divs = (item.division||'').split(',').map(d => d.trim()); if (!divs.includes(this.filters.division)) return false; }
+                    if (this.filters.divisions.length > 0) { const itemDivs = (item.division||'').split(',').map(d => d.trim()); if (!this.filters.divisions.some(fd => itemDivs.includes(fd))) return false; }
                     if (this.filters.condition) {
                         const conds = this.itemConditions(item);
                         if (!conds.some(c => c.condition === this.filters.condition)) return false;
@@ -549,8 +557,8 @@
                     return true;
                 });
             },
-            hasActiveFilters() { return this.filters.search || this.filters.category || this.filters.sport || this.filters.division || this.filters.condition || this.filters.lowStock; },
-            clearFilters() { this.filters = { search: '', category: '', sport: '', division: '', condition: '', lowStock: false }; this.applyFilters(); },
+            hasActiveFilters() { return this.filters.search || this.filters.category || this.filters.sport || this.filters.divisions.length > 0 || this.filters.condition || this.filters.lowStock; },
+            clearFilters() { this.filters = { search: '', category: '', sport: '', divisions: [], condition: '', lowStock: false }; this.applyFilters(); },
 
             openAddModal() { this.editingId = null; this.divisionInput = ''; this.form = { name: '', category: '', sport: '', divisions: [], quantity_total: 0, quantity_available: 0, conditions: [{condition: 'New', quantity: 0}], location: '', notes: '', min_quantity: 0, cost_per_unit: null }; this.showModal = true; },
             editItem(item) {
@@ -644,12 +652,20 @@
             },
 
             getCategoryEmoji(catName) { const cat = this.categories.find(c => c.name === catName); return cat ? cat.emoji : '📦'; },
-            addDivision() {
-                const val = this.divisionInput.trim();
-                if (val && !this.form.divisions.includes(val)) {
-                    this.form.divisions.push(val);
-                }
+            addDivisionsFromInput() {
+                const parts = this.divisionInput.split(',').map(d => d.trim()).filter(Boolean);
+                parts.forEach(val => {
+                    if (!this.form.divisions.includes(val)) {
+                        this.form.divisions.push(val);
+                    }
+                });
                 this.divisionInput = '';
+            },
+            toggleDivisionFilter(div) {
+                const idx = this.filters.divisions.indexOf(div);
+                if (idx >= 0) { this.filters.divisions.splice(idx, 1); }
+                else { this.filters.divisions.push(div); }
+                this.applyFilters();
             },
             parseDivisions(divStr) {
                 if (!divStr) return [];
