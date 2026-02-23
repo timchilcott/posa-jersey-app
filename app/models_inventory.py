@@ -21,6 +21,20 @@ class InventoryCategory(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class CheckoutRecord(Base):
+    """Tracks who checked out what and when."""
+
+    __tablename__ = "checkout_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, nullable=False, index=True)  # FK to inventory_items
+    person_name = Column(String, nullable=False)
+    quantity = Column(Integer, default=1)
+    checked_out_at = Column(DateTime, default=datetime.utcnow)
+    returned_at = Column(DateTime, nullable=True)  # NULL = still checked out
+    notes = Column(Text, nullable=True)
+
+
 class InventoryItem(Base):
     """A piece of equipment tracked in inventory."""
 
