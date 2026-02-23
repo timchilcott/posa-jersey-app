@@ -20,10 +20,7 @@
     <style>
         [x-cloak] { display: none !important; }
         .low-stock-pulse { animation: pulse-warn 2s ease-in-out infinite; }
-        @keyframes pulse-warn {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-        }
+        @keyframes pulse-warn { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
     </style>
 </head>
 <body class="bg-gray-50" x-data="inventoryApp()" x-init="init()" x-cloak>
@@ -36,15 +33,16 @@
                     <img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-8">
                     <span class="text-lg font-bold text-gray-900">Equipment Inventory</span>
                 </div>
-                <div class="flex items-center space-x-3">
+                <div class="flex items-center space-x-2">
                     <a href="/admin" class="text-pines-500 hover:text-pines-700 px-3 py-2 text-sm font-medium">&larr; Players</a>
                     <button @click="showCheckoutsView = !showCheckoutsView"
                             class="relative px-3 py-2 text-sm font-medium rounded-lg"
-                            :class="showCheckoutsView ? 'bg-pines-100 text-pines-700' : 'text-pines-500 hover:text-pines-700'">
-                        Active Checkouts
+                            :class="showCheckoutsView ? 'bg-pines-100 text-pines-700' : 'text-pines-500 hover:text-pines-700'">>
+                        Checked Out
                         <span x-show="totalCheckedOut > 0" class="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center" x-text="totalCheckedOut"></span>
                     </button>
-                    <button @click="openAddModal()" class="bg-pines-500 hover:bg-pines-600 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Add Item</button>
+                    <button @click="openBulkCheckout()" class="bg-pines-500 hover:bg-pines-600 text-white px-3 py-2 rounded-lg text-sm font-medium">Equipment Checkout</button>
+                    <button @click="openAddModal()" class="bg-pines-500 hover:bg-pines-600 text-white px-3 py-2 rounded-lg text-sm font-medium">+ Add Item</button>
                 </div>
             </div>
         </div>
@@ -80,49 +78,62 @@
         </div>
     </div>
 
-    <!-- Active Checkouts View -->
+    <!-- ==================== CHECKED OUT BY PERSON VIEW ==================== -->
     <div x-show="showCheckoutsView" class="max-w-7xl mx-auto px-4 pb-6">
-        <div class="bg-white rounded-lg shadow overflow-hidden">
-            <div class="px-4 py-3 bg-blue-50 border-b border-blue-200 flex items-center justify-between">
-                <h2 class="text-sm font-bold text-blue-800">Active Checkouts</h2>
-                <button @click="showCheckoutsView = false" class="text-blue-500 hover:text-blue-700 text-sm">Hide</button>
-            </div>
-            <div x-show="allCheckouts.length === 0" class="p-8 text-center text-gray-500">
-                No equipment currently checked out
-            </div>
-            <table x-show="allCheckouts.length > 0" class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Person</th>
-                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
-                        <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Qty</th>
-                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Checked Out</th>
-                        <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Action</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200">
-                    <template x-for="co in allCheckouts" :key="co.id">
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-3 py-2 text-sm font-medium text-gray-900" x-text="co.personName"></td>
-                            <td class="px-3 py-2 text-sm text-gray-600">
-                                <span x-text="co.itemName"></span>
-                                <span class="text-xs text-gray-400 ml-1" x-text="co.itemCategory ? '(' + co.itemCategory + ')' : ''"></span>
-                            </td>
-                            <td class="px-3 py-2 text-sm text-center font-semibold" x-text="co.quantity"></td>
-                            <td class="px-3 py-2 text-xs text-gray-500" x-text="formatDate(co.checkedOutAt)"></td>
-                            <td class="px-3 py-2 text-right">
-                                <button @click="returnCheckoutRecord(co.itemId, co.id, co.personName, co.quantity)"
-                                        class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 font-medium">
-                                    Return
-                                </button>
-                            </td>
-                        </tr>
-                    </template>
-                </tbody>
-            </table>
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-bold text-gray-900">Checked Out by Person</h2>
+            <button @click="showCheckoutsView = false" class="text-sm text-gray-500 hover:text-gray-700">← Back to Inventory</button>
+        </div>
+
+        <div x-show="checkoutPeople.length === 0" class="bg-white rounded-lg shadow p-12 text-center">
+            <div class="text-4xl mb-2">✅</div>
+            <p class="text-gray-500">No equipment currently checked out</p>
+        </div>
+
+        <div class="space-y-3">
+            <template x-for="person in checkoutPeople" :key="person.personName">
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <!-- Person header -->
+                    <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold"
+                                 x-text="person.personName.charAt(0).toUpperCase()"></div>
+                            <div>
+                                <span class="font-semibold text-gray-900" x-text="person.personName"></span>
+                                <span class="text-xs text-gray-500 ml-2" x-text="person.totalItems + ' item' + (person.totalItems !== 1 ? 's' : '')"></span>
+                            </div>
+                        </div>
+                        <button @click="returnAllForPerson(person.personName)"
+                                class="text-xs px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 font-medium">
+                            Return All
+                        </button>
+                    </div>
+                    <!-- Person's items -->
+                    <div class="divide-y divide-gray-100">
+                        <template x-for="co in person.items" :key="co.id">
+                            <div class="px-4 py-2 flex items-center justify-between hover:bg-gray-50">
+                                <div class="flex-1">
+                                    <span class="text-sm font-medium text-gray-900" x-text="co.itemName"></span>
+                                    <span class="text-xs text-gray-400 ml-1" x-text="co.itemCategory ? '(' + co.itemCategory + ')' : ''"></span>
+                                    <span x-show="co.notes" class="text-xs text-gray-400 ml-2 italic" x-text="co.notes"></span>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-sm font-semibold text-blue-600" x-text="'×' + co.quantity"></span>
+                                    <span class="text-xs text-gray-400" x-text="formatDate(co.checkedOutAt)"></span>
+                                    <button @click="returnCheckoutRecord(co.itemId, co.id, person.personName, co.quantity)"
+                                            class="text-xs px-2 py-1 bg-green-50 text-green-600 rounded hover:bg-green-100 font-medium">
+                                        Return
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
         </div>
     </div>
 
+    <!-- ==================== INVENTORY VIEW ==================== -->
     <!-- Filters -->
     <div class="bg-white border-b border-gray-200" x-show="!showCheckoutsView">
         <div class="max-w-7xl mx-auto px-4 py-3">
@@ -171,14 +182,12 @@
         </div>
     </div>
 
-    <!-- Items Table -->
     <main class="max-w-7xl mx-auto px-4 py-6" x-show="!showCheckoutsView">
         <div x-show="loading" class="text-center py-12">
             <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pines-500"></div>
-            <p class="mt-2 text-gray-600">Loading inventory...</p>
         </div>
 
-        <!-- Category cards when no filters -->
+        <!-- Category cards -->
         <div x-show="!loading && !hasActiveFilters() && summary.categories" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
             <template x-for="cat in summary.categories" :key="cat.name">
                 <div @click="filters.category = cat.name; applyFilters()" class="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:border-pines-300 hover:shadow-sm transition-all">
@@ -191,7 +200,7 @@
             </template>
         </div>
 
-        <!-- Items table when filters active -->
+        <!-- Items table -->
         <div x-show="!loading && hasActiveFilters()" class="bg-white rounded-lg shadow overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
@@ -220,7 +229,7 @@
                                                     <span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600" x-text="item.sport"></span>
                                                 </template>
                                             </div>
-                                            <!-- Inline checkout badges -->
+                                            <!-- Checkout badges -->
                                             <div x-show="item.checkouts && item.checkouts.length > 0" class="flex flex-wrap gap-1 mt-1">
                                                 <template x-for="co in item.checkouts" :key="co.id">
                                                     <span class="inline-flex items-center text-xs px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
@@ -237,9 +246,7 @@
                                 <td class="px-3 py-3 text-center text-sm font-medium" :class="item.lowStock ? 'bg-orange-50' : ''" x-text="item.quantityTotal"></td>
                                 <td class="px-3 py-3 text-center text-sm font-semibold" :class="item.lowStock ? 'text-orange-600 bg-orange-50' : 'text-pines-600'" x-text="item.quantityAvailable"></td>
                                 <td class="px-3 py-3 text-center text-sm" :class="item.checkedOut > 0 ? 'text-blue-600 font-semibold' : 'text-gray-400'" x-text="item.checkedOut"></td>
-                                <td class="px-3 py-3">
-                                    <span class="text-xs px-2 py-0.5 rounded font-medium" :class="conditionColor(item.condition)" x-text="item.condition || '-'"></span>
-                                </td>
+                                <td class="px-3 py-3"><span class="text-xs px-2 py-0.5 rounded font-medium" :class="conditionColor(item.condition)" x-text="item.condition || '-'"></span></td>
                                 <td class="px-3 py-3 text-sm text-gray-500" x-text="item.location || '-'"></td>
                                 <td class="px-3 py-3 text-right">
                                     <div class="flex items-center justify-end space-x-1">
@@ -266,16 +273,14 @@
         </div>
     </main>
 
-    <!-- Add/Edit Item Modal -->
+    <!-- ==================== ADD/EDIT ITEM MODAL ==================== -->
     <div x-show="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showModal = false">
         <div class="bg-white rounded-lg p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <h3 class="text-lg font-bold mb-4" x-text="editingId ? 'Edit Item' : 'Add New Item'"></h3>
-
             <div class="mb-3">
                 <label class="block text-xs font-medium text-gray-700 mb-1">Name *</label>
                 <input type="text" x-model="form.name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm" placeholder="e.g. Size 5 Soccer Balls">
             </div>
-
             <div class="grid grid-cols-2 gap-3 mb-3">
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Category *</label>
@@ -298,48 +303,19 @@
                     </select>
                 </div>
             </div>
-
             <div class="grid grid-cols-3 gap-3 mb-3">
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Total Qty</label>
-                    <input type="number" x-model.number="form.quantity_total" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Available</label>
-                    <input type="number" x-model.number="form.quantity_available" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Min Alert</label>
-                    <input type="number" x-model.number="form.min_quantity" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                </div>
+                <div><label class="block text-xs font-medium text-gray-700 mb-1">Total Qty</label><input type="number" x-model.number="form.quantity_total" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+                <div><label class="block text-xs font-medium text-gray-700 mb-1">Available</label><input type="number" x-model.number="form.quantity_available" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+                <div><label class="block text-xs font-medium text-gray-700 mb-1">Min Alert</label><input type="number" x-model.number="form.min_quantity" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
             </div>
-
             <div class="grid grid-cols-2 gap-3 mb-3">
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Condition</label>
-                    <select x-model="form.condition" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                        <option value="New">New</option>
-                        <option value="Good">Good</option>
-                        <option value="Fair">Fair</option>
-                        <option value="Poor">Poor</option>
-                        <option value="Replace">Replace</option>
-                    </select>
+                <div><label class="block text-xs font-medium text-gray-700 mb-1">Condition</label>
+                    <select x-model="form.condition" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"><option value="New">New</option><option value="Good">Good</option><option value="Fair">Fair</option><option value="Poor">Poor</option><option value="Replace">Replace</option></select>
                 </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Location</label>
-                    <input type="text" x-model="form.location" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="e.g. Shed A">
-                </div>
+                <div><label class="block text-xs font-medium text-gray-700 mb-1">Location</label><input type="text" x-model="form.location" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="e.g. Shed A"></div>
             </div>
-
-            <div class="mb-3">
-                <label class="block text-xs font-medium text-gray-700 mb-1">Cost per Unit ($)</label>
-                <input type="number" x-model="form.cost_per_unit" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-            </div>
-            <div class="mb-4">
-                <label class="block text-xs font-medium text-gray-700 mb-1">Notes</label>
-                <textarea x-model="form.notes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Any extra details..."></textarea>
-            </div>
-
+            <div class="mb-3"><label class="block text-xs font-medium text-gray-700 mb-1">Cost per Unit ($)</label><input type="number" x-model="form.cost_per_unit" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+            <div class="mb-4"><label class="block text-xs font-medium text-gray-700 mb-1">Notes</label><textarea x-model="form.notes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></textarea></div>
             <div class="flex justify-end space-x-3">
                 <button @click="showModal = false" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">Cancel</button>
                 <button @click="saveItem()" class="px-4 py-2 bg-pines-500 text-white rounded-lg hover:bg-pines-600 text-sm">Save</button>
@@ -347,31 +323,85 @@
         </div>
     </div>
 
-    <!-- Checkout Modal -->
+    <!-- ==================== SINGLE CHECKOUT MODAL ==================== -->
     <div x-show="showCheckoutModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showCheckoutModal = false">
         <div class="bg-white rounded-lg p-6 max-w-md w-full">
             <h3 class="text-lg font-bold mb-1">Check Out Equipment</h3>
             <p class="text-sm text-gray-500 mb-4" x-text="checkoutItem ? checkoutItem.name + ' (' + checkoutItem.quantityAvailable + ' available)' : ''"></p>
-
             <div class="mb-3">
                 <label class="block text-xs font-medium text-gray-700 mb-1">Who is checking this out? *</label>
-                <input type="text" x-model="checkoutForm.person_name" x-ref="checkoutName"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm"
-                       placeholder="e.g. Coach Smith" @keyup.enter="submitCheckout()">
+                <input type="text" x-model="checkoutForm.person_name" x-ref="checkoutName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm" placeholder="e.g. Coach Smith" @keyup.enter="submitCheckout()">
             </div>
             <div class="mb-3">
                 <label class="block text-xs font-medium text-gray-700 mb-1">Quantity</label>
-                <input type="number" x-model.number="checkoutForm.quantity" min="1" :max="checkoutItem ? checkoutItem.quantityAvailable : 1"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                <input type="number" x-model.number="checkoutForm.quantity" min="1" :max="checkoutItem ? checkoutItem.quantityAvailable : 1" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
             </div>
             <div class="mb-4">
                 <label class="block text-xs font-medium text-gray-700 mb-1">Notes (optional)</label>
                 <input type="text" x-model="checkoutForm.notes" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="e.g. For Saturday practice">
             </div>
-
             <div class="flex justify-end space-x-3">
                 <button @click="showCheckoutModal = false" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">Cancel</button>
-                <button @click="submitCheckout()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Check Out</button>
+                <button @click="submitCheckout()" class="px-4 py-2 bg-pines-500 text-white rounded-lg hover:bg-pines-600 text-sm">Check Out</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== BULK CHECKOUT MODAL ==================== -->
+    <div x-show="showBulkModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showBulkModal = false">
+        <div class="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <h3 class="text-lg font-bold mb-4">Equipment Checkout</h3>
+
+            <!-- Person name -->
+            <div class="mb-4">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Who is checking out? *</label>
+                <input type="text" x-model="bulkForm.person_name" x-ref="bulkPersonName"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm"
+                       placeholder="e.g. Coach Smith">
+            </div>
+
+            <!-- Items already added -->
+            <div x-show="bulkForm.items.length > 0" class="mb-4">
+                <label class="block text-xs font-medium text-gray-700 mb-2">Items to check out:</label>
+                <div class="space-y-2">
+                    <template x-for="(bi, idx) in bulkForm.items" :key="idx">
+                        <div class="flex items-center justify-between bg-blue-50 rounded-lg px-3 py-2">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-sm" x-text="getCategoryEmoji(bi._category)"></span>
+                                <span class="text-sm font-medium" x-text="bi._name"></span>
+                                <span class="text-xs text-gray-500" x-text="'×' + bi.quantity"></span>
+                            </div>
+                            <button @click="bulkForm.items.splice(idx, 1)" class="text-red-400 hover:text-red-600 text-sm font-bold">✕</button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Add item row -->
+            <div class="bg-gray-50 rounded-lg p-3 mb-4">
+                <label class="block text-xs font-medium text-gray-700 mb-2">Add an item:</label>
+                <div class="flex gap-2 items-end">
+                    <div class="flex-1">
+                        <select x-model="bulkAddItemId" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pines-500">
+                            <option value="">Select item...</option>
+                            <template x-for="item in availableForBulk" :key="item.id">
+                                <option :value="item.id" x-text="getCategoryEmoji(item.category) + ' ' + item.name + ' (' + item.quantityAvailable + ' avail)'"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div class="w-20">
+                        <input type="number" x-model.number="bulkAddQty" min="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Qty">
+                    </div>
+                    <button @click="addToBulk()" class="px-3 py-2 bg-pines-100 text-pines-700 rounded-lg hover:bg-pines-200 text-sm font-medium whitespace-nowrap">+ Add</button>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+                <button @click="showBulkModal = false" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">Cancel</button>
+                <button @click="submitBulkCheckout()" :disabled="bulkForm.items.length === 0"
+                        class="px-4 py-2 bg-pines-500 text-white rounded-lg hover:bg-pines-600 text-sm disabled:opacity-50">
+                    Check Out <span x-text="bulkForm.items.length"></span> Item<span x-show="bulkForm.items.length !== 1">s</span>
+                </button>
             </div>
         </div>
     </div>
@@ -382,193 +412,161 @@
             loading: true,
             showModal: false,
             showCheckoutModal: false,
+            showBulkModal: false,
             showCheckoutsView: false,
             editingId: null,
             items: [],
             filteredItems: [],
             categories: [],
             summary: {},
-            allCheckouts: [],
+            checkoutPeople: [],
             totalCheckedOut: 0,
             filters: { search: '', category: '', sport: '', condition: '', lowStock: false },
-            form: {
-                name: '', category: '', sport: '', quantity_total: 0, quantity_available: 0,
-                condition: 'Good', location: '', notes: '', min_quantity: 0, cost_per_unit: null
-            },
+            form: { name: '', category: '', sport: '', quantity_total: 0, quantity_available: 0, condition: 'Good', location: '', notes: '', min_quantity: 0, cost_per_unit: null },
             checkoutItem: null,
             checkoutForm: { person_name: '', quantity: 1, notes: '' },
+            bulkForm: { person_name: '', items: [] },
+            bulkAddItemId: '',
+            bulkAddQty: 1,
 
             async init() {
-                await Promise.all([this.loadItems(), this.loadSummary(), this.loadCategories(), this.loadAllCheckouts()]);
+                await Promise.all([this.loadItems(), this.loadSummary(), this.loadCategories(), this.loadCheckoutPeople()]);
                 this.loading = false;
             },
 
             async loadItems() {
-                try {
-                    const res = await fetch('/api/inventory/items');
-                    const data = await res.json();
-                    this.items = data.items;
-                    this.applyFilters();
-                } catch (e) { console.error('Failed to load items:', e); }
+                try { const res = await fetch('/api/inventory/items'); const data = await res.json(); this.items = data.items; this.applyFilters(); } catch (e) { console.error(e); }
             },
-
             async loadSummary() {
-                try {
-                    const res = await fetch('/api/inventory/summary');
-                    this.summary = await res.json();
-                } catch (e) { console.error(e); }
+                try { const res = await fetch('/api/inventory/summary'); this.summary = await res.json(); } catch (e) { console.error(e); }
             },
-
             async loadCategories() {
+                try { const res = await fetch('/api/inventory/categories'); const data = await res.json(); this.categories = data.categories; } catch (e) { console.error(e); }
+            },
+            async loadCheckoutPeople() {
                 try {
-                    const res = await fetch('/api/inventory/categories');
+                    const res = await fetch('/api/inventory/checkouts/by-person');
                     const data = await res.json();
-                    this.categories = data.categories;
+                    this.checkoutPeople = data.people;
+                    this.totalCheckedOut = this.checkoutPeople.reduce((sum, p) => sum + p.items.length, 0);
                 } catch (e) { console.error(e); }
             },
-
-            async loadAllCheckouts() {
-                try {
-                    const res = await fetch('/api/inventory/checkouts');
-                    const data = await res.json();
-                    this.allCheckouts = data.checkouts;
-                    this.totalCheckedOut = this.allCheckouts.length;
-                } catch (e) { console.error(e); }
-            },
-
             async refresh() {
-                await Promise.all([this.loadItems(), this.loadSummary(), this.loadAllCheckouts()]);
+                await Promise.all([this.loadItems(), this.loadSummary(), this.loadCheckoutPeople()]);
             },
 
             applyFilters() {
                 this.filteredItems = this.items.filter(item => {
-                    if (this.filters.search) {
-                        const s = this.filters.search.toLowerCase();
-                        if (!item.name.toLowerCase().includes(s) && !(item.location || '').toLowerCase().includes(s) && !(item.notes || '').toLowerCase().includes(s)) return false;
-                    }
+                    if (this.filters.search) { const s = this.filters.search.toLowerCase(); if (!item.name.toLowerCase().includes(s) && !(item.location||'').toLowerCase().includes(s) && !(item.notes||'').toLowerCase().includes(s)) return false; }
                     if (this.filters.category && item.category !== this.filters.category) return false;
-                    if (this.filters.sport && (item.sport || '') !== this.filters.sport) return false;
+                    if (this.filters.sport && (item.sport||'') !== this.filters.sport) return false;
                     if (this.filters.condition && item.condition !== this.filters.condition) return false;
                     if (this.filters.lowStock && !item.lowStock) return false;
                     return true;
                 });
             },
+            hasActiveFilters() { return this.filters.search || this.filters.category || this.filters.sport || this.filters.condition || this.filters.lowStock; },
+            clearFilters() { this.filters = { search: '', category: '', sport: '', condition: '', lowStock: false }; this.applyFilters(); },
 
-            hasActiveFilters() {
-                return this.filters.search || this.filters.category || this.filters.sport || this.filters.condition || this.filters.lowStock;
-            },
-
-            clearFilters() {
-                this.filters = { search: '', category: '', sport: '', condition: '', lowStock: false };
-                this.applyFilters();
-            },
-
-            openAddModal() {
-                this.editingId = null;
-                this.form = { name: '', category: '', sport: '', quantity_total: 0, quantity_available: 0, condition: 'Good', location: '', notes: '', min_quantity: 0, cost_per_unit: null };
-                this.showModal = true;
-            },
-
+            // --- Item CRUD ---
+            openAddModal() { this.editingId = null; this.form = { name: '', category: '', sport: '', quantity_total: 0, quantity_available: 0, condition: 'Good', location: '', notes: '', min_quantity: 0, cost_per_unit: null }; this.showModal = true; },
             editItem(item) {
                 this.editingId = item.id;
-                this.form = {
-                    name: item.name,
-                    category: item.category,
-                    sport: item.sport || '',
-                    quantity_total: item.quantityTotal,
-                    quantity_available: item.quantityAvailable,
-                    condition: item.condition || 'Good',
-                    location: item.location || '',
-                    notes: item.notes || '',
-                    min_quantity: item.minQuantity || 0,
-                    cost_per_unit: item.costPerUnit,
-                };
+                this.form = { name: item.name, category: item.category, sport: item.sport||'', quantity_total: item.quantityTotal, quantity_available: item.quantityAvailable, condition: item.condition||'Good', location: item.location||'', notes: item.notes||'', min_quantity: item.minQuantity||0, cost_per_unit: item.costPerUnit };
                 this.showModal = true;
             },
-
             async saveItem() {
-                if (!this.form.name || !this.form.category) {
-                    alert('Name and category are required'); return;
-                }
+                if (!this.form.name || !this.form.category) { alert('Name and category are required'); return; }
                 const url = this.editingId ? `/api/inventory/items/${this.editingId}` : '/api/inventory/items';
-                const method = this.editingId ? 'PUT' : 'POST';
-                try {
-                    await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.form) });
-                    this.showModal = false;
-                    await this.refresh();
-                } catch (e) { alert('Failed to save item'); }
+                try { await fetch(url, { method: this.editingId ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(this.form) }); this.showModal = false; await this.refresh(); } catch(e) { alert('Failed to save'); }
             },
-
             async deleteItem(item) {
-                if (!confirm(`Delete "${item.name}"? This cannot be undone.`)) return;
-                try {
-                    await fetch(`/api/inventory/items/${item.id}`, { method: 'DELETE' });
-                    await this.refresh();
-                } catch (e) { alert('Failed to delete item'); }
+                if (!confirm(`Delete "${item.name}"?`)) return;
+                try { await fetch(`/api/inventory/items/${item.id}`, {method:'DELETE'}); await this.refresh(); } catch(e) { alert('Failed'); }
             },
 
-            // --- Checkout flow ---
+            // --- Single checkout ---
             openCheckoutModal(item) {
                 if (item.quantityAvailable <= 0) return;
                 this.checkoutItem = item;
                 this.checkoutForm = { person_name: '', quantity: 1, notes: '' };
                 this.showCheckoutModal = true;
-                this.$nextTick(() => { if (this.$refs.checkoutName) this.$refs.checkoutName.focus(); });
+                this.$nextTick(() => { if(this.$refs.checkoutName) this.$refs.checkoutName.focus(); });
             },
-
             async submitCheckout() {
-                if (!this.checkoutForm.person_name.trim()) {
-                    alert('Please enter who is checking this out.'); return;
-                }
+                if (!this.checkoutForm.person_name.trim()) { alert('Please enter a name.'); return; }
                 try {
-                    const res = await fetch(`/api/inventory/items/${this.checkoutItem.id}/checkout`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(this.checkoutForm),
-                    });
-                    if (!res.ok) { const err = await res.json(); alert(err.detail || 'Checkout failed'); return; }
-                    this.showCheckoutModal = false;
-                    await this.refresh();
-                } catch (e) { alert('Checkout failed'); }
+                    const res = await fetch(`/api/inventory/items/${this.checkoutItem.id}/checkout`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(this.checkoutForm) });
+                    if (!res.ok) { const err = await res.json(); alert(err.detail||'Failed'); return; }
+                    this.showCheckoutModal = false; await this.refresh();
+                } catch(e) { alert('Failed'); }
             },
 
+            // --- Bulk checkout ---
+            get availableForBulk() {
+                // Items with quantity available, minus what's already in the bulk list
+                const bulkMap = {};
+                this.bulkForm.items.forEach(bi => { bulkMap[bi.item_id] = (bulkMap[bi.item_id]||0) + bi.quantity; });
+                return this.items.filter(i => {
+                    const alreadyAdded = bulkMap[i.id] || 0;
+                    return (i.quantityAvailable - alreadyAdded) > 0;
+                });
+            },
+            openBulkCheckout() {
+                this.bulkForm = { person_name: '', items: [] };
+                this.bulkAddItemId = '';
+                this.bulkAddQty = 1;
+                this.showBulkModal = true;
+                this.$nextTick(() => { if(this.$refs.bulkPersonName) this.$refs.bulkPersonName.focus(); });
+            },
+            addToBulk() {
+                if (!this.bulkAddItemId) return;
+                const item = this.items.find(i => i.id == this.bulkAddItemId);
+                if (!item) return;
+                const alreadyAdded = this.bulkForm.items.filter(bi => bi.item_id == item.id).reduce((s,bi) => s+bi.quantity, 0);
+                const maxAvail = item.quantityAvailable - alreadyAdded;
+                const qty = Math.min(Math.max(this.bulkAddQty || 1, 1), maxAvail);
+                if (qty <= 0) { alert('No more available'); return; }
+                this.bulkForm.items.push({ item_id: item.id, quantity: qty, _name: item.name, _category: item.category });
+                this.bulkAddItemId = '';
+                this.bulkAddQty = 1;
+            },
+            async submitBulkCheckout() {
+                if (!this.bulkForm.person_name.trim()) { alert('Please enter a name.'); return; }
+                if (this.bulkForm.items.length === 0) { alert('Add at least one item.'); return; }
+                try {
+                    const payload = {
+                        person_name: this.bulkForm.person_name,
+                        items: this.bulkForm.items.map(bi => ({ item_id: bi.item_id, quantity: bi.quantity }))
+                    };
+                    const res = await fetch('/api/inventory/checkout-bulk', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+                    if (!res.ok) { const err = await res.json(); alert(err.detail||'Failed'); return; }
+                    this.showBulkModal = false; await this.refresh();
+                } catch(e) { alert('Failed'); }
+            },
+
+            // --- Returns ---
             async returnCheckoutRecord(itemId, recordId, personName, qty) {
                 if (!confirm(`Return ${qty} from ${personName}?`)) return;
                 try {
-                    const res = await fetch(`/api/inventory/items/${itemId}/return`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ record_id: recordId }),
-                    });
-                    if (!res.ok) { const err = await res.json(); alert(err.detail || 'Return failed'); return; }
+                    const res = await fetch(`/api/inventory/items/${itemId}/return`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({record_id: recordId}) });
+                    if (!res.ok) { const err = await res.json(); alert(err.detail||'Failed'); return; }
                     await this.refresh();
-                } catch (e) { alert('Return failed'); }
+                } catch(e) { alert('Failed'); }
+            },
+            async returnAllForPerson(personName) {
+                if (!confirm(`Return ALL items from ${personName}?`)) return;
+                try {
+                    const res = await fetch('/api/inventory/return-person', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({person_name: personName}) });
+                    if (!res.ok) { const err = await res.json(); alert(err.detail||'Failed'); return; }
+                    await this.refresh();
+                } catch(e) { alert('Failed'); }
             },
 
             // --- Helpers ---
-            getCategoryEmoji(catName) {
-                const cat = this.categories.find(c => c.name === catName);
-                return cat ? cat.emoji : '📦';
-            },
-
-            conditionColor(condition) {
-                const map = {
-                    'New': 'bg-blue-100 text-blue-700',
-                    'Good': 'bg-green-100 text-green-700',
-                    'Fair': 'bg-yellow-100 text-yellow-700',
-                    'Poor': 'bg-orange-100 text-orange-700',
-                    'Replace': 'bg-red-100 text-red-700',
-                };
-                return map[condition] || 'bg-gray-100 text-gray-600';
-            },
-
-            formatDate(iso) {
-                if (!iso) return '';
-                const d = new Date(iso);
-                const month = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-                return `${month}, ${time}`;
-            },
+            getCategoryEmoji(catName) { const cat = this.categories.find(c => c.name === catName); return cat ? cat.emoji : '📦'; },
+            conditionColor(c) { return {'New':'bg-blue-100 text-blue-700','Good':'bg-green-100 text-green-700','Fair':'bg-yellow-100 text-yellow-700','Poor':'bg-orange-100 text-orange-700','Replace':'bg-red-100 text-red-700'}[c] || 'bg-gray-100 text-gray-600'; },
+            formatDate(iso) { if(!iso) return ''; const d=new Date(iso); return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+', '+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); },
         }
     }
     </script>
