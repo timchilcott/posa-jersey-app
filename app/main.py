@@ -703,7 +703,9 @@ async def admin_volunteers(request: Request):
 
 @app.get("/inventory", response_class=HTMLResponse)
 async def inventory_page():
-    with open("inventory_page.html", "r") as f:
+    import pathlib
+    html_path = pathlib.Path(__file__).parent / "templates" / "inventory_page.html"
+    with open(html_path, "r") as f:
         return HTMLResponse(f.read())
 
 @app.post("/api/players/{player_id}/set-volunteer")
