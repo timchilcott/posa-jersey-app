@@ -216,6 +216,7 @@ async def create_item(request: Request, db: Session = Depends(get_db)):
         name=name,
         category=category,
         sport=data.get("sport") or None,
+        division=data.get("division") or None,
         quantity_total=qty_total,
         quantity_available=qty_avail,
         condition=data.get("condition", "Good"),
@@ -264,6 +265,8 @@ async def update_item(item_id: int, request: Request, db: Session = Depends(get_
         item.category = data["category"].strip()
     if "sport" in data:
         item.sport = data["sport"] or None
+    if "division" in data:
+        item.division = data["division"] or None
     if "quantity_total" in data:
         item.quantity_total = int(data["quantity_total"])
     if "quantity_available" in data:
@@ -566,6 +569,7 @@ def _serialize_item(item: InventoryItem, db: Session = None) -> dict:
         "name": item.name,
         "category": item.category,
         "sport": item.sport,
+        "division": item.division,
         "quantityTotal": item.quantity_total,
         "quantityAvailable": item.quantity_available,
         "checkedOut": item.quantity_total - item.quantity_available,
