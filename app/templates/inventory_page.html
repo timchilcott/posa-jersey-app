@@ -606,7 +606,8 @@
             getCategoryEmoji(catName) { const cat = this.categories.find(c => c.name === catName); return cat ? cat.emoji : '📦'; },
             inventoryRows(item) {
                 const rows = [{ _type: 'item', _key: 'item-' + item.id }];
-                (item.checkouts || []).forEach(co => {
+                const sorted = (item.checkouts || []).slice().sort((a, b) => a.personName.localeCompare(b.personName));
+                sorted.forEach(co => {
                     rows.push({ ...co, _type: 'checkout', _key: 'co-' + co.id });
                 });
                 return rows;
@@ -616,12 +617,16 @@
                 if(!iso) return '';
                 const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
                 const now = new Date();
-                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                const dateDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-                const diffDays = Math.round((today - dateDay) / 86400000);
+                const pad = (n) => String(n);
+                const toDateStr = (dt) => dt.getFullYear() + '-' + pad(dt.getMonth()) + '-' + pad(dt.getDate());
+                const todayStr = toDateStr(now);
+                const dateStr = toDateStr(d);
+                const yesterday = new Date(now);
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = toDateStr(yesterday);
                 const time = d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
-                if (diffDays === 0) return 'Today, ' + time;
-                if (diffDays === 1) return 'Yesterday, ' + time;
+                if (dateStr === todayStr) return 'Today, ' + time;
+                if (dateStr === yesterdayStr) return 'Yesterday, ' + time;
                 return d.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ', ' + time;
             },
         }
