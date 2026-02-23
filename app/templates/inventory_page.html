@@ -618,10 +618,13 @@
                 if(!iso) return '';
                 const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
                 const now = new Date();
-                const diffDays = Math.floor((now - d) / 86400000);
-                if (diffDays === 0) return 'Today, ' + d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
-                if (diffDays === 1) return 'Yesterday, ' + d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
-                return d.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ', ' + d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const dateDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                const diffDays = Math.round((today - dateDay) / 86400000);
+                const time = d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+                if (diffDays === 0) return 'Today, ' + time;
+                if (diffDays === 1) return 'Yesterday, ' + time;
+                return d.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ', ' + time;
             },
         }
     }
