@@ -21,69 +21,103 @@
 </head>
 <body class="bg-gray-50" x-data="tableApp()" x-init="init()" x-cloak>
 
-    <!-- Page header -->
-    <div class="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200">
-        <h1 class="text-xl font-semibold text-gray-900">Players</h1>
-        <button @click="syncSportsEngine()" class="bg-pines-500 hover:bg-pines-600 text-white px-4 py-2 rounded-lg text-sm font-medium">Sync SportsEngine</button>
-    </div>
-
-    <!-- Filters -->
+    <!-- Header + Filters (Intercom style) -->
     <div class="bg-white border-b border-gray-200">
-        <div class="px-6 py-4">
-            <div class="flex flex-wrap gap-3 items-end">
-                <div class="flex-1 min-w-64">
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Search</label>
-                    <input type="search" x-model="filters.search" @input.debounce.300ms="applyFilters()" @keyup.enter="applyFilters()" placeholder="Name, email, or jersey #..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent">
+        <div class="px-6 py-3">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-3">
+                    <h1 class="text-base font-semibold text-gray-900">All Players</h1>
+                    <span class="text-xs text-gray-400" x-text="filteredPlayers.length + ' players'"></span>
                 </div>
-                <div class="w-32">
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Birth Year</label>
-                    <select x-model="filters.birthYear" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500">
-                        <option value="">All</option>
-                        <template x-for="year in availableBirthYears" :key="year">
-                            <option :value="year" x-text="year"></option>
-                        </template>
-                    </select>
-                </div>
-                <div class="w-40">
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Sport</label>
-                    <select x-model="filters.sport" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500">
-                        <option value="">All</option>
-                        <template x-for="sport in availableSports" :key="sport">
-                            <option :value="sport" x-text="sport"></option>
-                        </template>
-                    </select>
-                </div>
-                <div class="w-28">
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Year</label>
-                    <select x-model="filters.year" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500">
-                        <option value="">All</option>
-                        <template x-for="y in availableYears" :key="y">
-                            <option :value="y" x-text="y"></option>
-                        </template>
-                    </select>
-                </div>
-                <div class="w-28" x-show="availableSeasons.length > 0">
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Season</label>
-                    <select x-model="filters.season" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500">
-                        <option value="">All</option>
-                        <template x-for="season in availableSeasons" :key="season">
-                            <option :value="season" x-text="season"></option>
-                        </template>
-                    </select>
-                </div>
-                <div class="w-40">
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Status</label>
-                    <select x-model="filters.status" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500">
-                        <option value="">All</option>
-                        <option value="needsEmail">Needs Email</option>
-                        <option value="waitingRoom">Waiting Room</option>
-                        <option value="active">Active</option>
-                    </select>
-                </div>
-                <button @click="clearFilters()" class="px-4 py-2 text-gray-600 hover:text-gray-900 text-sm font-medium">Clear</button>
+                <button @click="syncSportsEngine()" class="bg-pines-500 hover:bg-pines-600 text-white px-3 py-1.5 rounded-md text-xs font-medium">Sync SportsEngine</button>
             </div>
-            <div class="mt-3 text-sm text-gray-600">
-                Showing <span class="font-medium" x-text="filteredPlayers.length"></span> of <span x-text="allPlayers.length"></span> players
+            <div class="flex items-center gap-2 flex-wrap">
+                <!-- Search -->
+                <div class="relative">
+                    <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input type="search" x-model="filters.search" @input.debounce.300ms="applyFilters()" @keyup.enter="applyFilters()" placeholder="Search..."
+                           class="pl-8 pr-3 py-1.5 border border-gray-200 rounded-md text-xs w-48 focus:ring-1 focus:ring-pines-500 focus:border-pines-500 placeholder-gray-400">
+                </div>
+                <!-- Birth Year pill -->
+                <div class="relative" x-data="{ open: false }">
+                    <button @click="open = !open" @click.outside="open = false"
+                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
+                            :class="filters.birthYear ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                        <span x-text="filters.birthYear ? 'Born ' + filters.birthYear : 'All birth years'"></span>
+                        <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div x-show="open" x-transition class="absolute z-20 mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg py-1 max-h-48 overflow-y-auto">
+                        <div @click="filters.birthYear = ''; applyFilters(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs text-gray-500">All birth years</div>
+                        <template x-for="year in availableBirthYears" :key="year">
+                            <div @click="filters.birthYear = year; applyFilters(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs" :class="filters.birthYear == year ? 'bg-pines-50 text-pines-700 font-medium' : ''" x-text="year"></div>
+                        </template>
+                    </div>
+                </div>
+                <!-- Sport pill -->
+                <div class="relative" x-data="{ open: false }">
+                    <button @click="open = !open" @click.outside="open = false"
+                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
+                            :class="filters.sport ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                        <span x-text="filters.sport || 'All sports'"></span>
+                        <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div x-show="open" x-transition class="absolute z-20 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+                        <div @click="filters.sport = ''; applyFilters(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs text-gray-500">All sports</div>
+                        <template x-for="sport in availableSports" :key="sport">
+                            <div @click="filters.sport = sport; applyFilters(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs" :class="filters.sport === sport ? 'bg-pines-50 text-pines-700 font-medium' : ''" x-text="sport"></div>
+                        </template>
+                    </div>
+                </div>
+                <!-- Year pill -->
+                <div class="relative" x-data="{ open: false }">
+                    <button @click="open = !open" @click.outside="open = false"
+                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
+                            :class="filters.year ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                        <span x-text="filters.year || 'All years'"></span>
+                        <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div x-show="open" x-transition class="absolute z-20 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg py-1 max-h-48 overflow-y-auto">
+                        <div @click="filters.year = ''; applyFilters(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs text-gray-500">All years</div>
+                        <template x-for="y in availableYears" :key="y">
+                            <div @click="filters.year = y; applyFilters(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs" :class="filters.year == y ? 'bg-pines-50 text-pines-700 font-medium' : ''" x-text="y"></div>
+                        </template>
+                    </div>
+                </div>
+                <!-- Season pill -->
+                <div class="relative" x-data="{ open: false }" x-show="availableSeasons.length > 0">
+                    <button @click="open = !open" @click.outside="open = false"
+                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
+                            :class="filters.season ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                        <span x-text="filters.season || 'All seasons'"></span>
+                        <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div x-show="open" x-transition class="absolute z-20 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+                        <div @click="filters.season = ''; applyFilters(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs text-gray-500">All seasons</div>
+                        <template x-for="season in availableSeasons" :key="season">
+                            <div @click="filters.season = season; applyFilters(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs" :class="filters.season === season ? 'bg-pines-50 text-pines-700 font-medium' : ''" x-text="season"></div>
+                        </template>
+                    </div>
+                </div>
+                <!-- Status pill -->
+                <div class="relative" x-data="{ open: false }">
+                    <button @click="open = !open" @click.outside="open = false"
+                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
+                            :class="filters.status ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                        <span x-text="filters.status === 'needsEmail' ? 'Needs Email' : filters.status === 'waitingRoom' ? 'Waiting Room' : filters.status === 'active' ? 'Active' : 'All statuses'"></span>
+                        <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div x-show="open" x-transition class="absolute z-20 mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+                        <div @click="filters.status = ''; applyFilters(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs text-gray-500">All statuses</div>
+                        <div @click="filters.status = 'needsEmail'; applyFilters(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs" :class="filters.status === 'needsEmail' ? 'bg-pines-50 text-pines-700 font-medium' : ''">Needs Email</div>
+                        <div @click="filters.status = 'waitingRoom'; applyFilters(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs" :class="filters.status === 'waitingRoom' ? 'bg-pines-50 text-pines-700 font-medium' : ''">Waiting Room</div>
+                        <div @click="filters.status = 'active'; applyFilters(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs" :class="filters.status === 'active' ? 'bg-pines-50 text-pines-700 font-medium' : ''">Active</div>
+                    </div>
+                </div>
+                <!-- Clear -->
+                <button x-show="filters.search || filters.birthYear || filters.sport || filters.year || filters.season || filters.status"
+                        @click="clearFilters()" class="text-xs text-gray-400 hover:text-gray-600 px-1.5 py-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
             </div>
         </div>
     </div>
