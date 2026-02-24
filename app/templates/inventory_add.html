@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Item - POSA Inventory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    pines: { 50: '#f0f7f0', 100: '#d9edd9', 200: '#b3dbb3', 300: '#7fc07f', 400: '#5aa55a', 500: '#3C7939', 600: '#2f6130', 700: '#254d26', 800: '#1c3a1d', 900: '#142914' }
+                }
+            }
+        }
+    }
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>[x-cloak] { display: none !important; }</style>
+</head>
+<body class="bg-gray-50" x-data="addItemApp()" x-init="init()" x-cloak>
+
+    <!-- Page header with breadcrumb -->
+    <div class="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200">
+        <div>
+            <div class="flex items-center text-sm text-gray-500 mb-0.5">
+                <a href="/inventory" class="hover:text-pines-600 transition-colors">Inventory</a>
+                <svg class="w-4 h-4 mx-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <span class="text-gray-900 font-medium">Add Item</span>
+            </div>
+            <h1 class="text-xl font-semibold text-gray-900">Add New Item</h1>
+        </div>
+    </div>
+
+    <main class="px-6 py-6 max-w-2xl">
+        <!-- Success notification -->
+        <div x-show="successMessage" x-transition
+             class="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm font-medium flex items-center justify-between">
+            <span x-text="successMessage"></span>
+            <button @click="successMessage = ''" class="text-green-500 hover:text-green-700">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <div class="bg-white rounded-lg border border-gray-200 p-6">
+            <div class="space-y-5">
+                <!-- Name -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Name <span class="text-red-500">*</span></label>
+                    <input type="text" x-model="form.name"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm"
+                           placeholder="e.g. Size 5 Soccer Balls">
+                </div>
+
+                <!-- Category + Sport -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Category <span class="text-red-500">*</span></label>
+                        <input type="text" x-model="form.category" list="category-suggestions"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm"
+                               placeholder="e.g. Balls, Goals, Jerseys...">
+                        <datalist id="category-suggestions">
+                            <template x-for="cat in uniqueCategories" :key="cat">
+                                <option :value="cat"></option>
+                            </template>
+                        </datalist>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Sport</label>
+                        <div class="flex flex-wrap gap-2 mt-1">
+                            <template x-for="sp in ['Basketball','Soccer','Flag Football','Volleyball','POSA']" :key="sp">
+                                <label class="inline-flex items-center px-2.5 py-1.5 rounded-lg border text-xs font-medium cursor-pointer"
+                                       :class="form.sports.includes(sp) ? 'bg-pines-50 border-pines-400 text-pines-700' : 'bg-white border-gray-300 text-gray-500 hover:border-gray-400'">
+                                    <input type="checkbox" :value="sp" :checked="form.sports.includes(sp)"
+                                           @change="toggleSport(sp)" class="sr-only">
+                                    <span x-text="sp"></span>
+                                </label>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Divisions -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Divisions</label>
+                    <div class="flex flex-wrap gap-1 mb-2" x-show="form.divisions.length > 0">
+                        <template x-for="(div, idx) in form.divisions" :key="idx">
+                            <span class="inline-flex items-center px-2.5 py-1 text-xs font-medium bg-pines-50 text-pines-700 rounded-full">
+                                <span x-text="div"></span>
+                                <button type="button" @click="form.divisions.splice(idx, 1)" class="ml-1 text-pines-400 hover:text-pines-700">&times;</button>
+                            </span>
+                        </template>
+                    </div>
+                    <input type="text" x-model="divisionInput" list="division-suggestions"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm"
+                           placeholder="Type divisions separated by commas..."
+                           @keydown.enter.prevent="addDivisionsFromInput()"
+                           @blur="addDivisionsFromInput()">
+                    <datalist id="division-suggestions">
+                        <template x-for="div in uniqueDivisions" :key="div">
+                            <option :value="div"></option>
+                        </template>
+                    </datalist>
+                </div>
+
+                <!-- Quantities -->
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Total Qty</label>
+                        <input type="number" x-model.number="form.quantity_total" min="0"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Available</label>
+                        <input type="number" x-model.number="form.quantity_available" min="0"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Min Alert</label>
+                        <input type="number" x-model.number="form.min_quantity" min="0"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm">
+                    </div>
+                </div>
+
+                <!-- Location Breakdown -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Location Breakdown</label>
+                    <div class="space-y-2">
+                        <template x-for="(lb, idx) in form.locations" :key="idx">
+                            <div class="flex items-center gap-2">
+                                <input type="number" x-model.number="lb.quantity" min="0"
+                                       class="w-20 px-2 py-1.5 border border-gray-300 rounded-lg text-sm text-center">
+                                <input type="text" x-model="lb.location" list="location-suggestions"
+                                       class="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm"
+                                       placeholder="e.g. Shed A, Gym B...">
+                                <button type="button" @click="form.locations.splice(idx, 1)"
+                                        class="p-1 text-red-400 hover:text-red-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                    <button type="button" @click="form.locations.push({location: '', quantity: 0})"
+                            class="mt-2 text-xs text-pines-600 hover:text-pines-800 font-medium">+ Add location</button>
+                    <datalist id="location-suggestions">
+                        <template x-for="loc in uniqueLocations" :key="loc">
+                            <option :value="loc"></option>
+                        </template>
+                    </datalist>
+                </div>
+
+                <!-- Condition Breakdown -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Condition Breakdown</label>
+                    <div class="space-y-2">
+                        <template x-for="(cb, idx) in form.conditions" :key="idx">
+                            <div class="flex items-center gap-2">
+                                <input type="number" x-model.number="cb.quantity" min="0"
+                                       class="w-20 px-2 py-1.5 border border-gray-300 rounded-lg text-sm text-center">
+                                <select x-model="cb.condition"
+                                        class="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm">
+                                    <option value="New">New</option>
+                                    <option value="Good">Good</option>
+                                    <option value="Fair">Fair</option>
+                                    <option value="Poor">Poor</option>
+                                    <option value="Replace">Replace</option>
+                                </select>
+                                <button type="button" @click="form.conditions.splice(idx, 1)"
+                                        class="p-1 text-red-400 hover:text-red-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                    <button type="button" @click="form.conditions.push({condition: 'Good', quantity: 0})"
+                            class="mt-2 text-xs text-pines-600 hover:text-pines-800 font-medium">+ Add condition split</button>
+                </div>
+
+                <!-- Cost -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Cost per Unit ($)</label>
+                    <input type="number" x-model="form.cost_per_unit" step="0.01" min="0"
+                           class="w-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm">
+                </div>
+
+                <!-- Notes -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    <textarea x-model="form.notes" rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm"
+                              placeholder="Any additional notes..."></textarea>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+                <a href="/inventory" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">Cancel</a>
+                <button @click="saveAndAddAnother()" :disabled="saving"
+                        class="px-4 py-2 border border-pines-500 text-pines-600 rounded-lg hover:bg-pines-50 text-sm font-medium disabled:opacity-50">
+                    Save &amp; Add Another
+                </button>
+                <button @click="saveAndReturn()" :disabled="saving"
+                        class="px-4 py-2 bg-pines-500 text-white rounded-lg hover:bg-pines-600 text-sm font-medium disabled:opacity-50">
+                    Save
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    function addItemApp() {
+        return {
+            saving: false,
+            successMessage: '',
+            divisionInput: '',
+            uniqueCategories: [],
+            uniqueDivisions: [],
+            uniqueLocations: [],
+            form: {
+                name: '',
+                category: '',
+                sports: [],
+                divisions: [],
+                quantity_total: 0,
+                quantity_available: 0,
+                conditions: [{ condition: 'New', quantity: 0 }],
+                locations: [{ location: '', quantity: 0 }],
+                notes: '',
+                min_quantity: 0,
+                cost_per_unit: null
+            },
+
+            async init() {
+                // Load existing categories, divisions, locations for autocomplete
+                try {
+                    const res = await fetch('/api/inventory/items');
+                    const data = await res.json();
+                    this.uniqueCategories = [...new Set(data.items.map(i => i.category).filter(Boolean))].sort();
+                    this.uniqueDivisions = [...new Set(data.items.flatMap(i => (i.division || '').split(',').map(d => d.trim()).filter(Boolean)))].sort();
+                    this.uniqueLocations = [...new Set(data.items.flatMap(i => this.parseLocations(i.location).map(lb => lb.location)))].sort();
+                } catch (e) {
+                    console.error('Failed to load suggestions:', e);
+                }
+            },
+
+            toggleSport(sp) {
+                const idx = this.form.sports.indexOf(sp);
+                if (idx >= 0) this.form.sports.splice(idx, 1);
+                else this.form.sports.push(sp);
+            },
+
+            addDivisionsFromInput() {
+                const parts = this.divisionInput.split(',').map(d => d.trim()).filter(Boolean);
+                parts.forEach(val => {
+                    if (!this.form.divisions.includes(val)) {
+                        this.form.divisions.push(val);
+                    }
+                });
+                this.divisionInput = '';
+            },
+
+            parseLocations(locStr) {
+                if (!locStr) return [];
+                return locStr.split(',').map(part => {
+                    part = part.trim();
+                    const colonIdx = part.lastIndexOf(':');
+                    if (colonIdx > 0) {
+                        const name = part.substring(0, colonIdx).trim();
+                        const qty = parseInt(part.substring(colonIdx + 1).trim(), 10);
+                        return { location: name, quantity: isNaN(qty) ? 0 : qty };
+                    }
+                    return { location: part, quantity: 0 };
+                }).filter(lb => lb.location);
+            },
+
+            async save() {
+                if (!this.form.name || !this.form.category) {
+                    alert('Name and category are required');
+                    return false;
+                }
+                this.saving = true;
+                const locStr = this.form.locations
+                    .filter(lb => lb.location.trim())
+                    .map(lb => lb.location.trim() + ':' + (lb.quantity || 0))
+                    .join(', ');
+                const payload = {
+                    ...this.form,
+                    division: this.form.divisions.join(', '),
+                    sport: this.form.sports.join(', '),
+                    location: locStr
+                };
+                delete payload.divisions;
+                delete payload.sports;
+                delete payload.locations;
+                try {
+                    const res = await fetch('/api/inventory/items', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!res.ok) throw new Error('Save failed');
+                    this.saving = false;
+                    return true;
+                } catch (e) {
+                    alert('Failed to save item');
+                    this.saving = false;
+                    return false;
+                }
+            },
+
+            async saveAndReturn() {
+                const ok = await this.save();
+                if (ok) window.location.href = '/inventory';
+            },
+
+            async saveAndAddAnother() {
+                const savedName = this.form.name;
+                const ok = await this.save();
+                if (ok) {
+                    this.successMessage = `"${savedName}" saved successfully!`;
+                    this.resetForm();
+                    setTimeout(() => { this.successMessage = ''; }, 4000);
+                }
+            },
+
+            resetForm() {
+                this.form = {
+                    name: '',
+                    category: '',
+                    sports: [],
+                    divisions: [],
+                    quantity_total: 0,
+                    quantity_available: 0,
+                    conditions: [{ condition: 'New', quantity: 0 }],
+                    locations: [{ location: '', quantity: 0 }],
+                    notes: '',
+                    min_quantity: 0,
+                    cost_per_unit: null
+                };
+                this.divisionInput = '';
+            }
+        }
+    }
+    </script>
+    <script src="/static/sidebar.js"></script>
+</body>
+</html>

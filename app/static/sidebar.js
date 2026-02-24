@@ -36,7 +36,11 @@
   const NAV_ITEMS = [
     { label: 'Players', href: '/admin', icon: ICONS.userGroup, match: ['/admin'] },
     { label: 'Volunteers', href: '/admin/volunteers', icon: ICONS.handRaised, match: ['/admin/volunteers'] },
-    { label: 'Inventory', href: '/inventory', icon: ICONS.cube, match: ['/inventory'] },
+    { label: 'Inventory', href: '/inventory', icon: ICONS.cube, match: ['/inventory'], children: [
+      { label: 'Equipment', href: '/inventory' },
+      { label: 'Checked Out', href: '/inventory/checked-out' },
+      { label: 'Add Item', href: '/inventory/add' },
+    ]},
     { label: 'Events', href: '/events', icon: ICONS.calendar, match: ['/events'] },
     { type: 'divider' },
     { label: 'SportsEngine', href: '/sportsengine', icon: ICONS.arrowPath, match: ['/sportsengine'] },
@@ -47,7 +51,17 @@
     if (!item.match) return false;
     // Exact match for /admin (don't match /admin/volunteers)
     if (item.href === '/admin') return currentPath === '/admin';
+    // For items with children, check if current path matches any child or the parent
+    if (item.children) {
+      return currentPath.startsWith(item.match[0]);
+    }
     return item.match.some(function(p) { return currentPath.startsWith(p); });
+  }
+
+  function isChildActive(child) {
+    // Exact match for /inventory (don't match /inventory/checked-out)
+    if (child.href === '/inventory') return currentPath === '/inventory';
+    return currentPath.startsWith(child.href);
   }
 
   // ── Build sidebar nav items HTML ─────────────────────────────────
@@ -63,8 +77,23 @@
       var label = collapsed
         ? ''
         : '<span class="ml-3 sidebar-label">' + item.label + '</span>';
-      return '<a href="' + item.href + '" class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ' + classes + '" title="' + item.label + '">' +
+      var html = '<a href="' + item.href + '" class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ' + classes + '" title="' + item.label + '">' +
         item.icon + label + '</a>';
+
+      // Render children when expanded and on a matching path
+      if (item.children && !collapsed && active) {
+        html += '<div class="ml-8 mt-1 space-y-0.5 sidebar-label">';
+        item.children.forEach(function(child) {
+          var childActive = isChildActive(child);
+          var childClasses = childActive
+            ? 'text-white font-semibold'
+            : 'text-pines-300 hover:text-white';
+          html += '<a href="' + child.href + '" class="block px-3 py-1.5 rounded-lg text-xs transition-colors ' + childClasses + '">' + child.label + '</a>';
+        });
+        html += '</div>';
+      }
+
+      return html;
     }).join('\n');
   }
 

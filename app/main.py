@@ -47,6 +47,14 @@ async def admin_dashboard(request: Request):
 async def admin_volunteers(request: Request):
     return HTMLResponse(_read_template("volunteers_page.html"))
 
+@app.get("/inventory/checked-out", response_class=HTMLResponse)
+async def inventory_checked_out_page():
+    return HTMLResponse(_read_template("inventory_checked_out.html"))
+
+@app.get("/inventory/add", response_class=HTMLResponse)
+async def inventory_add_page():
+    return HTMLResponse(_read_template("inventory_add.html"))
+
 @app.get("/inventory", response_class=HTMLResponse)
 async def inventory_page():
     return HTMLResponse(_read_template("inventory_page.html"))

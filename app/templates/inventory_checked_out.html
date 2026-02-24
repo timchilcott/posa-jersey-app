@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checked Out Equipment - POSA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    pines: { 50: '#f0f7f0', 100: '#d9edd9', 200: '#b3dbb3', 300: '#7fc07f', 400: '#5aa55a', 500: '#3C7939', 600: '#2f6130', 700: '#254d26', 800: '#1c3a1d', 900: '#142914' }
+                }
+            }
+        }
+    }
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>[x-cloak] { display: none !important; }</style>
+</head>
+<body class="bg-gray-50" x-data="checkedOutApp()" x-init="init()" x-cloak>
+
+    <!-- Page header with breadcrumb -->
+    <div class="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200">
+        <div>
+            <div class="flex items-center text-sm text-gray-500 mb-0.5">
+                <a href="/inventory" class="hover:text-pines-600 transition-colors">Inventory</a>
+                <svg class="w-4 h-4 mx-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <span class="text-gray-900 font-medium">Checked Out</span>
+            </div>
+            <h1 class="text-xl font-semibold text-gray-900">Checked Out Equipment</h1>
+        </div>
+    </div>
+
+    <main class="px-6 py-6">
+        <div x-show="loading" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pines-500"></div>
+            <p class="mt-2 text-gray-600">Loading checkouts...</p>
+        </div>
+
+        <div x-show="!loading">
+            <div class="mb-4 text-sm text-gray-600">
+                <span class="font-medium" x-text="totalCheckedOut"></span> <span x-text="totalCheckedOut !== 1 ? 'people have' : 'person has'"></span> equipment checked out
+            </div>
+
+            <div x-show="people.length === 0" class="text-center py-12 bg-white rounded-lg border border-gray-200">
+                <div class="text-gray-400 text-5xl mb-3">&#9989;</div>
+                <h3 class="text-lg font-medium text-gray-900 mb-1">All clear!</h3>
+                <p class="text-gray-500">No equipment is currently checked out</p>
+            </div>
+
+            <div x-show="people.length > 0" class="bg-white overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                <th class="w-16 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Checked Out</th>
+                                <th class="w-28 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <template x-for="row in displayList" :key="row._key">
+                                <tr :class="row._isHeader ? 'bg-pines-50 border-t-2 border-pines-200' : 'hover:bg-gray-50 transition-colors'">
+                                    <!-- Person header row -->
+                                    <template x-if="row._isHeader">
+                                        <td colspan="5" class="px-4 py-2.5">
+                                            <span class="text-sm font-bold text-pines-700" x-text="row._personName"></span>
+                                            <span class="ml-2 text-xs text-pines-500" x-text="row._totalItems + ' unit' + (row._totalItems !== 1 ? 's' : '')"></span>
+                                        </td>
+                                    </template>
+                                    <template x-if="row._isHeader">
+                                        <td class="px-4 py-2.5 text-right">
+                                            <button @click="returnAllForPerson(row._personName)"
+                                                    class="text-xs px-2.5 py-1 bg-pines-100 text-pines-700 rounded-full hover:bg-pines-200 font-medium">
+                                                Return All
+                                            </button>
+                                        </td>
+                                    </template>
+                                    <!-- Item rows -->
+                                    <template x-if="!row._isHeader">
+                                        <td class="px-4 py-3.5">
+                                            <span class="text-sm font-medium text-gray-900" x-text="row.itemName"></span>
+                                        </td>
+                                    </template>
+                                    <template x-if="!row._isHeader">
+                                        <td class="px-4 py-3.5 text-sm text-gray-500" x-text="row.itemCategory"></td>
+                                    </template>
+                                    <template x-if="!row._isHeader">
+                                        <td class="px-4 py-3.5 text-center text-sm font-medium" x-text="row.quantity"></td>
+                                    </template>
+                                    <template x-if="!row._isHeader">
+                                        <td class="px-4 py-3.5 text-xs text-gray-400 italic" x-text="row.notes || '-'"></td>
+                                    </template>
+                                    <template x-if="!row._isHeader">
+                                        <td class="px-4 py-3.5 text-sm text-gray-500" x-text="formatDate(row.checkedOutAt)"></td>
+                                    </template>
+                                    <template x-if="!row._isHeader">
+                                        <td class="px-4 py-3.5 text-right">
+                                            <button @click="returnCheckoutRecord(row.itemId, row.id, row._personName, row.quantity)"
+                                                    class="px-2.5 py-1 text-xs font-medium text-pines-600 hover:bg-pines-50 rounded-full transition-colors">
+                                                Return
+                                            </button>
+                                        </td>
+                                    </template>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    function checkedOutApp() {
+        return {
+            loading: true,
+            people: [],
+            displayList: [],
+            totalCheckedOut: 0,
+
+            async init() {
+                await this.loadCheckouts();
+                this.loading = false;
+            },
+
+            async loadCheckouts() {
+                try {
+                    const res = await fetch('/api/inventory/checkouts/by-person');
+                    const data = await res.json();
+                    this.people = data.people;
+                    this.totalCheckedOut = this.people.length;
+                    this.buildDisplayList();
+                } catch (e) {
+                    console.error('Failed to load checkouts:', e);
+                }
+            },
+
+            buildDisplayList() {
+                this.displayList = [];
+                this.people.forEach(person => {
+                    this.displayList.push({
+                        _isHeader: true,
+                        _key: 'h-' + person.personName,
+                        _personName: person.personName,
+                        _totalItems: person.totalItems
+                    });
+                    person.items.forEach(co => {
+                        this.displayList.push({
+                            ...co,
+                            _isHeader: false,
+                            _key: 'co-' + co.id,
+                            _personName: person.personName
+                        });
+                    });
+                });
+            },
+
+            async returnCheckoutRecord(itemId, recordId, personName, qty) {
+                if (!confirm(`Return ${qty} from ${personName}?`)) return;
+                try {
+                    const res = await fetch(`/api/inventory/items/${itemId}/return`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ record_id: recordId })
+                    });
+                    if (!res.ok) {
+                        const err = await res.json();
+                        alert(err.detail || 'Failed');
+                        return;
+                    }
+                    await this.loadCheckouts();
+                } catch (e) {
+                    alert('Failed to return item');
+                }
+            },
+
+            async returnAllForPerson(personName) {
+                if (!confirm(`Return ALL items from ${personName}?`)) return;
+                try {
+                    const res = await fetch('/api/inventory/return-person', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ person_name: personName })
+                    });
+                    if (!res.ok) {
+                        const err = await res.json();
+                        alert(err.detail || 'Failed');
+                        return;
+                    }
+                    await this.loadCheckouts();
+                } catch (e) {
+                    alert('Failed to return items');
+                }
+            },
+
+            formatDate(iso) {
+                if (!iso) return '';
+                const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
+                const now = new Date();
+                const pad = (n) => String(n);
+                const toDateStr = (dt) => dt.getFullYear() + '-' + pad(dt.getMonth()) + '-' + pad(dt.getDate());
+                const todayStr = toDateStr(now);
+                const dateStr = toDateStr(d);
+                const yesterday = new Date(now);
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = toDateStr(yesterday);
+                const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                if (dateStr === todayStr) return 'Today, ' + time;
+                if (dateStr === yesterdayStr) return 'Yesterday, ' + time;
+                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' + time;
+            }
+        }
+    }
+    </script>
+    <script src="/static/sidebar.js"></script>
+</body>
+</html>
