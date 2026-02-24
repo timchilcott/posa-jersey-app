@@ -220,36 +220,6 @@
                                         </div>
                                     </td>
                                 </template>
-                                <!-- CHECKOUT SUB-ROW -->
-                                <template x-if="entry._type === 'checkout'">
-                                    <td class="pl-6 pr-3 py-3 text-sm text-gray-600" x-text="entry.personName"></td>
-                                </template>
-                                <template x-if="entry._type === 'checkout'">
-                                    <td class="px-3 py-3 text-sm text-gray-500" x-text="entry.quantity"></td>
-                                </template>
-                                <template x-if="entry._type === 'checkout'">
-                                    <td class="px-3 py-3"></td>
-                                </template>
-                                <template x-if="entry._type === 'checkout'">
-                                    <td class="px-3 py-3 text-sm text-gray-400 whitespace-nowrap" x-text="formatDate(entry.checkedOutAt)"></td>
-                                </template>
-                                <template x-if="entry._type === 'checkout'">
-                                    <td x-show="filters.divisions.length > 0" class="px-3 py-3"></td>
-                                </template>
-                                <template x-if="entry._type === 'checkout'">
-                                    <td class="px-3 py-3 text-sm text-gray-400 italic" x-text="entry.notes || ''"></td>
-                                </template>
-                                <template x-if="entry._type === 'checkout'">
-                                    <td class="px-3 py-3"></td>
-                                </template>
-                                <template x-if="entry._type === 'checkout'">
-                                    <td class="px-3 py-3 text-right">
-                                        <button @click="returnCheckoutRecord(entry._itemId, entry.id, entry.personName, entry.quantity)"
-                                                class="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-pines-600" title="Return">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                        </button>
-                                    </td>
-                                </template>
                                 </tr>
                             </template>
                         </tbody>
@@ -640,10 +610,6 @@
                     this.displayList.push({ _type: 'sportHeader', _key: 'sport-' + sport, _sport: sport, _count: items.length });
                     items.forEach(item => {
                         this.displayList.push({ ...item, _type: 'item', _key: 'item-' + item.id });
-                        const checkouts = (item.checkouts || []).slice().sort((a, b) => a.personName.localeCompare(b.personName));
-                        checkouts.forEach(co => {
-                            this.displayList.push({ ...co, _type: 'checkout', _key: 'co-' + co.id, _itemId: item.id });
-                        });
                     });
                 });
             },
