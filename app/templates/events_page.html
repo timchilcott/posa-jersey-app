@@ -21,30 +21,19 @@
 </head>
 <body class="bg-gray-50" x-data="eventsApp()" x-init="init()" x-cloak>
 
-    <!-- Header — matches other pages -->
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div class="max-w-7xl mx-auto px-4 py-3">
-            <div class="flex items-center justify-between">
-                <a href="/admin">
-                    <img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-8">
-                </a>
-                <div class="flex items-center space-x-3">
-                    <a href="/admin" class="text-gray-600 hover:text-gray-900 text-sm font-medium">Players</a>
-                    <a href="/inventory" class="text-gray-600 hover:text-gray-900 text-sm font-medium">Inventory</a>
-                    <span class="text-gray-900 text-sm font-medium">Events</span>
-                    <button @click="syncEvents()" :disabled="syncing"
-                            class="bg-pines-500 hover:bg-pines-600 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                        <span x-show="!syncing">Sync Events</span>
-                        <span x-show="syncing">Syncing...</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </header>
+    <!-- Page header -->
+    <div class="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200">
+        <h1 class="text-xl font-semibold text-gray-900">Events</h1>
+        <button @click="syncEvents()" :disabled="syncing"
+                class="bg-pines-500 hover:bg-pines-600 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium">
+            <span x-show="!syncing">Sync Events</span>
+            <span x-show="syncing">Syncing...</span>
+        </button>
+    </div>
 
     <!-- Filters -->
     <div class="bg-white border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 py-4">
+        <div class="px-6 py-4">
             <div class="flex flex-wrap gap-3 items-end">
                 <div class="flex-1 min-w-64">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Search</label>
@@ -102,7 +91,7 @@
     </div>
 
     <!-- Events table -->
-    <main class="max-w-7xl mx-auto px-4 py-6">
+    <main class="px-6 py-6">
         <div x-show="loading" class="text-center py-12">
             <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pines-500"></div>
         </div>
@@ -407,5 +396,6 @@ function eventsApp() {
     }
 }
 </script>
+<script src="/static/sidebar.js"></script>
 </body>
 </html>
