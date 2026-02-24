@@ -156,7 +156,7 @@
     var hasPanel = active && active.children && active.children.length > 0;
 
     var html = '' +
-    '<aside id="posa-sidebar" class="hidden lg:flex bg-white h-screen flex-shrink-0 border-r border-gray-200">' +
+    '<aside id="posa-sidebar" class="hidden lg:flex bg-white h-screen flex-shrink-0 border-r border-gray-200" style="overflow:visible;z-index:20">' +
       '<!-- Icon Rail -->' +
       '<div class="posa-rail flex flex-col h-full">' +
         '<div class="flex items-center justify-center h-16 flex-shrink-0">' +

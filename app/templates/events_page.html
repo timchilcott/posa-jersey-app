@@ -201,7 +201,10 @@
                                 <template x-if="!entry._isHeader">
                                     <td class="px-4 py-3 whitespace-nowrap">
                                         <template x-if="entry.location">
-                                            <div class="text-sm text-gray-600" x-text="entry.location.name"></div>
+                                            <div>
+                                                <div class="text-sm text-gray-600" x-text="entry.location.name"></div>
+                                                <div x-show="entry.location.description" class="text-xs text-gray-400 mt-0.5" x-text="entry.location.description"></div>
+                                            </div>
                                         </template>
                                         <span x-show="!entry.location" class="text-sm text-gray-300">--</span>
                                     </td>
@@ -268,6 +271,7 @@
                 <div x-show="selectedEvent.location">
                     <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Location</label>
                     <p class="text-sm text-gray-900" x-text="selectedEvent.location?.name"></p>
+                    <p x-show="selectedEvent.location?.description" class="text-xs text-pines-600 font-medium mt-0.5" x-text="selectedEvent.location?.description"></p>
                     <p x-show="selectedEvent.location?.address" class="text-xs text-gray-500 mt-0.5" x-text="selectedEvent.location?.address"></p>
                 </div>
                 <div x-show="selectedEvent.teams && selectedEvent.teams.length > 0">
