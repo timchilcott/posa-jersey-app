@@ -5,6 +5,7 @@
  * Include via <script src="/static/sidebar.js"></script> before </body>.
  *
  * Layout: Icon rail (56px) + Nav panel (200px) on desktop.
+ * White background with green accent icons.
  * Mobile: hamburger menu with overlay.
  */
 (function() {
@@ -60,12 +61,12 @@
   function buildRailItems() {
     return NAV_ITEMS.map(function(item) {
       if (item.type === 'divider') {
-        return '<div class="border-t border-white/15 my-2 mx-2"></div>';
+        return '<div class="border-t border-gray-200 my-2 mx-2"></div>';
       }
       var active = isActive(item);
       var classes = active
-        ? 'bg-pines-600 text-white'
-        : 'text-pines-100 hover:bg-pines-400 hover:text-white';
+        ? 'bg-pines-500 text-white'
+        : 'text-pines-500 hover:bg-pines-50 hover:text-pines-600';
       return '<a href="' + item.href + '" class="flex items-center justify-center w-10 h-10 rounded-lg transition-colors ' + classes + '" title="' + item.label + '">' +
         item.icon + '</a>';
     }).join('\n');
@@ -75,12 +76,12 @@
   function buildPanelItems() {
     return NAV_ITEMS.map(function(item) {
       if (item.type === 'divider') {
-        return '<div class="border-t border-white/15 my-3"></div>';
+        return '<div class="border-t border-gray-200 my-3"></div>';
       }
       var active = isActive(item);
       var classes = active
-        ? 'bg-pines-600 text-white'
-        : 'text-pines-100 hover:bg-pines-400 hover:text-white';
+        ? 'bg-pines-500 text-white'
+        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900';
 
       var html = '<a href="' + item.href + '" class="block px-3 py-2 rounded-lg text-sm font-medium transition-colors ' + classes + '">' +
         item.label + '</a>';
@@ -91,8 +92,8 @@
         item.children.forEach(function(child) {
           var childActive = isChildActive(child);
           var childClasses = childActive
-            ? 'text-white font-semibold'
-            : 'text-pines-200 hover:text-white';
+            ? 'text-pines-600 font-semibold bg-pines-50'
+            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50';
           html += '<a href="' + child.href + '" class="block px-3 py-1.5 rounded-lg text-xs transition-colors ' + childClasses + '">' + child.label + '</a>';
         });
         html += '</div>';
@@ -135,11 +136,11 @@
   // ── Build full sidebar HTML (dual panel) ───────────────────────────
   function buildSidebarHTML() {
     return '' +
-    '<aside id="posa-sidebar" class="hidden lg:flex bg-pines-500 text-white h-screen flex-shrink-0">' +
+    '<aside id="posa-sidebar" class="hidden lg:flex bg-white h-screen flex-shrink-0 border-r border-gray-200">' +
       '<!-- Icon Rail -->' +
       '<div class="posa-rail flex flex-col h-full">' +
         '<div class="flex items-center justify-center h-16 flex-shrink-0">' +
-          '<img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-7 brightness-0 invert">' +
+          '<img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-7">' +
         '</div>' +
         '<nav class="flex-1 flex flex-col items-center py-4 space-y-1 overflow-y-auto">' +
           buildRailItems() +
@@ -148,7 +149,7 @@
       '<!-- Nav Panel -->' +
       '<div class="posa-nav-panel flex flex-col h-full">' +
         '<div class="flex items-center h-16 px-4 flex-shrink-0">' +
-          '<span class="font-bold text-lg tracking-tight">POSA</span>' +
+          '<span class="font-bold text-lg tracking-tight text-gray-900">POSA</span>' +
         '</div>' +
         '<nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">' +
           buildPanelItems() +
@@ -160,12 +161,12 @@
   // ── Build mobile top bar ─────────────────────────────────────────
   function buildMobileBar() {
     return '' +
-    '<div id="posa-mobile-bar" class="lg:hidden flex items-center h-14 px-4 bg-pines-500 text-white flex-shrink-0">' +
-      '<button id="mobile-menu-btn" class="p-1.5 rounded-lg hover:bg-pines-400">' +
+    '<div id="posa-mobile-bar" class="lg:hidden flex items-center h-14 px-4 bg-white border-b border-gray-200 flex-shrink-0">' +
+      '<button id="mobile-menu-btn" class="p-1.5 rounded-lg text-gray-600 hover:bg-gray-100">' +
         ICONS.bars3 +
       '</button>' +
-      '<img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-6 ml-3 brightness-0 invert">' +
-      '<span class="ml-2 font-bold text-sm">POSA</span>' +
+      '<img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-6 ml-3">' +
+      '<span class="ml-2 font-bold text-sm text-gray-900">POSA</span>' +
     '</div>';
   }
 
@@ -196,7 +197,7 @@
     var style = document.createElement('style');
     style.textContent = '' +
       '#posa-sidebar { width: 16rem; }' +
-      '#posa-sidebar .posa-rail { width: 3.5rem; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.15); }' +
+      '#posa-sidebar .posa-rail { width: 3.5rem; flex-shrink: 0; border-right: 1px solid #e5e7eb; }' +
       '#posa-sidebar .posa-nav-panel { width: 12.5rem; flex-shrink: 0; }' +
       /* Prevent FOUC */
       'body.sidebar-loading > *:not(script):not(style):not(link) { visibility: hidden; }' +
