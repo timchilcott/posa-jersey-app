@@ -30,7 +30,11 @@
 
   // ── Navigation items ─────────────────────────────────────────────
   const NAV_ITEMS = [
-    { label: 'Players', href: '/admin', icon: ICONS.userGroup, match: ['/admin'] },
+    { label: 'Players', href: '/admin', icon: ICONS.userGroup, match: ['/admin'], children: [
+      { label: 'All Players', href: '/admin' },
+      { label: 'Add Player', href: '/admin/add' },
+      { label: 'Sync Registrations', href: '/sportsengine' },
+    ]},
     { label: 'Volunteers', href: '/admin/volunteers', icon: ICONS.handRaised, match: ['/admin/volunteers'] },
     { label: 'Inventory', href: '/inventory', icon: ICONS.cube, match: ['/inventory'], children: [
       { label: 'Equipment', href: '/inventory' },
@@ -39,21 +43,25 @@
     ]},
     { label: 'Events', href: '/events', icon: ICONS.calendar, match: ['/events'] },
     { type: 'divider' },
-    { label: 'SportsEngine', href: '/sportsengine', icon: ICONS.arrowPath, match: ['/sportsengine'] },
     { label: 'Email Templates', href: '/email-templates', icon: ICONS.envelope, match: ['/email-templates'] },
   ];
 
   function isActive(item) {
     if (!item.match) return false;
-    if (item.href === '/admin') return currentPath === '/admin';
+    // Items with children: check if current path matches any child href
     if (item.children) {
-      return currentPath.startsWith(item.match[0]);
+      return item.children.some(function(c) { return isChildActive(c); });
     }
+    // Volunteers needs exact prefix match that doesn't collide with /admin
+    if (item.href === '/admin/volunteers') return currentPath.startsWith('/admin/volunteers');
     return item.match.some(function(p) { return currentPath.startsWith(p); });
   }
 
   function isChildActive(child) {
-    if (child.href === '/inventory') return currentPath === '/inventory';
+    // Exact match for index pages (e.g., /inventory, /admin, /events)
+    if (child.href === '/inventory' || child.href === '/admin' || child.href === '/events') {
+      return currentPath === child.href;
+    }
     return currentPath.startsWith(child.href);
   }
 
@@ -72,35 +80,36 @@
     }).join('\n');
   }
 
-  // ── Build nav panel items ──────────────────────────────────────────
-  function buildPanelItems() {
-    return NAV_ITEMS.map(function(item) {
-      if (item.type === 'divider') {
-        return '<div class="border-t border-gray-200 my-3"></div>';
-      }
-      var active = isActive(item);
-      var classes = active
-        ? 'bg-gray-100 text-pines-600 font-semibold'
-        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900';
+  // ── Find the active section ────────────────────────────────────────
+  function getActiveSection() {
+    for (var i = 0; i < NAV_ITEMS.length; i++) {
+      if (NAV_ITEMS[i].type === 'divider') continue;
+      if (isActive(NAV_ITEMS[i])) return NAV_ITEMS[i];
+    }
+    return null;
+  }
 
-      var html = '<a href="' + item.href + '" class="block px-3 py-2 rounded-lg text-sm font-medium transition-colors ' + classes + '">' +
-        item.label + '</a>';
+  // ── Build nav panel content (contextual for active section) ───────
+  function buildPanelContent() {
+    var active = getActiveSection();
+    if (!active) return '';
 
-      // Show children inline when parent is active
-      if (item.children && active) {
-        html += '<div class="mt-1 ml-3 space-y-0.5">';
-        item.children.forEach(function(child) {
-          var childActive = isChildActive(child);
-          var childClasses = childActive
-            ? 'text-pines-600 font-semibold bg-pines-50'
-            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50';
-          html += '<a href="' + child.href + '" class="block px-3 py-1.5 rounded-lg text-xs transition-colors ' + childClasses + '">' + child.label + '</a>';
-        });
-        html += '</div>';
-      }
+    var html = '';
 
-      return html;
-    }).join('\n');
+    // If the active section has children, show them as sub-navigation
+    if (active.children && active.children.length > 0) {
+      html += '<div class="space-y-0.5">';
+      active.children.forEach(function(child) {
+        var childActive = isChildActive(child);
+        var childClasses = childActive
+          ? 'bg-gray-100 text-pines-600 font-semibold'
+          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900';
+        html += '<a href="' + child.href + '" class="block px-3 py-2 rounded-lg text-sm transition-colors ' + childClasses + '">' + child.label + '</a>';
+      });
+      html += '</div>';
+    }
+
+    return html;
   }
 
   // ── Build mobile nav items (icon + label, single column) ───────────
@@ -135,7 +144,11 @@
 
   // ── Build full sidebar HTML (dual panel) ───────────────────────────
   function buildSidebarHTML() {
-    return '' +
+    var active = getActiveSection();
+    var panelContent = buildPanelContent();
+    var hasPanel = active && active.children && active.children.length > 0;
+
+    var html = '' +
     '<aside id="posa-sidebar" class="hidden lg:flex bg-white h-screen flex-shrink-0 border-r border-gray-200">' +
       '<!-- Icon Rail -->' +
       '<div class="posa-rail flex flex-col h-full">' +
@@ -145,17 +158,24 @@
         '<nav class="flex-1 flex flex-col items-center py-4 space-y-1 overflow-y-auto">' +
           buildRailItems() +
         '</nav>' +
-      '</div>' +
+      '</div>';
+
+    // Only show nav panel when active section has children
+    if (hasPanel) {
+      html +=
       '<!-- Nav Panel -->' +
       '<div class="posa-nav-panel flex flex-col h-full">' +
-        '<div class="flex items-center h-16 px-4 flex-shrink-0">' +
-          '<span class="font-bold text-lg tracking-tight text-gray-900">POSA</span>' +
+        '<div class="flex items-center h-16 px-4 flex-shrink-0 border-b border-gray-100">' +
+          '<span class="font-semibold text-sm text-gray-900">' + active.label + '</span>' +
         '</div>' +
-        '<nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">' +
-          buildPanelItems() +
+        '<nav class="flex-1 px-3 py-3 overflow-y-auto">' +
+          panelContent +
         '</nav>' +
-      '</div>' +
-    '</aside>';
+      '</div>';
+    }
+
+    html += '</aside>';
+    return html;
   }
 
   // ── Build mobile top bar ─────────────────────────────────────────
@@ -194,11 +214,13 @@
 
   // ── CSS ────────────────────────────────────────────────────────────
   function injectStyles() {
+    var active = getActiveSection();
+    var hasPanel = active && active.children && active.children.length > 0;
     var style = document.createElement('style');
     style.textContent = '' +
-      '#posa-sidebar { width: 16rem; }' +
-      '#posa-sidebar .posa-rail { width: 3.5rem; flex-shrink: 0; border-right: 1px solid #e5e7eb; }' +
-      '#posa-sidebar .posa-nav-panel { width: 12.5rem; flex-shrink: 0; }' +
+      '#posa-sidebar { width: ' + (hasPanel ? '16rem' : '3.5rem') + '; }' +
+      '#posa-sidebar .posa-rail { width: 3.5rem; flex-shrink: 0; }' +
+      '#posa-sidebar .posa-nav-panel { width: 12.5rem; flex-shrink: 0; border-left: 1px solid #e5e7eb; }' +
       /* Prevent FOUC */
       'body.sidebar-loading > *:not(script):not(style):not(link) { visibility: hidden; }' +
       'body.sidebar-ready > * { visibility: visible; }';

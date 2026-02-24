@@ -43,6 +43,10 @@ async def home():
 async def admin_dashboard(request: Request):
     return HTMLResponse(_read_template("players_page.html"))
 
+@app.get("/admin/add", response_class=HTMLResponse)
+async def admin_add_player():
+    return HTMLResponse(_read_template("player_add.html"))
+
 @app.get("/admin/volunteers", response_class=HTMLResponse)
 async def admin_volunteers(request: Request):
     return HTMLResponse(_read_template("volunteers_page.html"))

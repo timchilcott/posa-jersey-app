@@ -308,6 +308,46 @@ def get_filtered_players(
     }
 
 
+@router.post("/players")
+def create_player(player_data: Dict[str, Any], db: Session = Depends(get_db)):
+    """Create a new player with optional registration."""
+    full_name = (player_data.get("full_name") or "").strip()
+    parent_email = (player_data.get("parent_email") or "").strip()
+    if not full_name or not parent_email:
+        raise HTTPException(status_code=400, detail="Name and email are required")
+
+    # Check for duplicate name
+    existing = db.query(Player).filter(func.lower(Player.full_name) == full_name.lower()).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="A player with that name already exists")
+
+    player = Player(
+        full_name=full_name,
+        parent_email=parent_email,
+        birth_year=player_data.get("birth_year"),
+        jersey_number=player_data.get("jersey_number"),
+    )
+    db.add(player)
+    db.flush()
+
+    # Optionally add a registration
+    sport = (player_data.get("sport") or "").strip()
+    division = (player_data.get("division") or "").strip()
+    season = (player_data.get("season") or "").strip()
+    if sport and division and season:
+        reg = Registration(
+            player_id=player.id,
+            program=player_data.get("program", sport),
+            sport=sport,
+            division=division,
+            season=season,
+        )
+        db.add(reg)
+
+    db.commit()
+    return {"id": player.id, "name": player.full_name}
+
+
 @router.get("/waiting-room")
 def get_waiting_room_players(db: Session = Depends(get_db)):
     """Get all players in waiting room"""
