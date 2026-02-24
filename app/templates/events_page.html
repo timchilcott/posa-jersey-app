@@ -190,9 +190,11 @@
                                 <template x-if="!entry._isHeader">
                                     <td class="px-3 py-2">
                                         <template x-if="entry.teams && entry.teams.length > 0">
-                                            <div class="flex flex-wrap gap-1">
+                                            <div class="flex flex-wrap gap-1 items-center">
                                                 <template x-for="(team, ti) in entry.teams" :key="ti">
                                                     <span class="inline-flex items-center text-xs">
+                                                        <img x-show="team.logoUrl" :src="team.logoUrl" :alt="team.name"
+                                                             class="w-5 h-5 object-contain rounded mr-1" @error="$el.style.display='none'">
                                                         <span class="px-1.5 py-0.5 rounded font-medium"
                                                               :class="team.homeTeam ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'"
                                                               x-text="team.name || 'TBD'"></span>

@@ -1326,6 +1326,9 @@ query GetEvents($orgId: Int!, $page: Int!, $perPage: Int!) {
                 primaryColor
                 homeTeam
                 name
+                brand {
+                    logoUrl
+                }
             }
         }
     }
@@ -1484,17 +1487,20 @@ def _upsert_event(event_data: dict, db: Session, results: dict) -> None:
     else:
         address_str = str(address_data) if address_data else None
 
-    # Extract teams
+    # Extract teams (including brand logoUrl if available)
     teams_raw = event_data.get("eventTeams") or []
-    teams_json = [
-        {
+    teams_json = []
+    for t in teams_raw:
+        team_entry = {
             "name": t.get("name"),
             "score": t.get("score"),
             "primaryColor": t.get("primaryColor"),
             "homeTeam": t.get("homeTeam"),
         }
-        for t in teams_raw
-    ]
+        brand = t.get("brand") or {}
+        if brand.get("logoUrl"):
+            team_entry["logoUrl"] = brand["logoUrl"]
+        teams_json.append(team_entry)
 
     sport = _extract_sport_from_event(event_data)
     start_time = _parse_utc_datetime(event_data.get("start"))
