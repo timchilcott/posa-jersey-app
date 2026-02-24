@@ -18,9 +18,9 @@
 
   // ── Font Awesome icons (loaded via <link> in each template <head>) ──
   const ICONS = {
-    userGroup: '<i class="fa-solid fa-users text-base"></i>',
-    handRaised: '<i class="fa-solid fa-hand text-base"></i>',
-    cube: '<i class="fa-solid fa-box-open text-base"></i>',
+    shirt: '<i class="fa-solid fa-shirt text-base"></i>',
+    handshakeAngle: '<i class="fa-solid fa-handshake-angle text-base"></i>',
+    barcode: '<i class="fa-solid fa-barcode text-base"></i>',
     calendar: '<i class="fa-regular fa-calendar-days text-base"></i>',
     arrowPath: '<i class="fa-solid fa-arrows-rotate text-base"></i>',
     envelope: '<i class="fa-regular fa-envelope text-base"></i>',
@@ -30,18 +30,18 @@
 
   // ── Navigation items ─────────────────────────────────────────────
   const NAV_ITEMS = [
-    { label: 'Players', href: '/admin', icon: ICONS.userGroup, match: ['/admin'], children: [
+    { label: 'Players', href: '/admin', icon: ICONS.shirt, match: ['/admin'], children: [
       { label: 'All Players', href: '/admin' },
       { label: 'Add Player', href: '/admin/add' },
       { label: 'Sync Registrations', href: '/sportsengine' },
     ]},
-    { label: 'Volunteers', href: '/admin/volunteers', icon: ICONS.handRaised, match: ['/admin/volunteers'] },
-    { label: 'Inventory', href: '/inventory', icon: ICONS.cube, match: ['/inventory'], children: [
+    { label: 'Volunteers', href: '/admin/volunteers', icon: ICONS.handshakeAngle, match: ['/admin/volunteers'] },
+    { label: 'Inventory', href: '/inventory', icon: ICONS.barcode, match: ['/inventory'], children: [
       { label: 'Equipment', href: '/inventory' },
       { label: 'Checked Out', href: '/inventory/checked-out' },
       { label: 'Add Item', href: '/inventory/add' },
     ]},
-    { label: 'Events', href: '/events', icon: ICONS.calendar, match: ['/events'] },
+    { label: 'Schedule', href: '/events', icon: ICONS.calendar, match: ['/events'] },
     { type: 'divider' },
     { label: 'Email Templates', href: '/email-templates', icon: ICONS.envelope, match: ['/email-templates'] },
   ];
@@ -58,8 +58,8 @@
   }
 
   function isChildActive(child) {
-    // Exact match for index pages (e.g., /inventory, /admin, /events)
-    if (child.href === '/inventory' || child.href === '/admin' || child.href === '/events') {
+    // Exact match for index pages (e.g., /inventory, /admin)
+    if (child.href === '/inventory' || child.href === '/admin') {
       return currentPath === child.href;
     }
     return currentPath.startsWith(child.href);
