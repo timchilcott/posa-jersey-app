@@ -16,12 +16,7 @@
 
   const currentPath = window.location.pathname;
 
-  // ── Font Awesome icons ───────────────────────────────────────────
-  var faLink = document.createElement('link');
-  faLink.rel = 'stylesheet';
-  faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css';
-  document.head.appendChild(faLink);
-
+  // ── Font Awesome icons (loaded via <link> in each template <head>) ──
   const ICONS = {
     userGroup: '<i class="fa-solid fa-users text-base"></i>',
     handRaised: '<i class="fa-solid fa-hand text-base"></i>',

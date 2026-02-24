@@ -4,7 +4,7 @@ New Admin API Routes for Drill-Down Interface
 import re
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, extract, cast, Integer
 from datetime import datetime
 from typing import List, Dict, Any, Optional
@@ -204,57 +204,51 @@ def get_filtered_players(
     Get filtered list of players with their registrations.
     Returns data for Level 3 player list view.
     """
-    # Build query
-    query = db.query(Player).join(Registration, isouter=True)
-    
+    # Build query — eager-load registrations in one trip (no N+1)
+    query = db.query(Player).options(joinedload(Player.registrations)).join(Registration, isouter=True)
+
     # Apply filters
     if birth_year:
         query = query.filter(Player.birth_year == birth_year)
-    
+
     if year:
         query = query.filter(_season_contains_year(year))
-    
+
     if sport:
         # Normalize sport name
         sport_name = sport.replace('_', ' ').title()
         query = query.filter(Registration.sport == sport_name)
-    
+
     if needs_email is not None:
         query = query.filter(Registration.confirmation_sent == (not needs_email))
-    
+
     if waiting_room:
         query = query.filter(Registration.division == 'Waiting Room')
-    
+
     if search:
         search_term = f"%{search}%"
         query = query.filter(
             (Player.full_name.ilike(search_term)) |
             (Player.parent_email.ilike(search_term))
         )
-    
-    # Get distinct players
+
+    # Get distinct players (registrations already loaded via joinedload)
     players = query.distinct().all()
-    
-    # Separate volunteers from players based on their registrations
-    all_regs_by_player = {}
-    for player in players:
-        regs = db.query(Registration).filter(Registration.player_id == player.id).all()
-        all_regs_by_player[player.id] = regs
-    
+
     # A player is a "volunteer" if manually marked (locked=True) OR all their registrations are volunteer divisions
     def player_is_volunteer(p):
         if p.locked:
             return True
-        regs = all_regs_by_player.get(p.id, [])
+        regs = p.registrations
         if not regs:
             return False
         return all(is_volunteer_division(r.division) for r in regs)
-    
+
     if volunteers_only:
         players = [p for p in players if player_is_volunteer(p)]
     else:
         players = [p for p in players if not player_is_volunteer(p)]
-    
+
     # Sort: youngest birth year first, then jersey number ascending
     # Nulls go to the end for both fields
     players.sort(key=lambda p: (
@@ -263,32 +257,29 @@ def get_filtered_players(
         p.jersey_number is None,       # null jerseys last
         p.jersey_number or 0           # ascending
     ))
-    
-    # Format response
+
+    # Normalize filter values for registration filtering in Python
+    sport_name = sport.replace('_', ' ').title() if sport else None
+    year_str = str(year) if year else None
+
+    # Format response — use already-loaded registrations, filter in Python
     result = []
     for player in players:
-        # Get all registrations for this player (filtered by criteria)
-        reg_query = db.query(Registration).filter(Registration.player_id == player.id)
-        
-        if year:
-            reg_query = reg_query.filter(Registration.season.ilike(f'%{year}%'))
-        if sport:
-            sport_name = sport.replace('_', ' ').title()
-            reg_query = reg_query.filter(Registration.sport == sport_name)
-        
-        registrations = reg_query.all()
-        
+        # Filter registrations in Python from the eager-loaded collection
+        registrations = player.registrations
+        if year_str:
+            registrations = [r for r in registrations if year_str in (r.season or '')]
+        if sport_name:
+            registrations = [r for r in registrations if r.sport == sport_name]
+
         # Check if any registration has email sent
         email_sent = any(reg.confirmation_sent for reg in registrations)
-        
-        # Show actual jersey number
-        jersey_display = player.jersey_number
-        
+
         result.append({
             'id': player.id,
             'name': player.full_name,
             'birthYear': player.birth_year,
-            'jersey': jersey_display,
+            'jersey': player.jersey_number,
             'email': player.parent_email,
             'emailSent': email_sent,
             'locked': player.locked,
@@ -301,7 +292,7 @@ def get_filtered_players(
                 'emailSent': reg.confirmation_sent
             } for reg in registrations]
         })
-    
+
     return {
         'count': len(result),
         'players': result

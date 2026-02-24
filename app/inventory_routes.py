@@ -141,9 +141,27 @@ def list_items(
 
     items = query.order_by(InventoryItem.category, InventoryItem.name).all()
 
+    # Bulk-load checkouts and conditions for all items (2 queries instead of 2 per item)
+    item_ids = [i.id for i in items]
+    checkouts_by_item = {}
+    conditions_by_item = {}
+    if item_ids:
+        all_checkouts = db.query(CheckoutRecord).filter(
+            CheckoutRecord.item_id.in_(item_ids),
+            CheckoutRecord.returned_at.is_(None),
+        ).order_by(CheckoutRecord.checked_out_at.desc()).all()
+        for r in all_checkouts:
+            checkouts_by_item.setdefault(r.item_id, []).append(r)
+
+        all_conditions = db.query(ConditionBreakdown).filter(
+            ConditionBreakdown.item_id.in_(item_ids),
+        ).order_by(ConditionBreakdown.id).all()
+        for c in all_conditions:
+            conditions_by_item.setdefault(c.item_id, []).append(c)
+
     return {
         "count": len(items),
-        "items": [_serialize_item(i, db) for i in items],
+        "items": [_serialize_item(i, db, checkouts_by_item.get(i.id, []), conditions_by_item.get(i.id, [])) for i in items],
     }
 
 
@@ -440,9 +458,17 @@ def list_all_checkouts(db: Session = Depends(get_db)):
     records = db.query(CheckoutRecord).filter(
         CheckoutRecord.returned_at.is_(None)
     ).order_by(CheckoutRecord.checked_out_at.desc()).all()
+
+    # Bulk-load all referenced items in one query
+    item_ids = list({r.item_id for r in records})
+    items_map = {}
+    if item_ids:
+        items = db.query(InventoryItem).filter(InventoryItem.id.in_(item_ids)).all()
+        items_map = {i.id: i for i in items}
+
     result = []
     for r in records:
-        item = db.query(InventoryItem).filter(InventoryItem.id == r.item_id).first()
+        item = items_map.get(r.item_id)
         result.append({
             "id": r.id,
             "itemId": r.item_id,
@@ -463,11 +489,18 @@ def checkouts_by_person(db: Session = Depends(get_db)):
         CheckoutRecord.returned_at.is_(None)
     ).order_by(CheckoutRecord.person_name, CheckoutRecord.checked_out_at.desc()).all()
 
+    # Bulk-load all referenced items in one query
+    item_ids = list({r.item_id for r in records})
+    items_map = {}
+    if item_ids:
+        items = db.query(InventoryItem).filter(InventoryItem.id.in_(item_ids)).all()
+        items_map = {i.id: i for i in items}
+
     people = {}
     for r in records:
         if r.person_name not in people:
             people[r.person_name] = {"personName": r.person_name, "items": [], "totalItems": 0}
-        item = db.query(InventoryItem).filter(InventoryItem.id == r.item_id).first()
+        item = items_map.get(r.item_id)
         people[r.person_name]["items"].append({
             "id": r.id,
             "itemId": r.item_id,
@@ -534,31 +567,42 @@ def _sync_conditions(item_id: int, conditions: list, db: Session):
             db.add(ConditionBreakdown(item_id=item_id, condition=cond, quantity=qty))
 
 
-def _serialize_item(item: InventoryItem, db: Session = None) -> dict:
-    checkouts = []
-    conditions = []
-    if db:
-        records = db.query(CheckoutRecord).filter(
+def _serialize_item(item: InventoryItem, db: Session = None, preloaded_checkouts=None, preloaded_conditions=None) -> dict:
+    # Use pre-loaded data if available, otherwise fall back to per-item queries
+    if preloaded_checkouts is not None:
+        checkout_records = preloaded_checkouts
+    elif db:
+        checkout_records = db.query(CheckoutRecord).filter(
             CheckoutRecord.item_id == item.id,
             CheckoutRecord.returned_at.is_(None),
         ).order_by(CheckoutRecord.checked_out_at.desc()).all()
-        checkouts = [
-            {
-                "id": r.id,
-                "personName": r.person_name,
-                "quantity": r.quantity,
-                "checkedOutAt": r.checked_out_at.isoformat() if r.checked_out_at else None,
-                "notes": r.notes,
-            }
-            for r in records
-        ]
+    else:
+        checkout_records = []
+
+    checkouts = [
+        {
+            "id": r.id,
+            "personName": r.person_name,
+            "quantity": r.quantity,
+            "checkedOutAt": r.checked_out_at.isoformat() if r.checked_out_at else None,
+            "notes": r.notes,
+        }
+        for r in checkout_records
+    ]
+
+    if preloaded_conditions is not None:
+        cond_rows = preloaded_conditions
+    elif db:
         cond_rows = db.query(ConditionBreakdown).filter(
             ConditionBreakdown.item_id == item.id
         ).order_by(ConditionBreakdown.id).all()
-        conditions = [
-            {"condition": c.condition, "quantity": c.quantity}
-            for c in cond_rows
-        ]
+    else:
+        cond_rows = []
+
+    conditions = [
+        {"condition": c.condition, "quantity": c.quantity}
+        for c in cond_rows
+    ]
 
     # If no breakdowns exist, fall back to the single condition field
     if not conditions and item.condition:

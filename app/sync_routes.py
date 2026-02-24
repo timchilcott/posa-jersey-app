@@ -18,11 +18,11 @@ Routes:
 """
 import os
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, HTMLResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from app.database import get_db
+from app.database import get_db, SessionLocal
 from app.models import Player, Registration
 
 logger = logging.getLogger(__name__)
@@ -31,20 +31,62 @@ router = APIRouter(tags=["sync"])
 
 
 # ------------------------------------------------------------------
+# Background task helpers — each creates its own DB session so the
+# request session can close immediately.
+# ------------------------------------------------------------------
+def _bg_sync_registrations():
+    """Run full registration sync in background with its own DB session."""
+    db = SessionLocal()
+    try:
+        from app.services.sportsengine import sync_all_registrations
+        results = sync_all_registrations(db)
+        logger.info(
+            f"BG registration sync done: "
+            f"{results['new_players']} new, {results['existing_players']} updated, "
+            f"{len(results['errors'])} errors"
+        )
+    except Exception as e:
+        logger.error(f"BG registration sync failed: {e}", exc_info=True)
+    finally:
+        db.close()
+
+
+def _bg_sync_events():
+    """Run full event sync in background with its own DB session."""
+    db = SessionLocal()
+    try:
+        from app.services.sportsengine import sync_all_events
+        results = sync_all_events(db)
+        logger.info(
+            f"BG event sync done: "
+            f"{results['new_events']} new, {results['updated_events']} updated, "
+            f"{len(results['errors'])} errors"
+        )
+    except Exception as e:
+        logger.error(f"BG event sync failed: {e}", exc_info=True)
+    finally:
+        db.close()
+
+
+def _bg_sync_all():
+    """Run both registration + event sync in background."""
+    _bg_sync_registrations()
+    _bg_sync_events()
+
+
+# ------------------------------------------------------------------
 # Primary sync endpoint (admin UI button)
 # ------------------------------------------------------------------
 @router.post("/sync/pull")
-def sync_pull(db: Session = Depends(get_db)):
+def sync_pull(background_tasks: BackgroundTasks):
     """
     Pull all registrations from SportsEngine.
     This is the endpoint the admin UI's "Sync SportsEngine" button calls.
+    Responds immediately; sync runs in background.
     """
-    from app.services.sportsengine import is_configured, sync_all_registrations
-
-    print("SYNC_PULL: Endpoint called", flush=True)
+    from app.services.sportsengine import is_configured
 
     if not is_configured():
-        print("SYNC_PULL: Not configured!", flush=True)
         return JSONResponse(
             status_code=400,
             content={
@@ -53,24 +95,8 @@ def sync_pull(db: Session = Depends(get_db)):
             },
         )
 
-    try:
-        results = sync_all_registrations(db)
-        return {
-            "status": "success",
-            "created": results["new_players"],
-            "updated": results["existing_players"],
-            "new_registrations": results["new_registrations"],
-            "updated_registrations": results["updated_registrations"],
-            "forms_processed": results["forms_processed"],
-            "errors": len(results["errors"]),
-            "error_details": results["errors"][:10],
-        }
-    except Exception as e:
-        logger.error(f"Sync failed: {e}", exc_info=True)
-        return JSONResponse(
-            status_code=500,
-            content={"status": "error", "detail": str(e)},
-        )
+    background_tasks.add_task(_bg_sync_registrations)
+    return {"status": "accepted", "message": "Registration sync started in background"}
 
 
 @router.post("/sync/pull/{registration_id}")
@@ -98,33 +124,32 @@ def sync_pull_one(registration_id: str, db: Session = Depends(get_db)):
 # SportsEngine webhook (receives POST from SportsEngine servers)
 # ------------------------------------------------------------------
 @router.post("/sportsengine/webhook")
-async def sportsengine_webhook(request: Request, db: Session = Depends(get_db)):
+async def sportsengine_webhook(request: Request, background_tasks: BackgroundTasks):
     """
     Receive webhook notifications from SportsEngine.
-    SportsEngine POSTs here when registrations are created/updated.
+    Responds immediately with 200 and runs sync in background so
+    SportsEngine doesn't time out waiting for a response.
     """
-    from app.services.sportsengine import is_configured, process_webhook
+    from app.services.sportsengine import is_configured
 
     try:
         payload = await request.json()
     except Exception:
         payload = {}
 
-    logger.info(f"SportsEngine webhook received: {payload}")
+    resource_type = payload.get("resourceType") or payload.get("type") or "unknown"
+    operation = payload.get("resourceOperation") or payload.get("operation") or payload.get("action") or "unknown"
+    resource_id = payload.get("resourceId") or payload.get("id") or "unknown"
+
+    logger.info(f"WEBHOOK: Received — operation={operation} type={resource_type} id={resource_id}")
 
     if not is_configured():
         logger.warning("Webhook received but SportsEngine not configured")
         return {"status": "ignored", "reason": "not configured"}
 
-    try:
-        result = process_webhook(payload, db)
-        return {"status": "ok", "result": result}
-    except Exception as e:
-        logger.error(f"Webhook processing error: {e}", exc_info=True)
-        return JSONResponse(
-            status_code=500,
-            content={"status": "error", "detail": str(e)},
-        )
+    # Respond immediately, sync in background
+    background_tasks.add_task(_bg_sync_all)
+    return {"status": "accepted", "message": "Sync started in background"}
 
 
 # ------------------------------------------------------------------
@@ -185,12 +210,13 @@ def sportsengine_registrations():
 
 
 @router.post("/sportsengine/sync")
-async def sportsengine_sync(request: Request, db: Session = Depends(get_db)):
+async def sportsengine_sync(request: Request, background_tasks: BackgroundTasks):
     """
     Sync endpoint used by the sportsengine.html management page.
     Accepts optional { "registration_id": "..." } to sync a single form.
+    Single-form sync still runs synchronously (fast); full sync is background.
     """
-    from app.services.sportsengine import is_configured, sync_all_registrations, sync_registration
+    from app.services.sportsengine import is_configured, sync_registration
 
     if not is_configured():
         return JSONResponse(
@@ -205,36 +231,41 @@ async def sportsengine_sync(request: Request, db: Session = Depends(get_db)):
 
     reg_id = body.get("registration_id")
 
-    try:
-        if reg_id:
+    # Single-form sync is fast enough to run inline
+    if reg_id:
+        db = SessionLocal()
+        try:
             results = sync_registration(reg_id, db)
-        else:
-            results = sync_all_registrations(db)
+            return {
+                "status": "success",
+                "created": results["new_players"],
+                "updated": results["existing_players"],
+                "new_registrations": results["new_registrations"],
+                "updated_registrations": results["updated_registrations"],
+                "errors": len(results["errors"]),
+                "error_details": results["errors"][:10],
+            }
+        except Exception as e:
+            logger.error(f"Sync failed: {e}", exc_info=True)
+            return JSONResponse(
+                status_code=500,
+                content={"status": "error", "detail": str(e)},
+            )
+        finally:
+            db.close()
 
-        return {
-            "status": "success",
-            "created": results["new_players"],
-            "updated": results["existing_players"],
-            "new_registrations": results["new_registrations"],
-            "updated_registrations": results["updated_registrations"],
-            "errors": len(results["errors"]),
-            "error_details": results["errors"][:10],
-        }
-    except Exception as e:
-        logger.error(f"Sync failed: {e}", exc_info=True)
-        return JSONResponse(
-            status_code=500,
-            content={"status": "error", "detail": str(e)},
-        )
+    # Full sync → background
+    background_tasks.add_task(_bg_sync_registrations)
+    return {"status": "accepted", "message": "Registration sync started in background"}
 
 
 # ------------------------------------------------------------------
 # Event sync endpoint
 # ------------------------------------------------------------------
 @router.post("/sync/events")
-def sync_events(db: Session = Depends(get_db)):
-    """Pull events from SportsEngine."""
-    from app.services.sportsengine import is_configured, sync_all_events
+def sync_events(background_tasks: BackgroundTasks):
+    """Pull events from SportsEngine. Responds immediately; sync runs in background."""
+    from app.services.sportsengine import is_configured
 
     if not is_configured():
         return JSONResponse(
@@ -242,22 +273,8 @@ def sync_events(db: Session = Depends(get_db)):
             content={"status": "error", "detail": "SportsEngine not configured"},
         )
 
-    try:
-        results = sync_all_events(db)
-        return {
-            "status": "success",
-            "new_events": results["new_events"],
-            "updated_events": results["updated_events"],
-            "total_fetched": results["total_fetched"],
-            "errors": len(results["errors"]),
-            "error_details": results["errors"][:10],
-        }
-    except Exception as e:
-        logger.error(f"Event sync failed: {e}", exc_info=True)
-        return JSONResponse(
-            status_code=500,
-            content={"status": "error", "detail": str(e)},
-        )
+    background_tasks.add_task(_bg_sync_events)
+    return {"status": "accepted", "message": "Event sync started in background"}
 
 
 # ------------------------------------------------------------------
