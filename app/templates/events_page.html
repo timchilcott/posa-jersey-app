@@ -133,7 +133,7 @@
                             <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Time</th>
                             <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Type</th>
                             <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Event</th>
-                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Sport</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Teams</th>
                             <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Location</th>
                             <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Status</th>
                         </tr>
@@ -163,22 +163,32 @@
                                     </td>
                                 </template>
 
-                                <!-- EVENT ROW: Name -->
+                                <!-- EVENT ROW: Name + Sport -->
                                 <template x-if="!entry._isHeader">
                                     <td class="px-4 py-3 whitespace-nowrap">
-                                        <div class="text-sm font-medium text-gray-900" x-text="entry.name"></div>
-                                        <div x-show="entry.description" class="text-xs text-gray-400 mt-0.5 truncate max-w-xs" x-text="entry.description"></div>
+                                        <div class="text-sm text-gray-900" x-text="entry.name"></div>
+                                        <div x-show="entry.sport" class="text-xs text-gray-400 mt-0.5">
+                                            <span x-html="sportEmoji(entry.sport)"></span>
+                                            <span x-text="entry.sport"></span>
+                                        </div>
                                     </td>
                                 </template>
 
-                                <!-- EVENT ROW: Sport -->
+                                <!-- EVENT ROW: Teams matchup -->
                                 <template x-if="!entry._isHeader">
                                     <td class="px-4 py-3 whitespace-nowrap">
-                                        <span x-show="entry.sport" class="text-sm text-gray-600">
-                                            <span x-html="sportEmoji(entry.sport)"></span>
-                                            <span x-text="entry.sport"></span>
-                                        </span>
-                                        <span x-show="!entry.sport" class="text-sm text-gray-300">--</span>
+                                        <template x-if="entry.teams && entry.teams.length > 0">
+                                            <div class="flex items-center gap-1.5">
+                                                <template x-for="(team, ti) in entry.teams" :key="ti">
+                                                    <div class="flex items-center gap-1">
+                                                        <span x-show="ti > 0" class="text-xs text-gray-300 mx-0.5">vs</span>
+                                                        <img x-show="team.logoUrl" :src="team.logoUrl" class="w-5 h-5 object-contain rounded" @error="$el.style.display='none'">
+                                                        <span class="text-xs text-gray-600 max-w-[8rem] truncate" x-text="team.name || 'TBD'"></span>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+                                        <span x-show="!entry.teams || entry.teams.length === 0" class="text-sm text-gray-300">--</span>
                                     </td>
                                 </template>
 
