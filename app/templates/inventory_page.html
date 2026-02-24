@@ -583,11 +583,18 @@
                 const sorted = [...this.filteredItems].sort((a, b) => a.name.localeCompare(b.name));
                 sorted.forEach(item => {
                     const sports = (item.sport||'').split(',').map(s => s.trim()).filter(Boolean);
-                    const primary = sports.length > 0 ? sports[0] : 'General';
-                    if (!sportGroups[primary]) sportGroups[primary] = [];
-                    sportGroups[primary].push(item);
+                    let group;
+                    if (sports.length === 0) group = 'General';
+                    else if (sports.length > 1) group = 'All Sports';
+                    else group = sports[0];
+                    if (!sportGroups[group]) sportGroups[group] = [];
+                    sportGroups[group].push(item);
                 });
                 const sortedSports = Object.keys(sportGroups).sort((a, b) => {
+                    if (a === 'All Sports') return -1;
+                    if (b === 'All Sports') return 1;
+                    if (a === 'General') return 1;
+                    if (b === 'General') return -1;
                     const ai = sportOrder.indexOf(a);
                     const bi = sportOrder.indexOf(b);
                     if (ai >= 0 && bi >= 0) return ai - bi;
