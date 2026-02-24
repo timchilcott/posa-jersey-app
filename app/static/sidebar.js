@@ -65,8 +65,8 @@
       }
       var active = isActive(item);
       var classes = active
-        ? 'bg-pines-500 text-white'
-        : 'text-pines-500 hover:bg-pines-50 hover:text-pines-600';
+        ? 'bg-gray-100 text-pines-600'
+        : 'text-gray-400 hover:bg-gray-50 hover:text-pines-500';
       return '<a href="' + item.href + '" class="flex items-center justify-center w-10 h-10 rounded-lg transition-colors ' + classes + '" title="' + item.label + '">' +
         item.icon + '</a>';
     }).join('\n');
@@ -80,8 +80,8 @@
       }
       var active = isActive(item);
       var classes = active
-        ? 'bg-pines-500 text-white'
-        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900';
+        ? 'bg-gray-100 text-pines-600 font-semibold'
+        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900';
 
       var html = '<a href="' + item.href + '" class="block px-3 py-2 rounded-lg text-sm font-medium transition-colors ' + classes + '">' +
         item.label + '</a>';
