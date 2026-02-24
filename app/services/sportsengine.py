@@ -1292,11 +1292,9 @@ def process_webhook(payload: dict, db: Session) -> dict:
 # ---------------------------------------------------------------------
 
 EVENTS_QUERY = """
-query GetEvents($orgId: Int!, $start: String, $end: String, $page: Int!, $perPage: Int!) {
+query GetEvents($orgId: Int!, $page: Int!, $perPage: Int!) {
     events(
         organizationId: $orgId
-        start: $start
-        end: $end
         page: $page
         perPage: $perPage
     ) {
@@ -1335,15 +1333,11 @@ query GetEvents($orgId: Int!, $start: String, $end: String, $page: Int!, $perPag
 """
 
 
-def get_events(start: str = None, end: str = None, page: int = 1, per_page: int = 100) -> dict:
+def get_events(page: int = 1, per_page: int = 100) -> dict:
     """
     Fetch events from SportsEngine for the configured organization.
-
-    Args:
-        start: UTC datetime string, e.g. "2026-01-01T00:00:00Z"
-        end: UTC datetime string
-        page: Page number (1-based)
-        per_page: Results per page (max 100)
+    Date filtering is done in Python after fetching since the GraphQL
+    schema does not support start/end arguments on the events query.
     """
     org_id = os.getenv("SPORTSENGINE_ORG_ID")
     if not org_id:
@@ -1354,10 +1348,6 @@ def get_events(start: str = None, end: str = None, page: int = 1, per_page: int 
         "page": page,
         "perPage": min(per_page, 100),
     }
-    if start:
-        variables["start"] = start
-    if end:
-        variables["end"] = end
 
     data = graphql_query(EVENTS_QUERY, variables)
     return data.get("events", {})
@@ -1396,8 +1386,9 @@ def _parse_utc_datetime(dt_str: str) -> Optional[datetime]:
 
 def sync_all_events(db: Session, days_back: int = 30, days_forward: int = 90) -> dict:
     """
-    Sync events from SportsEngine for a date window.
-    Fetches all events in [now - days_back, now + days_forward] and upserts each.
+    Sync events from SportsEngine.
+    Fetches all pages of events, then filters to the date window
+    [now - days_back, now + days_forward] before upserting.
     """
     from app.models_events import Event
 
@@ -1405,19 +1396,20 @@ def sync_all_events(db: Session, days_back: int = 30, days_forward: int = 90) ->
         "new_events": 0,
         "updated_events": 0,
         "total_fetched": 0,
+        "skipped_out_of_range": 0,
         "errors": [],
     }
 
     now = datetime.utcnow()
-    start_dt = (now - timedelta(days=days_back)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    end_dt = (now + timedelta(days=days_forward)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    window_start = now - timedelta(days=days_back)
+    window_end = now + timedelta(days=days_forward)
 
-    logger.info(f"EVENT SYNC: Fetching events from {start_dt} to {end_dt}")
+    logger.info(f"EVENT SYNC: Fetching events (date window {window_start.date()} to {window_end.date()})")
 
     page = 1
     while True:
         try:
-            events_data = get_events(start=start_dt, end=end_dt, page=page, per_page=100)
+            events_data = get_events(page=page, per_page=100)
         except Exception as e:
             logger.error(f"EVENT SYNC: Failed to fetch page {page}: {e}")
             results["errors"].append(str(e))
@@ -1433,6 +1425,11 @@ def sync_all_events(db: Session, days_back: int = 30, days_forward: int = 90) ->
 
         for event_data in events_list:
             try:
+                # Filter by date window in Python
+                event_start = _parse_utc_datetime(event_data.get("start"))
+                if event_start and (event_start < window_start or event_start > window_end):
+                    results["skipped_out_of_range"] += 1
+                    continue
                 _upsert_event(event_data, db, results)
             except Exception as e:
                 logger.error(f"EVENT SYNC: Error processing event {event_data.get('id')}: {e}")
