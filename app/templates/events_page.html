@@ -21,76 +21,83 @@
 </head>
 <body class="bg-gray-50" x-data="eventsApp()" x-init="init()" x-cloak>
 
-    <!-- Header + Filters (Intercom style) -->
-    <div class="bg-white border-b border-gray-200">
-        <div class="px-6 py-3">
-            <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center gap-3">
-                    <h1 class="text-base font-semibold text-gray-900">All Events</h1>
-                    <span class="text-xs text-gray-400" x-text="filteredEvents.length + ' events'"></span>
+    <!-- Filter bar -->
+    <div class="bg-white border-b border-gray-200" x-data="{ showMore: false }">
+        <div class="flex items-center gap-2 flex-nowrap px-6 py-2.5">
+            <span class="text-xs text-gray-400 mr-1 shrink-0" x-text="filteredEvents.length + ' events'"></span>
+            <!-- Search -->
+            <div class="relative">
+                <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="search" x-model="filters.search" @input.debounce.300ms="loadEvents()" placeholder="Search..."
+                       class="pl-8 pr-3 py-1.5 border border-gray-200 rounded-md text-xs w-48 focus:ring-1 focus:ring-pines-500 focus:border-pines-500 placeholder-gray-400">
+            </div>
+            <!-- Sport pill -->
+            <div class="relative" x-data="{ open: false }">
+                <button @click="open = !open" @click.outside="open = false"
+                        class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
+                        :class="filters.sport ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                    <span x-text="filters.sport || 'All sports'"></span>
+                    <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="open" x-transition class="absolute z-20 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+                    <div @click="filters.sport = ''; loadEvents(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs text-gray-500">All sports</div>
+                    <template x-for="sp in availableSports" :key="sp">
+                        <div @click="filters.sport = sp; loadEvents(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs"
+                             :class="filters.sport === sp ? 'bg-pines-50 text-pines-700 font-medium' : ''" x-text="sp"></div>
+                    </template>
                 </div>
+            </div>
+            <!-- Type pill -->
+            <div class="relative" x-data="{ open: false }">
+                <button @click="open = !open" @click.outside="open = false"
+                        class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
+                        :class="filters.eventType ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                    <span x-text="filters.eventType ? typeLabel(filters.eventType) : 'All types'"></span>
+                    <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="open" x-transition class="absolute z-20 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+                    <div @click="filters.eventType = ''; loadEvents(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs text-gray-500">All types</div>
+                    <template x-for="t in ['game', 'practice', 'event']" :key="t">
+                        <div @click="filters.eventType = t; loadEvents(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs"
+                             :class="filters.eventType === t ? 'bg-pines-50 text-pines-700 font-medium' : ''">
+                            <span x-text="typeLabel(t)"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+            <!-- Date range (behind + Filter) -->
+            <template x-if="showMore || filters.startDate || filters.endDate">
+                <div class="contents">
+                    <div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-200">
+                        <span class="text-gray-400">From</span>
+                        <input type="date" x-model="filters.startDate" @change="loadEvents()"
+                               class="border-0 p-0 text-xs w-28 focus:ring-0 text-gray-600">
+                    </div>
+                    <div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-200">
+                        <span class="text-gray-400">To</span>
+                        <input type="date" x-model="filters.endDate" @change="loadEvents()"
+                               class="border-0 p-0 text-xs w-28 focus:ring-0 text-gray-600">
+                    </div>
+                </div>
+            </template>
+            <!-- + Filter button -->
+            <button x-show="!showMore && !filters.startDate && !filters.endDate"
+                    @click="showMore = true"
+                    class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border border-dashed border-gray-300 text-gray-400 hover:text-gray-600 hover:border-gray-400 transition-colors">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Filter
+            </button>
+            <!-- Clear -->
+            <button x-show="filters.search || filters.sport || filters.eventType || filters.startDate || filters.endDate"
+                    @click="showMore = false; clearFilters()" class="text-xs text-gray-400 hover:text-gray-600 px-1.5 py-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <!-- Sync button pushed right -->
+            <div class="ml-auto">
                 <button @click="syncEvents()" :disabled="syncing"
                         class="bg-pines-500 hover:bg-pines-600 disabled:opacity-50 text-white px-3 py-1.5 rounded-md text-xs font-medium">
                     <span x-show="!syncing">Sync Events</span>
                     <span x-show="syncing">Syncing...</span>
-                </button>
-            </div>
-            <div class="flex items-center gap-2 flex-wrap">
-                <!-- Search -->
-                <div class="relative">
-                    <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                    <input type="search" x-model="filters.search" @input.debounce.300ms="loadEvents()" placeholder="Search..."
-                           class="pl-8 pr-3 py-1.5 border border-gray-200 rounded-md text-xs w-48 focus:ring-1 focus:ring-pines-500 focus:border-pines-500 placeholder-gray-400">
-                </div>
-                <!-- Sport pill -->
-                <div class="relative" x-data="{ open: false }">
-                    <button @click="open = !open" @click.outside="open = false"
-                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                            :class="filters.sport ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
-                        <span x-text="filters.sport || 'All sports'"></span>
-                        <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                    </button>
-                    <div x-show="open" x-transition class="absolute z-20 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
-                        <div @click="filters.sport = ''; loadEvents(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs text-gray-500">All sports</div>
-                        <template x-for="sp in availableSports" :key="sp">
-                            <div @click="filters.sport = sp; loadEvents(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs"
-                                 :class="filters.sport === sp ? 'bg-pines-50 text-pines-700 font-medium' : ''" x-text="sp"></div>
-                        </template>
-                    </div>
-                </div>
-                <!-- Type pill -->
-                <div class="relative" x-data="{ open: false }">
-                    <button @click="open = !open" @click.outside="open = false"
-                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                            :class="filters.eventType ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
-                        <span x-text="filters.eventType ? typeLabel(filters.eventType) : 'All types'"></span>
-                        <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                    </button>
-                    <div x-show="open" x-transition class="absolute z-20 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
-                        <div @click="filters.eventType = ''; loadEvents(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs text-gray-500">All types</div>
-                        <template x-for="t in ['game', 'practice', 'event']" :key="t">
-                            <div @click="filters.eventType = t; loadEvents(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs"
-                                 :class="filters.eventType === t ? 'bg-pines-50 text-pines-700 font-medium' : ''">
-                                <span x-text="typeLabel(t)"></span>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-                <!-- Date range pills -->
-                <div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-200">
-                    <span class="text-gray-400">From</span>
-                    <input type="date" x-model="filters.startDate" @change="loadEvents()"
-                           class="border-0 p-0 text-xs w-28 focus:ring-0 text-gray-600">
-                </div>
-                <div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-200">
-                    <span class="text-gray-400">To</span>
-                    <input type="date" x-model="filters.endDate" @change="loadEvents()"
-                           class="border-0 p-0 text-xs w-28 focus:ring-0 text-gray-600">
-                </div>
-                <!-- Clear -->
-                <button x-show="filters.search || filters.sport || filters.eventType || filters.startDate || filters.endDate"
-                        @click="clearFilters()" class="text-xs text-gray-400 hover:text-gray-600 px-1.5 py-1.5">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
         </div>
