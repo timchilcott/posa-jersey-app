@@ -136,7 +136,7 @@
 
             <div x-show="!loading" class="bg-white rounded-lg shadow overflow-hidden">
                 <div class="overflow-x-auto">
-                    <table x-show="filteredItems.length > 0" class="min-w-full divide-y divide-gray-200 table-fixed">
+                    <table x-show="displayList.length > 0" class="min-w-full divide-y divide-gray-200 table-fixed">
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
@@ -150,37 +150,43 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
-                            <template x-for="item in filteredItems" :key="item.id">
-                                <template x-for="(row, rowIdx) in inventoryRows(item)" :key="row._key">
-                                    <tr :class="row._type === 'item' ? 'bg-pines-50 border-t-2 border-pines-200' : 'bg-white hover:bg-gray-50'">
-                                <!-- ITEM ROW -->
-                                <template x-if="row._type === 'item'">
-                                    <td class="px-3 py-2">
-                                        <span class="text-sm font-bold text-pines-700" x-text="item.name"></span>
+                            <template x-for="entry in displayList" :key="entry._key">
+                                <tr :class="entry._type === 'sportHeader' ? 'bg-pines-50 border-t-2 border-pines-200' : entry._type === 'item' ? 'bg-white hover:bg-gray-50' : 'bg-white hover:bg-gray-50'">
+                                <!-- SPORT HEADER -->
+                                <template x-if="entry._type === 'sportHeader'">
+                                    <td :colspan="filters.divisions.length > 0 ? 8 : 7" class="px-3 py-2">
+                                        <span class="text-sm font-bold text-pines-700" x-text="entry._sport"></span>
+                                        <span class="ml-2 text-xs text-pines-500" x-text="entry._count + ' items'"></span>
                                     </td>
                                 </template>
-                                <template x-if="row._type === 'item'">
-                                    <td class="px-3 py-2 text-sm text-gray-900" x-text="item.quantityTotal"></td>
+                                <!-- ITEM ROW -->
+                                <template x-if="entry._type === 'item'">
+                                    <td class="px-3 py-2">
+                                        <span class="text-sm font-medium text-gray-900" x-text="entry.name"></span>
+                                    </td>
                                 </template>
-                                <template x-if="row._type === 'item'">
-                                    <td class="px-3 py-2 text-sm font-semibold text-pines-600" x-text="item.quantityAvailable"></td>
+                                <template x-if="entry._type === 'item'">
+                                    <td class="px-3 py-2 text-sm text-gray-900" x-text="entry.quantityTotal"></td>
                                 </template>
-                                <template x-if="row._type === 'item'">
-                                    <td class="px-3 py-2 text-sm" :class="item.checkedOut > 0 ? 'text-orange-600 font-semibold' : 'text-gray-400'" x-text="item.checkedOut"></td>
+                                <template x-if="entry._type === 'item'">
+                                    <td class="px-3 py-2 text-sm font-semibold text-pines-600" x-text="entry.quantityAvailable"></td>
                                 </template>
-                                <template x-if="row._type === 'item'">
+                                <template x-if="entry._type === 'item'">
+                                    <td class="px-3 py-2 text-sm" :class="entry.checkedOut > 0 ? 'text-orange-600 font-semibold' : 'text-gray-400'" x-text="entry.checkedOut"></td>
+                                </template>
+                                <template x-if="entry._type === 'item'">
                                     <td x-show="filters.divisions.length > 0" class="px-3 py-2">
                                         <div class="flex flex-nowrap gap-1">
-                                            <template x-for="div in parseDivisions(item.division)" :key="div">
+                                            <template x-for="div in parseDivisions(entry.division)" :key="div">
                                                 <span class="text-xs px-1.5 py-0.5 rounded bg-pines-50 text-pines-700 whitespace-nowrap" x-text="div"></span>
                                             </template>
                                         </div>
                                     </td>
                                 </template>
-                                <template x-if="row._type === 'item'">
+                                <template x-if="entry._type === 'item'">
                                     <td class="px-3 py-2">
                                         <div class="flex flex-wrap gap-1">
-                                            <template x-for="(cb, cbIdx) in itemConditions(item)" :key="cbIdx">
+                                            <template x-for="(cb, cbIdx) in itemConditions(entry)" :key="cbIdx">
                                                 <span class="text-xs px-2 py-0.5 rounded font-medium" :class="conditionColor(cb.condition)">
                                                     <span x-text="cb.quantity"></span> <span x-text="cb.condition"></span>
                                                 </span>
@@ -188,61 +194,60 @@
                                         </div>
                                     </td>
                                 </template>
-                                <template x-if="row._type === 'item'">
-                                    <td class="px-3 py-2 text-sm text-gray-500" x-text="item.location || ''"></td>
+                                <template x-if="entry._type === 'item'">
+                                    <td class="px-3 py-2 text-sm text-gray-500" x-text="entry.location || ''"></td>
                                 </template>
-                                <template x-if="row._type === 'item'">
+                                <template x-if="entry._type === 'item'">
                                     <td class="px-3 py-2 text-right">
                                         <div class="flex items-center justify-end space-x-1">
-                                            <button @click="openCheckoutModal(item)" class="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-pines-600" title="Check out" :disabled="item.quantityAvailable <= 0">
+                                            <button @click="openCheckoutModal(entry)" class="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-pines-600" title="Check out" :disabled="entry.quantityAvailable <= 0">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                                             </button>
-                                            <button @click="editItem(item)" class="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-pines-600" title="Edit">
+                                            <button @click="editItem(entry)" class="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-pines-600" title="Edit">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                             </button>
-                                            <button @click="deleteItem(item)" class="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-red-500" title="Delete">
+                                            <button @click="deleteItem(entry)" class="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-red-500" title="Delete">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                             </button>
                                         </div>
                                     </td>
                                 </template>
                                 <!-- CHECKOUT SUB-ROW -->
-                                <template x-if="row._type === 'checkout'">
-                                    <td class="pl-6 pr-3 py-3 text-sm text-gray-600" x-text="row.personName"></td>
+                                <template x-if="entry._type === 'checkout'">
+                                    <td class="pl-6 pr-3 py-3 text-sm text-gray-600" x-text="entry.personName"></td>
                                 </template>
-                                <template x-if="row._type === 'checkout'">
-                                    <td class="px-3 py-3 text-sm text-gray-500" x-text="row.quantity"></td>
+                                <template x-if="entry._type === 'checkout'">
+                                    <td class="px-3 py-3 text-sm text-gray-500" x-text="entry.quantity"></td>
                                 </template>
-                                <template x-if="row._type === 'checkout'">
+                                <template x-if="entry._type === 'checkout'">
                                     <td class="px-3 py-3"></td>
                                 </template>
-                                <template x-if="row._type === 'checkout'">
-                                    <td class="px-3 py-3 text-sm text-gray-400" x-text="formatDate(row.checkedOutAt)"></td>
+                                <template x-if="entry._type === 'checkout'">
+                                    <td class="px-3 py-3 text-sm text-gray-400" x-text="formatDate(entry.checkedOutAt)"></td>
                                 </template>
-                                <template x-if="row._type === 'checkout'">
+                                <template x-if="entry._type === 'checkout'">
                                     <td x-show="filters.divisions.length > 0" class="px-3 py-3"></td>
                                 </template>
-                                <template x-if="row._type === 'checkout'">
-                                    <td class="px-3 py-3 text-sm text-gray-400 italic" x-text="row.notes || ''"></td>
+                                <template x-if="entry._type === 'checkout'">
+                                    <td class="px-3 py-3 text-sm text-gray-400 italic" x-text="entry.notes || ''"></td>
                                 </template>
-                                <template x-if="row._type === 'checkout'">
+                                <template x-if="entry._type === 'checkout'">
                                     <td class="px-3 py-3"></td>
                                 </template>
-                                <template x-if="row._type === 'checkout'">
+                                <template x-if="entry._type === 'checkout'">
                                     <td class="px-3 py-3 text-right">
-                                        <button @click="returnCheckoutRecord(item.id, row.id, row.personName, row.quantity)"
+                                        <button @click="returnCheckoutRecord(entry._itemId, entry.id, entry.personName, entry.quantity)"
                                                 class="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-pines-600" title="Return">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                         </button>
                                     </td>
                                 </template>
-                            </tr>
-                        </template>
-                    </template>
-                </tbody>
+                                </tr>
+                            </template>
+                        </tbody>
                     </table>
                 </div>
-                <div x-show="filteredItems.length === 0 && !loading" class="text-center py-12">
+                <div x-show="displayList.length === 0 && !loading" class="text-center py-12">
                     <div class="text-gray-400 text-5xl mb-3">🔍</div>
                     <h3 class="text-lg font-medium text-gray-900 mb-1">No items found</h3>
                     <p class="text-gray-500">Try adjusting your filters</p>
@@ -503,6 +508,7 @@
             editingId: null,
             items: [],
             filteredItems: [],
+            displayList: [],
             categories: [],
             uniqueCategories: [],
             uniqueDivisions: [],
@@ -568,6 +574,38 @@
                     }
                     if (this.filters.lowStock && !item.lowStock) return false;
                     return true;
+                });
+                this.buildDisplayList();
+            },
+            buildDisplayList() {
+                const sportOrder = ['Soccer','Basketball','Flag Football','Volleyball','POSA'];
+                const sportGroups = {};
+                const sorted = [...this.filteredItems].sort((a, b) => a.name.localeCompare(b.name));
+                sorted.forEach(item => {
+                    const sports = (item.sport||'').split(',').map(s => s.trim()).filter(Boolean);
+                    const primary = sports.length > 0 ? sports[0] : 'General';
+                    if (!sportGroups[primary]) sportGroups[primary] = [];
+                    sportGroups[primary].push(item);
+                });
+                const sortedSports = Object.keys(sportGroups).sort((a, b) => {
+                    const ai = sportOrder.indexOf(a);
+                    const bi = sportOrder.indexOf(b);
+                    if (ai >= 0 && bi >= 0) return ai - bi;
+                    if (ai >= 0) return -1;
+                    if (bi >= 0) return 1;
+                    return a.localeCompare(b);
+                });
+                this.displayList = [];
+                sortedSports.forEach(sport => {
+                    const items = sportGroups[sport];
+                    this.displayList.push({ _type: 'sportHeader', _key: 'sport-' + sport, _sport: sport, _count: items.length });
+                    items.forEach(item => {
+                        this.displayList.push({ ...item, _type: 'item', _key: 'item-' + item.id });
+                        const checkouts = (item.checkouts || []).slice().sort((a, b) => a.personName.localeCompare(b.personName));
+                        checkouts.forEach(co => {
+                            this.displayList.push({ ...co, _type: 'checkout', _key: 'co-' + co.id, _itemId: item.id });
+                        });
+                    });
                 });
             },
             hasActiveFilters() { return this.filters.search || this.filters.category || this.filters.sport || this.filters.divisions.length > 0 || this.filters.condition || this.filters.lowStock; },
@@ -691,7 +729,7 @@
                 if (!divStr) return [];
                 return divStr.split(',').map(d => d.trim()).filter(Boolean);
             },
-            itemConditions(item) {
+            itemConditions(entry) {
                 const conds = (item.conditions || []).filter(c => c.quantity > 0);
                 if (conds.length > 0) return conds;
                 if (item.condition) return [{ condition: item.condition, quantity: item.quantityTotal }];
