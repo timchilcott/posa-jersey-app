@@ -1358,6 +1358,33 @@ query GetTeams($orgId: Int!, $page: Int!, $perPage: Int!) {
 """
 
 
+TEAMS_EVENTS_QUERY = """
+query GetTeamEvents($orgId: Int!, $page: Int!, $perPage: Int!) {
+    teams(
+        organizationId: $orgId
+        page: $page
+        perPage: $perPage
+    ) {
+        pageInformation {
+            pages
+            count
+            page
+            perPage
+        }
+        results {
+            id
+            name
+            events(perPage: 200) {
+                results {
+                    id
+                }
+            }
+        }
+    }
+}
+"""
+
+
 def get_team_logo_map() -> dict:
     """
     Fetch all teams for the org and return a dict mapping
@@ -1399,6 +1426,56 @@ def get_team_logo_map() -> dict:
 
     logger.info(f"TEAMS LOGO: Found {len(logo_map)} teams with logos")
     return logo_map
+
+
+def get_event_team_map() -> dict:
+    """
+    Fetch all teams and their associated events, returning a dict mapping
+    SportsEngine event_id (str) -> team_name (str).
+
+    This solves the problem where practice events have null eventTeams.name
+    in the events API, but teams still know which events they're associated with.
+    """
+    org_id = os.getenv("SPORTSENGINE_ORG_ID")
+    if not org_id:
+        return {}
+
+    event_team_map = {}
+    page = 1
+
+    while True:
+        try:
+            data = graphql_query(TEAMS_EVENTS_QUERY, {
+                "orgId": int(org_id),
+                "page": page,
+                "perPage": 100,
+            })
+        except Exception as e:
+            logger.warning(f"TEAM EVENTS: Failed to fetch page {page}: {e}")
+            break
+
+        teams_data = data.get("teams", {})
+        page_info = teams_data.get("pageInformation", {})
+        results = teams_data.get("results", [])
+
+        for team in results:
+            team_name = team.get("name")
+            if not team_name:
+                continue
+            events = (team.get("events") or {}).get("results") or []
+            for evt in events:
+                evt_id = str(evt.get("id"))
+                if evt_id:
+                    # If multiple teams share an event (games), the last one wins
+                    # but for practices (single team), this gives us the right name
+                    event_team_map[evt_id] = team_name
+
+        if page >= page_info.get("pages", 1):
+            break
+        page += 1
+
+    logger.info(f"TEAM EVENTS: Mapped {len(event_team_map)} events to team names")
+    return event_team_map
 
 
 def get_events(page: int = 1, per_page: int = 100) -> dict:
@@ -1496,6 +1573,14 @@ def sync_all_events(db: Session, days_back: int = 30, days_forward: int = 90) ->
     except Exception as e:
         logger.warning(f"EVENT SYNC: Could not fetch team logos: {e}")
 
+    # Fetch team→event mappings so we can resolve team names for practices
+    # (practice events have null eventTeams.name in the events API)
+    event_team_map = {}
+    try:
+        event_team_map = get_event_team_map()
+    except Exception as e:
+        logger.warning(f"EVENT SYNC: Could not fetch event-team map: {e}")
+
     page = 1
     while True:
         try:
@@ -1520,7 +1605,7 @@ def sync_all_events(db: Session, days_back: int = 30, days_forward: int = 90) ->
                 if event_start and (event_start < window_start or event_start > window_end):
                     results["skipped_out_of_range"] += 1
                     continue
-                _upsert_event(event_data, db, results, logo_map=logo_map)
+                _upsert_event(event_data, db, results, logo_map=logo_map, event_team_map=event_team_map)
             except Exception as e:
                 logger.error(f"EVENT SYNC: Error processing event {event_data.get('id')}: {e}")
                 results["errors"].append(str(e))
@@ -1536,7 +1621,7 @@ def sync_all_events(db: Session, days_back: int = 30, days_forward: int = 90) ->
     return results
 
 
-def _upsert_event(event_data: dict, db: Session, results: dict, logo_map: dict = None) -> None:
+def _upsert_event(event_data: dict, db: Session, results: dict, logo_map: dict = None, event_team_map: dict = None) -> None:
     """Create or update a single event from SportsEngine data."""
     from app.models_events import Event
 
@@ -1546,6 +1631,17 @@ def _upsert_event(event_data: dict, db: Session, results: dict, logo_map: dict =
 
     if logo_map is None:
         logo_map = {}
+    if event_team_map is None:
+        event_team_map = {}
+
+    # Determine event type — SportsEngine returns "event" for practices,
+    # so we check the name to distinguish practices from other events
+    raw_type = (event_data.get("type") or "event").lower()
+    event_name = (event_data.get("name") or "").strip()
+    if raw_type != "game" and event_name.lower().startswith("practice"):
+        event_type = "practice"
+    else:
+        event_type = raw_type
 
     # Extract location
     location = event_data.get("location") or {}
@@ -1579,6 +1675,32 @@ def _upsert_event(event_data: dict, db: Session, results: dict, logo_map: dict =
             team_entry["logoUrl"] = logo_url
         teams_json.append(team_entry)
 
+    # For practices: if eventTeams has null names, resolve the team name
+    # from the event_team_map (built by querying teams → events)
+    if event_type == "practice" and event_team_map:
+        team_name_from_map = event_team_map.get(se_id)
+        if team_name_from_map:
+            # Check if all existing team entries have null names
+            all_null = all(not t.get("name") for t in teams_json)
+            if all_null:
+                # Replace the null-name entries with the resolved team name
+                logo_url = logo_map.get(team_name_from_map.lower())
+                teams_json = [{
+                    "name": team_name_from_map,
+                    "score": None,
+                    "primaryColor": None,
+                    "homeTeam": None,
+                    "logoUrl": logo_url,
+                }]
+            else:
+                # Some names exist; only fill in the null ones
+                for t in teams_json:
+                    if not t.get("name"):
+                        t["name"] = team_name_from_map
+                        logo_url = logo_map.get(team_name_from_map.lower())
+                        if logo_url:
+                            t["logoUrl"] = logo_url
+
     sport = _extract_sport_from_event(event_data)
     start_time = _parse_utc_datetime(event_data.get("start"))
     end_time = _parse_utc_datetime(event_data.get("end"))
@@ -1589,7 +1711,7 @@ def _upsert_event(event_data: dict, db: Session, results: dict, logo_map: dict =
 
     if existing:
         existing.name = event_data.get("name", existing.name)
-        existing.event_type = (event_data.get("type") or "event").lower()
+        existing.event_type = event_type
         existing.sport = sport or existing.sport
         existing.start_time = start_time
         existing.end_time = end_time
@@ -1607,7 +1729,7 @@ def _upsert_event(event_data: dict, db: Session, results: dict, logo_map: dict =
             se_event_id=se_id,
             organization_id=str(event_data.get("organizationId", "")),
             name=event_data.get("name", "Untitled Event"),
-            event_type=(event_data.get("type") or "event").lower(),
+            event_type=event_type,
             sport=sport,
             start_time=start_time,
             end_time=end_time,
