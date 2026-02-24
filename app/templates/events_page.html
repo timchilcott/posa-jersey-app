@@ -110,12 +110,12 @@
                 <table x-show="displayList.length > 0" class="min-w-full">
                     <thead>
                         <tr class="border-b border-gray-200">
-                            <th class="w-32 px-4 py-2.5 text-left text-xs font-medium text-gray-500">Time</th>
-                            <th class="w-24 px-4 py-2.5 text-left text-xs font-medium text-gray-500">Type</th>
-                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Event</th>
-                            <th class="w-28 px-4 py-2.5 text-left text-xs font-medium text-gray-500">Sport</th>
-                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Location</th>
-                            <th class="w-28 px-4 py-2.5 text-left text-xs font-medium text-gray-500">Status</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Time</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Type</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Event</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Sport</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Location</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -138,22 +138,22 @@
 
                                 <!-- EVENT ROW: Type badge -->
                                 <template x-if="!entry._isHeader">
-                                    <td class="px-4 py-3">
+                                    <td class="px-4 py-3 whitespace-nowrap">
                                         <span class="text-xs text-gray-600" x-text="typeLabel(entry.eventType)"></span>
                                     </td>
                                 </template>
 
                                 <!-- EVENT ROW: Name -->
                                 <template x-if="!entry._isHeader">
-                                    <td class="px-4 py-3">
+                                    <td class="px-4 py-3 whitespace-nowrap">
                                         <div class="text-sm font-medium text-gray-900" x-text="entry.name"></div>
-                                        <div x-show="entry.description" class="text-xs text-gray-400 mt-0.5 line-clamp-1" x-text="entry.description"></div>
+                                        <div x-show="entry.description" class="text-xs text-gray-400 mt-0.5 truncate max-w-xs" x-text="entry.description"></div>
                                     </td>
                                 </template>
 
                                 <!-- EVENT ROW: Sport -->
                                 <template x-if="!entry._isHeader">
-                                    <td class="px-4 py-3">
+                                    <td class="px-4 py-3 whitespace-nowrap">
                                         <span x-show="entry.sport" class="text-sm text-gray-600">
                                             <span x-html="sportEmoji(entry.sport)"></span>
                                             <span x-text="entry.sport"></span>
@@ -164,7 +164,7 @@
 
                                 <!-- EVENT ROW: Location -->
                                 <template x-if="!entry._isHeader">
-                                    <td class="px-4 py-3">
+                                    <td class="px-4 py-3 whitespace-nowrap">
                                         <template x-if="entry.location">
                                             <div class="text-sm text-gray-600" x-text="entry.location.name"></div>
                                         </template>
@@ -174,7 +174,7 @@
 
                                 <!-- EVENT ROW: Status -->
                                 <template x-if="!entry._isHeader">
-                                    <td class="px-4 py-3">
+                                    <td class="px-4 py-3 whitespace-nowrap">
                                         <span x-show="entry.status" class="text-xs" :class="statusTextColor(entry.status)" x-text="entry.status"></span>
                                         <span x-show="!entry.status" class="text-sm text-gray-300">--</span>
                                     </td>
