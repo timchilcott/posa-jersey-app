@@ -96,14 +96,14 @@
 
         <div x-show="!loading" class="bg-white border border-gray-200 rounded-lg overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="min-w-full table-fixed">
+                <table class="min-w-full">
                     <thead>
                         <tr class="border-b border-gray-200">
-                            <th class="w-52 px-4 py-2.5 text-left text-xs font-medium text-gray-500">Player</th>
-                            <th class="w-16 px-4 py-2.5 text-center text-xs font-medium text-gray-500">Jersey</th>
-                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Email</th>
-                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Registrations</th>
-                            <th class="w-28 px-4 py-2.5 text-center text-xs font-medium text-gray-500">Status</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Player</th>
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-500 whitespace-nowrap">Jersey</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Email</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Registrations</th>
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-500 whitespace-nowrap">Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -117,21 +117,21 @@
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3 border-b border-gray-100">
+                                    <td class="px-4 py-3 border-b border-gray-100 whitespace-nowrap">
                                         <div class="text-sm font-medium text-gray-900" x-text="item.name"></div>
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3 text-center border-b border-gray-100">
+                                    <td class="px-4 py-3 text-center border-b border-gray-100 whitespace-nowrap">
                                         <span class="text-sm text-gray-600" x-text="item.jersey || '-'"></span>
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3 border-b border-gray-100"><div class="text-sm text-gray-500 truncate" x-text="item.email"></div></td>
+                                    <td class="px-4 py-3 border-b border-gray-100 whitespace-nowrap"><div class="text-sm text-gray-500" x-text="item.email"></div></td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3 border-b border-gray-100">
-                                        <div class="flex flex-wrap gap-1">
+                                    <td class="px-4 py-3 border-b border-gray-100 whitespace-nowrap">
+                                        <div class="flex flex-nowrap gap-1">
                                             <template x-for="reg in sortedRegs(item.registrations)" :key="reg.id">
                                                 <span class="inline-flex items-center px-1.5 py-0.5 text-xs rounded cursor-default"
                                                       :class="sportColor(reg.sport)"
@@ -144,7 +144,7 @@
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3 text-center border-b border-gray-100">
+                                    <td class="px-4 py-3 text-center border-b border-gray-100 whitespace-nowrap">
                                         <span x-show="!item.emailSent" class="text-xs text-orange-600">Needs Email</span>
                                         <span x-show="item.emailSent" class="text-xs text-green-600">&#10003; Sent</span>
                                     </td>

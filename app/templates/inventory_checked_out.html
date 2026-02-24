@@ -83,24 +83,24 @@
                                     </template>
                                     <!-- Item rows -->
                                     <template x-if="!row._isHeader">
-                                        <td class="px-4 py-3">
+                                        <td class="px-4 py-3 whitespace-nowrap">
                                             <span class="text-sm font-medium text-gray-900" x-text="row.itemName"></span>
                                         </td>
                                     </template>
                                     <template x-if="!row._isHeader">
-                                        <td class="px-4 py-3 text-sm text-gray-500" x-text="row.itemCategory"></td>
+                                        <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" x-text="row.itemCategory"></td>
                                     </template>
                                     <template x-if="!row._isHeader">
-                                        <td class="px-4 py-3 text-center text-sm text-gray-600" x-text="row.quantity"></td>
+                                        <td class="px-4 py-3 text-center text-sm text-gray-600 whitespace-nowrap" x-text="row.quantity"></td>
                                     </template>
                                     <template x-if="!row._isHeader">
-                                        <td class="px-4 py-3 text-xs text-gray-400" x-text="row.notes || '-'"></td>
+                                        <td class="px-4 py-3 text-xs text-gray-400 whitespace-nowrap" x-text="row.notes || '-'"></td>
                                     </template>
                                     <template x-if="!row._isHeader">
-                                        <td class="px-4 py-3 text-sm text-gray-500" x-text="formatDate(row.checkedOutAt)"></td>
+                                        <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" x-text="formatDate(row.checkedOutAt)"></td>
                                     </template>
                                     <template x-if="!row._isHeader">
-                                        <td class="px-4 py-3 text-right">
+                                        <td class="px-4 py-3 text-right whitespace-nowrap">
                                             <button @click="returnCheckoutRecord(row.itemId, row.id, row._personName, row.quantity)"
                                                     class="text-xs font-medium text-pines-600 hover:text-pines-800 transition-colors">
                                                 Return
