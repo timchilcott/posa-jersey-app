@@ -114,64 +114,64 @@
             <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pines-500"></div>
         </div>
 
-        <div x-show="!loading" class="bg-white overflow-hidden">
+        <div x-show="!loading" class="bg-white border border-gray-200 rounded-lg overflow-hidden">
             <div class="overflow-x-auto">
-                <table x-show="displayList.length > 0" class="min-w-full divide-y divide-gray-200 table-fixed">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
-                            <th class="w-16 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                            <th class="w-20 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Avail</th>
-                            <th class="w-24 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Out</th>
-                            <th x-show="filters.divisions.length > 0" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Division</th>
-                            <th class="min-w-[180px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Condition</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider max-w-[200px]">Location</th>
+                <table x-show="displayList.length > 0" class="min-w-full table-fixed">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="w-28 px-4 py-2.5 text-left text-xs font-medium text-gray-500">Category</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Item</th>
+                            <th class="w-16 px-4 py-2.5 text-center text-xs font-medium text-gray-500">Total</th>
+                            <th class="w-20 px-4 py-2.5 text-center text-xs font-medium text-gray-500">Avail</th>
+                            <th class="w-24 px-4 py-2.5 text-center text-xs font-medium text-gray-500 whitespace-nowrap">Out</th>
+                            <th x-show="filters.divisions.length > 0" class="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Division</th>
+                            <th class="min-w-[180px] px-4 py-2.5 text-left text-xs font-medium text-gray-500">Condition</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 max-w-[200px]">Location</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
+                    <tbody>
                         <template x-for="entry in displayList" :key="entry._key">
-                            <tr :class="entry._type === 'sportHeader' ? 'bg-pines-50 border-t-2 border-pines-200' : 'hover:bg-gray-50 cursor-pointer transition-colors'"
+                            <tr :class="entry._type === 'sportHeader' ? 'bg-gray-50 border-t border-gray-200' : 'hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100'"
                                 @click="entry._type === 'item' && openPanel(entry)">
                             <!-- SPORT HEADER -->
                             <template x-if="entry._type === 'sportHeader'">
-                                <td :colspan="filters.divisions.length > 0 ? 8 : 7" class="px-4 py-2.5">
-                                    <span class="text-sm font-bold text-pines-700" x-text="entry._sport"></span>
-                                    <span class="ml-2 text-xs text-pines-500" x-text="entry._count + ' items'"></span>
+                                <td :colspan="filters.divisions.length > 0 ? 8 : 7" class="px-4 py-2">
+                                    <span class="text-xs font-semibold text-gray-500" x-text="entry._sport"></span>
+                                    <span class="ml-1.5 text-xs text-gray-400" x-text="entry._count + ' items'"></span>
                                 </td>
                             </template>
                             <!-- ITEM ROW -->
                             <template x-if="entry._type === 'item'">
-                                <td class="px-4 py-3.5 text-sm text-gray-500" x-text="entry.category"></td>
+                                <td class="px-4 py-3 text-sm text-gray-500" x-text="entry.category"></td>
                             </template>
                             <template x-if="entry._type === 'item'">
-                                <td class="px-4 py-3.5">
+                                <td class="px-4 py-3">
                                     <span class="text-sm font-medium text-gray-900" x-text="entry.name"></span>
                                 </td>
                             </template>
                             <template x-if="entry._type === 'item'">
-                                <td class="px-4 py-3.5 text-center text-sm text-gray-900" x-text="entry.quantityTotal"></td>
+                                <td class="px-4 py-3 text-center text-sm text-gray-600" x-text="entry.quantityTotal"></td>
                             </template>
                             <template x-if="entry._type === 'item'">
-                                <td class="px-4 py-3.5 text-center text-sm font-semibold text-pines-600" x-text="entry.quantityAvailable"></td>
+                                <td class="px-4 py-3 text-center text-sm font-medium text-gray-900" x-text="entry.quantityAvailable"></td>
                             </template>
                             <template x-if="entry._type === 'item'">
-                                <td class="px-4 py-3.5 text-center text-sm" :class="entry.checkedOut > 0 ? 'text-orange-600 font-semibold' : 'text-gray-400'" x-text="entry.checkedOut"></td>
+                                <td class="px-4 py-3 text-center text-sm" :class="entry.checkedOut > 0 ? 'text-orange-600 font-medium' : 'text-gray-300'" x-text="entry.checkedOut"></td>
                             </template>
                             <template x-if="entry._type === 'item'">
-                                <td x-show="filters.divisions.length > 0" class="px-4 py-3.5">
+                                <td x-show="filters.divisions.length > 0" class="px-4 py-3">
                                     <div class="flex flex-nowrap gap-1">
                                         <template x-for="div in parseDivisions(entry.division)" :key="div">
-                                            <span class="text-xs px-2 py-0.5 rounded-full bg-pines-50 text-pines-700 whitespace-nowrap" x-text="div"></span>
+                                            <span class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600 whitespace-nowrap" x-text="div"></span>
                                         </template>
                                     </div>
                                 </td>
                             </template>
                             <template x-if="entry._type === 'item'">
-                                <td class="px-4 py-3.5">
+                                <td class="px-4 py-3">
                                     <div class="flex flex-nowrap gap-1">
                                         <template x-for="(cb, cbIdx) in itemConditions(entry)" :key="cbIdx">
-                                            <span class="text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap" :class="conditionColor(cb.condition)">
+                                            <span class="text-xs px-2 py-0.5 rounded whitespace-nowrap" :class="conditionColor(cb.condition)">
                                                 <span x-text="cb.quantity"></span> <span x-text="cb.condition"></span>
                                             </span>
                                         </template>
@@ -179,10 +179,10 @@
                                 </td>
                             </template>
                             <template x-if="entry._type === 'item'">
-                                <td class="px-4 py-3.5">
+                                <td class="px-4 py-3">
                                     <div class="flex flex-wrap gap-1">
                                         <template x-for="(lb, lbIdx) in parseLocations(entry.location)" :key="lbIdx">
-                                            <span class="text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-700">
+                                            <span class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600">
                                                 <span x-text="lb.quantity"></span> @ <span x-text="lb.location"></span>
                                             </span>
                                         </template>

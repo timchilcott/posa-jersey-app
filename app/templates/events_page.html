@@ -96,7 +96,7 @@
             <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pines-500"></div>
         </div>
 
-        <div x-show="!loading" class="bg-white overflow-hidden">
+        <div x-show="!loading" class="bg-white border border-gray-200 rounded-lg overflow-hidden">
             <!-- Empty state -->
             <div x-show="displayList.length === 0" class="text-center py-12">
                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -107,76 +107,76 @@
             </div>
 
             <div class="overflow-x-auto">
-                <table x-show="displayList.length > 0" class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                            <th class="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
-                            <th class="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sport</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                            <th class="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <table x-show="displayList.length > 0" class="min-w-full">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="w-32 px-4 py-2.5 text-left text-xs font-medium text-gray-500">Time</th>
+                            <th class="w-24 px-4 py-2.5 text-left text-xs font-medium text-gray-500">Type</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Event</th>
+                            <th class="w-28 px-4 py-2.5 text-left text-xs font-medium text-gray-500">Sport</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Location</th>
+                            <th class="w-28 px-4 py-2.5 text-left text-xs font-medium text-gray-500">Status</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
+                    <tbody>
                         <template x-for="entry in displayList" :key="entry._key">
-                            <tr :class="entry._isHeader ? 'bg-pines-50 border-t-2 border-pines-200' : 'hover:bg-gray-50 cursor-pointer transition-colors'"
+                            <tr :class="entry._isHeader ? 'bg-gray-50 border-t border-gray-200' : 'hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100'"
                                 @click="!entry._isHeader && openPanel(entry)">
 
                                 <!-- DATE HEADER ROW -->
                                 <template x-if="entry._isHeader">
-                                    <td colspan="6" class="px-4 py-2.5">
-                                        <span class="text-sm font-bold text-pines-700" x-text="entry._date"></span>
-                                        <span class="ml-2 text-xs text-pines-500" x-text="entry._count + ' event' + (entry._count === 1 ? '' : 's')"></span>
+                                    <td colspan="6" class="px-4 py-2">
+                                        <span class="text-xs font-semibold text-gray-500" x-text="entry._date"></span>
+                                        <span class="ml-1.5 text-xs text-gray-400" x-text="entry._count + ' event' + (entry._count === 1 ? '' : 's')"></span>
                                     </td>
                                 </template>
 
                                 <!-- EVENT ROW: Time -->
                                 <template x-if="!entry._isHeader">
-                                    <td class="px-4 py-3.5 text-sm text-gray-900 whitespace-nowrap" x-text="formatTimeRange(entry.startTime, entry.endTime)"></td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 whitespace-nowrap" x-text="formatTimeRange(entry.startTime, entry.endTime)"></td>
                                 </template>
 
                                 <!-- EVENT ROW: Type badge -->
                                 <template x-if="!entry._isHeader">
-                                    <td class="px-4 py-3.5">
-                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium" :class="typeColor(entry.eventType)" x-text="typeLabel(entry.eventType)"></span>
+                                    <td class="px-4 py-3">
+                                        <span class="text-xs text-gray-600" x-text="typeLabel(entry.eventType)"></span>
                                     </td>
                                 </template>
 
                                 <!-- EVENT ROW: Name -->
                                 <template x-if="!entry._isHeader">
-                                    <td class="px-4 py-3.5">
+                                    <td class="px-4 py-3">
                                         <div class="text-sm font-medium text-gray-900" x-text="entry.name"></div>
-                                        <div x-show="entry.description" class="text-xs text-gray-500 mt-0.5 line-clamp-1" x-text="entry.description"></div>
+                                        <div x-show="entry.description" class="text-xs text-gray-400 mt-0.5 line-clamp-1" x-text="entry.description"></div>
                                     </td>
                                 </template>
 
                                 <!-- EVENT ROW: Sport -->
                                 <template x-if="!entry._isHeader">
-                                    <td class="px-4 py-3.5">
-                                        <span x-show="entry.sport" class="text-sm text-gray-700">
+                                    <td class="px-4 py-3">
+                                        <span x-show="entry.sport" class="text-sm text-gray-600">
                                             <span x-html="sportEmoji(entry.sport)"></span>
                                             <span x-text="entry.sport"></span>
                                         </span>
-                                        <span x-show="!entry.sport" class="text-sm text-gray-400">--</span>
+                                        <span x-show="!entry.sport" class="text-sm text-gray-300">--</span>
                                     </td>
                                 </template>
 
                                 <!-- EVENT ROW: Location -->
                                 <template x-if="!entry._isHeader">
-                                    <td class="px-4 py-3.5">
+                                    <td class="px-4 py-3">
                                         <template x-if="entry.location">
-                                            <div class="text-sm text-gray-900" x-text="entry.location.name"></div>
+                                            <div class="text-sm text-gray-600" x-text="entry.location.name"></div>
                                         </template>
-                                        <span x-show="!entry.location" class="text-sm text-gray-400">--</span>
+                                        <span x-show="!entry.location" class="text-sm text-gray-300">--</span>
                                     </td>
                                 </template>
 
                                 <!-- EVENT ROW: Status -->
                                 <template x-if="!entry._isHeader">
-                                    <td class="px-4 py-3.5">
-                                        <span x-show="entry.status" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium" :class="statusColor(entry.status)" x-text="entry.status"></span>
-                                        <span x-show="!entry.status" class="text-sm text-gray-400">--</span>
+                                    <td class="px-4 py-3">
+                                        <span x-show="entry.status" class="text-xs" :class="statusTextColor(entry.status)" x-text="entry.status"></span>
+                                        <span x-show="!entry.status" class="text-sm text-gray-300">--</span>
                                     </td>
                                 </template>
                             </tr>
@@ -206,11 +206,11 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Type</label>
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium" :class="typeColor(selectedEvent.eventType)" x-text="typeLabel(selectedEvent.eventType)"></span>
+                        <span class="text-sm text-gray-900" x-text="typeLabel(selectedEvent.eventType)"></span>
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Status</label>
-                        <span x-show="selectedEvent.status" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium" :class="statusColor(selectedEvent.status)" x-text="selectedEvent.status"></span>
+                        <span x-show="selectedEvent.status" class="text-sm" :class="statusTextColor(selectedEvent.status)" x-text="selectedEvent.status"></span>
                         <span x-show="!selectedEvent.status" class="text-sm text-gray-400">--</span>
                     </div>
                 </div>
@@ -387,6 +387,15 @@ function eventsApp() {
             if (s === 'completed') return 'bg-green-100 text-green-700';
             if (s === 'cancelled') return 'bg-red-100 text-red-700';
             return 'bg-gray-100 text-gray-600';
+        },
+
+        statusTextColor(status) {
+            if (!status) return 'text-gray-400';
+            const s = status.toLowerCase();
+            if (s === 'scheduled') return 'text-blue-600';
+            if (s === 'completed') return 'text-green-600';
+            if (s === 'cancelled') return 'text-red-500';
+            return 'text-gray-500';
         },
 
         sportEmoji(sport) {

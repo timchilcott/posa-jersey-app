@@ -57,34 +57,34 @@
             <p class="mt-2 text-gray-600">Loading volunteers...</p>
         </div>
 
-        <div x-show="!loading" class="bg-white overflow-hidden">
+        <div x-show="!loading" class="bg-white border border-gray-200 rounded-lg overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200 table-fixed">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="w-56 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registration Type</th>
-                            <th class="w-28 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <table class="min-w-full table-fixed">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="w-56 px-4 py-2.5 text-left text-xs font-medium text-gray-500">Name</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Email</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Registration Type</th>
+                            <th class="w-28 px-4 py-2.5 text-center text-xs font-medium text-gray-500">Status</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
+                    <tbody>
                         <template x-for="vol in filtered" :key="vol.id">
-                            <tr class="hover:bg-gray-50 cursor-pointer transition-colors" @click="openPanel(vol)">
-                                <td class="px-4 py-3.5">
+                            <tr class="hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100" @click="openPanel(vol)">
+                                <td class="px-4 py-3">
                                     <div class="text-sm font-medium text-gray-900" x-text="vol.name"></div>
                                 </td>
-                                <td class="px-4 py-3.5"><div class="text-sm text-gray-600" x-text="vol.email"></div></td>
-                                <td class="px-4 py-3.5">
+                                <td class="px-4 py-3"><div class="text-sm text-gray-500" x-text="vol.email"></div></td>
+                                <td class="px-4 py-3">
                                     <div class="flex flex-wrap gap-1">
                                         <template x-for="reg in vol.registrations" :key="reg.id">
-                                            <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-pines-50 text-pines-700" x-text="reg.division"></span>
+                                            <span class="inline-flex items-center px-2 py-0.5 text-xs rounded text-gray-600 bg-gray-100" x-text="reg.division"></span>
                                         </template>
                                     </div>
                                 </td>
-                                <td class="px-4 py-3.5 text-center">
-                                    <span x-show="!vol.emailSent" class="px-2.5 py-1 text-xs font-medium bg-orange-100 text-orange-700 rounded-full">Needs Email</span>
-                                    <span x-show="vol.emailSent" class="px-2.5 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">&#10003; Sent</span>
+                                <td class="px-4 py-3 text-center">
+                                    <span x-show="!vol.emailSent" class="text-xs text-orange-600">Needs Email</span>
+                                    <span x-show="vol.emailSent" class="text-xs text-green-600">&#10003; Sent</span>
                                 </td>
                             </tr>
                         </template>
@@ -128,7 +128,7 @@
                     <div class="space-y-2">
                         <template x-for="reg in selectedVol.registrations" :key="reg.id">
                             <div class="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
-                                <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-pines-50 text-pines-700" x-text="reg.division"></span>
+                                <span class="inline-flex items-center px-2 py-0.5 text-xs rounded text-gray-600 bg-gray-100" x-text="reg.division"></span>
                                 <span class="text-xs text-gray-400" x-text="reg.season"></span>
                             </div>
                         </template>
@@ -136,8 +136,8 @@
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Email Status</label>
-                    <span x-show="!selectedVol.emailSent" class="px-2.5 py-1 text-xs font-medium bg-orange-100 text-orange-700 rounded-full">Needs Email</span>
-                    <span x-show="selectedVol.emailSent" class="px-2.5 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">&#10003; Sent</span>
+                    <span x-show="!selectedVol.emailSent" class="text-xs text-orange-600">Needs Email</span>
+                    <span x-show="selectedVol.emailSent" class="text-xs text-green-600">&#10003; Sent</span>
                 </div>
             </div>
             </template>

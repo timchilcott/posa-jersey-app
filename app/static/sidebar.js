@@ -65,29 +65,61 @@
   }
 
   // ── Build sidebar nav items HTML ─────────────────────────────────
-  function buildNavItems(collapsed) {
+  function buildNavItems(forMobile) {
     return NAV_ITEMS.map(function(item) {
       if (item.type === 'divider') {
-        return '<div class="border-t border-pines-700 my-3 mx-2"></div>';
+        return '<div class="border-t border-pines-400 my-3 mx-2"></div>';
       }
       var active = isActive(item);
       var classes = active
         ? 'bg-pines-600 text-white'
-        : 'text-pines-100 hover:bg-pines-700 hover:text-white';
-      var label = collapsed
-        ? ''
-        : '<span class="ml-3 sidebar-label">' + item.label + '</span>';
-      var html = '<a href="' + item.href + '" class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ' + classes + '" title="' + item.label + '">' +
-        item.icon + label + '</a>';
+        : 'text-pines-100 hover:bg-pines-400 hover:text-white';
 
-      // Render children when expanded and on a matching path
-      if (item.children && !collapsed && active) {
-        html += '<div class="ml-8 mt-1 space-y-0.5 sidebar-label">';
+      // For items with children, wrap in a relative group for collapsed hover dropdown
+      if (item.children && !forMobile) {
+        var html = '<div class="relative group">';
+        html += '<a href="' + item.href + '" class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ' + classes + '" title="' + item.label + '">' +
+          item.icon + '<span class="ml-3 sidebar-label">' + item.label + '</span></a>';
+
+        // Expanded children (shown when expanded & active)
+        if (active) {
+          html += '<div class="ml-8 mt-1 space-y-0.5 sidebar-label">';
+          item.children.forEach(function(child) {
+            var childActive = isChildActive(child);
+            var childClasses = childActive
+              ? 'text-white font-semibold'
+              : 'text-pines-200 hover:text-white';
+            html += '<a href="' + child.href + '" class="block px-3 py-1.5 rounded-lg text-xs transition-colors ' + childClasses + '">' + child.label + '</a>';
+          });
+          html += '</div>';
+        }
+
+        // Collapsed hover dropdown (hidden when expanded, shown on hover when collapsed)
+        html += '<div class="sidebar-collapsed-dropdown hidden absolute left-full top-0 ml-1 z-50">';
+        html += '<div class="bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-44">';
+        html += '<div class="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase">' + item.label + '</div>';
+        item.children.forEach(function(child) {
+          var childActive = isChildActive(child);
+          var childClasses = childActive
+            ? 'text-pines-600 font-semibold bg-pines-50'
+            : 'text-gray-700 hover:bg-gray-50';
+          html += '<a href="' + child.href + '" class="block px-3 py-1.5 text-sm transition-colors ' + childClasses + '">' + child.label + '</a>';
+        });
+        html += '</div></div></div>';
+        return html;
+      }
+
+      var html = '<a href="' + item.href + '" class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ' + classes + '" title="' + item.label + '">' +
+        item.icon + '<span class="ml-3 sidebar-label">' + item.label + '</span></a>';
+
+      // For mobile, render children inline (always expanded)
+      if (item.children && forMobile && active) {
+        html += '<div class="ml-8 mt-1 space-y-0.5">';
         item.children.forEach(function(child) {
           var childActive = isChildActive(child);
           var childClasses = childActive
             ? 'text-white font-semibold'
-            : 'text-pines-300 hover:text-white';
+            : 'text-pines-200 hover:text-white';
           html += '<a href="' + child.href + '" class="block px-3 py-1.5 rounded-lg text-xs transition-colors ' + childClasses + '">' + child.label + '</a>';
         });
         html += '</div>';
@@ -100,9 +132,9 @@
   // ── Build full sidebar HTML ──────────────────────────────────────
   function buildSidebarHTML() {
     return '' +
-    '<aside id="posa-sidebar" class="hidden lg:flex flex-col bg-pines-800 text-white transition-all duration-300 h-screen flex-shrink-0 sidebar-expanded">' +
+    '<aside id="posa-sidebar" class="hidden lg:flex flex-col bg-pines-500 text-white transition-all duration-300 h-screen flex-shrink-0 sidebar-expanded">' +
       '<!-- Logo -->' +
-      '<div class="flex items-center h-16 px-4 border-b border-pines-700 flex-shrink-0">' +
+      '<div class="flex items-center h-16 px-4 border-b border-pines-400 flex-shrink-0">' +
         '<img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-8 brightness-0 invert flex-shrink-0">' +
         '<span class="ml-3 font-bold text-lg tracking-tight sidebar-label">POSA</span>' +
       '</div>' +
@@ -111,8 +143,8 @@
         buildNavItems(false) +
       '</nav>' +
       '<!-- Collapse toggle -->' +
-      '<div class="border-t border-pines-700 p-2 flex-shrink-0">' +
-        '<button id="sidebar-toggle" class="flex items-center w-full px-3 py-2 rounded-lg text-pines-200 hover:bg-pines-700 hover:text-white transition-colors text-sm">' +
+      '<div class="border-t border-pines-400 p-2 flex-shrink-0">' +
+        '<button id="sidebar-toggle" class="flex items-center w-full px-3 py-2 rounded-lg text-pines-100 hover:bg-pines-400 hover:text-white transition-colors text-sm">' +
           ICONS.chevronDoubleLeft +
           '<span class="ml-3 sidebar-label">Collapse</span>' +
         '</button>' +
@@ -123,8 +155,8 @@
   // ── Build mobile top bar ─────────────────────────────────────────
   function buildMobileBar() {
     return '' +
-    '<div id="posa-mobile-bar" class="lg:hidden flex items-center h-14 px-4 bg-pines-800 text-white flex-shrink-0">' +
-      '<button id="mobile-menu-btn" class="p-1.5 rounded-lg hover:bg-pines-700">' +
+    '<div id="posa-mobile-bar" class="lg:hidden flex items-center h-14 px-4 bg-pines-500 text-white flex-shrink-0">' +
+      '<button id="mobile-menu-btn" class="p-1.5 rounded-lg hover:bg-pines-400">' +
         ICONS.bars3 +
       '</button>' +
       '<img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-6 ml-3 brightness-0 invert">' +
@@ -137,18 +169,18 @@
     return '' +
     '<div id="posa-mobile-overlay" class="fixed inset-0 z-40 lg:hidden" style="display:none">' +
       '<div id="mobile-backdrop" class="fixed inset-0 bg-black/50"></div>' +
-      '<aside class="fixed inset-y-0 left-0 w-64 bg-pines-800 text-white z-50 flex flex-col">' +
-        '<div class="flex items-center justify-between h-14 px-4 border-b border-pines-700">' +
+      '<aside class="fixed inset-y-0 left-0 w-64 bg-pines-500 text-white z-50 flex flex-col">' +
+        '<div class="flex items-center justify-between h-14 px-4 border-b border-pines-400">' +
           '<div class="flex items-center">' +
             '<img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-7 brightness-0 invert">' +
             '<span class="ml-3 font-bold text-lg">POSA</span>' +
           '</div>' +
-          '<button id="mobile-close-btn" class="p-1.5 rounded-lg hover:bg-pines-700">' +
+          '<button id="mobile-close-btn" class="p-1.5 rounded-lg hover:bg-pines-400">' +
             ICONS.xMark +
           '</button>' +
         '</div>' +
         '<nav class="flex-1 px-2 py-4 space-y-1 overflow-y-auto">' +
-          buildNavItems(false) +
+          buildNavItems(true) +
         '</nav>' +
       '</aside>' +
     '</div>';
@@ -163,6 +195,9 @@
       '#posa-sidebar.sidebar-collapsed .sidebar-label { display: none; }' +
       '#posa-sidebar.sidebar-collapsed img.h-8 { margin-left: auto; margin-right: auto; }' +
       '#posa-sidebar { transition: width 0.3s ease; }' +
+      /* Collapsed dropdown: hidden when expanded, shown on hover when collapsed */
+      '#posa-sidebar.sidebar-expanded .sidebar-collapsed-dropdown { display: none !important; }' +
+      '#posa-sidebar.sidebar-collapsed .group:hover .sidebar-collapsed-dropdown { display: block !important; }' +
       /* Prevent FOUC — body hidden until sidebar injects */
       'body.sidebar-loading > *:not(script):not(style):not(link) { visibility: hidden; }' +
       'body.sidebar-ready > * { visibility: visible; }';
