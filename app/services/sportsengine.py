@@ -1267,10 +1267,264 @@ def process_webhook(payload: dict, db: Session) -> dict:
     logger.info(f"WEBHOOK: Received — operation={operation} type={resource_type} id={resource_id}")
     logger.info(f"WEBHOOK: Full payload: {payload}")
 
-    # Always sync — don't filter on resource type or operation
+    # Always sync both registrations and events
+    results = {"registration_sync": None, "event_sync": None}
+
     try:
-        results = sync_all_registrations(db)
-        return {"action": "synced", "results": results}
+        reg_results = sync_all_registrations(db)
+        results["registration_sync"] = {"action": "synced", "results": reg_results}
     except Exception as e:
-        logger.error(f"WEBHOOK: Sync failed: {e}", exc_info=True)
-        return {"action": "error", "message": str(e)}
+        logger.error(f"WEBHOOK: Registration sync failed: {e}", exc_info=True)
+        results["registration_sync"] = {"action": "error", "message": str(e)}
+
+    try:
+        event_results = sync_all_events(db)
+        results["event_sync"] = {"action": "synced", "results": event_results}
+    except Exception as e:
+        logger.error(f"WEBHOOK: Event sync failed: {e}", exc_info=True)
+        results["event_sync"] = {"action": "error", "message": str(e)}
+
+    return results
+
+
+# ---------------------------------------------------------------------
+# Events API
+# ---------------------------------------------------------------------
+
+EVENTS_QUERY = """
+query GetEvents($orgId: Int!, $start: String, $end: String, $page: Int!, $perPage: Int!) {
+    events(
+        organizationId: $orgId
+        start: $start
+        end: $end
+        page: $page
+        perPage: $perPage
+    ) {
+        pageInformation {
+            pages
+            count
+            page
+            perPage
+        }
+        results {
+            id
+            organizationId
+            name
+            type
+            start
+            end
+            status
+            description
+            created
+            updated
+            location {
+                name
+                description
+                url
+                address
+            }
+            eventTeams {
+                score
+                primaryColor
+                homeTeam
+                name
+            }
+        }
+    }
+}
+"""
+
+
+def get_events(start: str = None, end: str = None, page: int = 1, per_page: int = 100) -> dict:
+    """
+    Fetch events from SportsEngine for the configured organization.
+
+    Args:
+        start: UTC datetime string, e.g. "2026-01-01T00:00:00Z"
+        end: UTC datetime string
+        page: Page number (1-based)
+        per_page: Results per page (max 100)
+    """
+    org_id = os.getenv("SPORTSENGINE_ORG_ID")
+    if not org_id:
+        raise ValueError("SPORTSENGINE_ORG_ID must be set")
+
+    variables = {
+        "orgId": int(org_id),
+        "page": page,
+        "perPage": min(per_page, 100),
+    }
+    if start:
+        variables["start"] = start
+    if end:
+        variables["end"] = end
+
+    data = graphql_query(EVENTS_QUERY, variables)
+    return data.get("events", {})
+
+
+def _extract_sport_from_event(event: dict) -> Optional[str]:
+    """Try to determine the sport from event name or team names."""
+    name = event.get("name", "")
+    sport = extract_sport_from_registration_name(name)
+    if sport != "Unknown":
+        return sport
+
+    for team in (event.get("eventTeams") or []):
+        team_name = team.get("name", "")
+        if team_name:
+            sport = extract_sport_from_registration_name(team_name)
+            if sport != "Unknown":
+                return sport
+
+    return None
+
+
+def _parse_utc_datetime(dt_str: str) -> Optional[datetime]:
+    """Parse a UTC datetime string from SportsEngine."""
+    if not dt_str:
+        return None
+    try:
+        return datetime.fromisoformat(dt_str.replace("Z", "+00:00")).replace(tzinfo=None)
+    except (ValueError, TypeError):
+        try:
+            return datetime.strptime(dt_str, "%Y-%m-%dT%H:%M:%S")
+        except (ValueError, TypeError):
+            logger.warning(f"Could not parse datetime: {dt_str}")
+            return None
+
+
+def sync_all_events(db: Session, days_back: int = 30, days_forward: int = 90) -> dict:
+    """
+    Sync events from SportsEngine for a date window.
+    Fetches all events in [now - days_back, now + days_forward] and upserts each.
+    """
+    from app.models_events import Event
+
+    results = {
+        "new_events": 0,
+        "updated_events": 0,
+        "total_fetched": 0,
+        "errors": [],
+    }
+
+    now = datetime.utcnow()
+    start_dt = (now - timedelta(days=days_back)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    end_dt = (now + timedelta(days=days_forward)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    logger.info(f"EVENT SYNC: Fetching events from {start_dt} to {end_dt}")
+
+    page = 1
+    while True:
+        try:
+            events_data = get_events(start=start_dt, end=end_dt, page=page, per_page=100)
+        except Exception as e:
+            logger.error(f"EVENT SYNC: Failed to fetch page {page}: {e}")
+            results["errors"].append(str(e))
+            break
+
+        page_info = events_data.get("pageInformation", {})
+        events_list = events_data.get("results", [])
+
+        logger.info(
+            f"EVENT SYNC: Page {page}/{page_info.get('pages', '?')}, "
+            f"{len(events_list)} events"
+        )
+
+        for event_data in events_list:
+            try:
+                _upsert_event(event_data, db, results)
+            except Exception as e:
+                logger.error(f"EVENT SYNC: Error processing event {event_data.get('id')}: {e}")
+                results["errors"].append(str(e))
+
+        results["total_fetched"] += len(events_list)
+
+        if page >= page_info.get("pages", 1):
+            break
+        page += 1
+
+    db.commit()
+    logger.info(f"EVENT SYNC: Complete — {results}")
+    return results
+
+
+def _upsert_event(event_data: dict, db: Session, results: dict) -> None:
+    """Create or update a single event from SportsEngine data."""
+    from app.models_events import Event
+
+    se_id = str(event_data.get("id"))
+    if not se_id:
+        return
+
+    # Extract location
+    location = event_data.get("location") or {}
+    address_data = location.get("address")
+    if isinstance(address_data, dict):
+        address_str = ", ".join(
+            filter(None, [
+                address_data.get("street"),
+                address_data.get("city"),
+                address_data.get("state"),
+                address_data.get("zip"),
+            ])
+        )
+    else:
+        address_str = str(address_data) if address_data else None
+
+    # Extract teams
+    teams_raw = event_data.get("eventTeams") or []
+    teams_json = [
+        {
+            "name": t.get("name"),
+            "score": t.get("score"),
+            "primaryColor": t.get("primaryColor"),
+            "homeTeam": t.get("homeTeam"),
+        }
+        for t in teams_raw
+    ]
+
+    sport = _extract_sport_from_event(event_data)
+    start_time = _parse_utc_datetime(event_data.get("start"))
+    end_time = _parse_utc_datetime(event_data.get("end"))
+    se_created = _parse_utc_datetime(event_data.get("created"))
+    se_updated = _parse_utc_datetime(event_data.get("updated"))
+
+    existing = db.query(Event).filter(Event.se_event_id == se_id).first()
+
+    if existing:
+        existing.name = event_data.get("name", existing.name)
+        existing.event_type = (event_data.get("type") or "event").lower()
+        existing.sport = sport or existing.sport
+        existing.start_time = start_time
+        existing.end_time = end_time
+        existing.status = event_data.get("status")
+        existing.description = event_data.get("description")
+        existing.location_name = location.get("name")
+        existing.location_address = address_str
+        existing.location_url = location.get("url")
+        existing.location_description = location.get("description")
+        existing.teams = teams_json if teams_json else existing.teams
+        existing.se_updated_at = se_updated
+        results["updated_events"] += 1
+    else:
+        new_event = Event(
+            se_event_id=se_id,
+            organization_id=str(event_data.get("organizationId", "")),
+            name=event_data.get("name", "Untitled Event"),
+            event_type=(event_data.get("type") or "event").lower(),
+            sport=sport,
+            start_time=start_time,
+            end_time=end_time,
+            status=event_data.get("status"),
+            description=event_data.get("description"),
+            location_name=location.get("name"),
+            location_address=address_str,
+            location_url=location.get("url"),
+            location_description=location.get("description"),
+            teams=teams_json if teams_json else None,
+            se_created_at=se_created,
+            se_updated_at=se_updated,
+        )
+        db.add(new_event)
+        results["new_events"] += 1
