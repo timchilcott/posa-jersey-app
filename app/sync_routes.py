@@ -263,6 +263,36 @@ def sync_events(db: Session = Depends(get_db)):
 # ------------------------------------------------------------------
 # Debug endpoints
 # ------------------------------------------------------------------
+@router.get("/api/debug/schema-introspect")
+def debug_schema_introspect(type_name: str = "Team"):
+    """Introspect a GraphQL type to discover all available fields."""
+    from app.services.sportsengine import is_configured, graphql_query
+
+    if not is_configured():
+        return {"error": "SportsEngine not configured"}
+
+    query = """
+    query IntrospectType($typeName: String!) {
+        __type(name: $typeName) {
+            name
+            fields {
+                name
+                type {
+                    name
+                    kind
+                    ofType { name kind ofType { name kind } }
+                }
+            }
+        }
+    }
+    """
+    try:
+        data = graphql_query(query, {"typeName": type_name})
+        return data
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @router.get("/api/debug/player-lookup")
 def debug_player_lookup(name: str = "", email: str = "", db: Session = Depends(get_db)):
     """
