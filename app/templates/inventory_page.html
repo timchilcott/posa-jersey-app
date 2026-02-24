@@ -736,7 +736,7 @@
                 if (!divStr) return [];
                 return divStr.split(',').map(d => d.trim()).filter(Boolean);
             },
-            itemConditions(entry) {
+            itemConditions(item) {
                 const conds = (item.conditions || []).filter(c => c.quantity > 0);
                 if (conds.length > 0) return conds;
                 if (item.condition) return [{ condition: item.condition, quantity: item.quantityTotal }];
