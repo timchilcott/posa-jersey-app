@@ -4,44 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SportsEngine Integration - POSA Jersey App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    pines: { 50: '#f0f7f0', 100: '#d9edd9', 200: '#b3dbb3', 300: '#7fc07f', 400: '#5aa55a', 500: '#3C7939', 600: '#2f6130', 700: '#254d26', 800: '#1c3a1d', 900: '#142914' }
+                }
+            }
+        }
+    }
+    </script>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        h1 {
-            color: #0D1831;
-        }
-        .nav {
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #ddd;
-        }
-        .nav a {
-            margin-right: 15px;
-            text-decoration: none;
-            color: #3C7939;
-            font-weight: 500;
-        }
-        .nav a:hover {
-            text-decoration: underline;
-        }
-        .card {
-            background: white;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .card h2 {
-            margin-top: 0;
-            color: #333;
-            border-bottom: 2px solid #3C7939;
-            padding-bottom: 10px;
-        }
         .status-badge {
             display: inline-block;
             padding: 4px 12px;
@@ -61,48 +36,6 @@
             background: #fef2f2;
             color: #dc2626;
         }
-        .config-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .config-item:last-child {
-            border-bottom: none;
-        }
-        .config-label {
-            font-weight: 500;
-            color: #333;
-        }
-        .btn {
-            padding: 10px 20px;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-primary {
-            background: #3C7939;
-            color: white;
-        }
-        .btn-primary:hover {
-            background: #2e5e2d;
-        }
-        .btn-primary:disabled {
-            background: #9ca3af;
-            cursor: not-allowed;
-        }
-        .btn-secondary {
-            background: white;
-            color: #333;
-            border: 1px solid #ddd;
-        }
-        .btn-secondary:hover {
-            background: #f5f5f5;
-        }
         .sync-result {
             margin-top: 15px;
             padding: 15px;
@@ -117,39 +50,7 @@
             background: #fef2f2;
             border: 1px solid #fecaca;
         }
-        .registration-list {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .registration-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            background: #fafafa;
-        }
-        .registration-item:hover {
-            background: #f0f0f0;
-        }
-        .registration-name {
-            font-weight: 500;
-        }
-        .registration-meta {
-            font-size: 12px;
-            color: #6b7280;
-        }
-        .registration-count {
-            background: #3C7939;
-            color: white;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        .loading {
+        .loading-spinner {
             display: inline-block;
             width: 16px;
             height: 16px;
@@ -161,112 +62,90 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        .info-box {
-            background: #e7f3ff;
-            border-left: 4px solid #2196F3;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 0 6px 6px 0;
-        }
-        .info-box h3 {
-            margin-top: 0;
-            color: #1976D2;
-        }
-        code {
-            background: #f1f5f9;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 13px;
-        }
     </style>
 </head>
-<body>
-    <div class="nav">
-        <a href="/admin">← Back to Admin</a>
-        <a href="/email-templates">Email Templates</a>
-        <a href="/logout">Logout</a>
-    </div>
+<body class="bg-gray-50">
 
-    <h1>🏈 SportsEngine Integration</h1>
-
-    <div class="info-box">
-        <h3>About This Integration</h3>
-        <p>This connects directly to SportsEngine HQ's API to pull registration data. Instead of parsing forwarded emails, registrations are synced via the API for more reliable and complete data.</p>
-    </div>
-
-    <!-- Status Card -->
-    <div class="card">
-        <h2>Connection Status</h2>
-        <div id="status-loading">
-            <span class="loading"></span> Checking connection...
-        </div>
-        <div id="status-content" style="display: none;">
-            <div class="config-item">
-                <span class="config-label">Integration Configured</span>
-                <span id="status-configured" class="status-badge">-</span>
-            </div>
-            <div class="config-item">
-                <span class="config-label">Client ID</span>
-                <span id="status-client-id" class="status-badge">-</span>
-            </div>
-            <div class="config-item">
-                <span class="config-label">Client Secret</span>
-                <span id="status-client-secret" class="status-badge">-</span>
-            </div>
-            <div class="config-item">
-                <span class="config-label">Organization ID</span>
-                <span id="status-org-id">-</span>
-            </div>
-            <div class="config-item">
-                <span class="config-label">API Authentication</span>
-                <span id="status-auth" class="status-badge">-</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sync Card -->
-    <div class="card">
-        <h2>Sync Registrations</h2>
-        <p>Pull the latest registration data from SportsEngine into your database.</p>
-        
-        <div style="display: flex; gap: 10px; margin-top: 15px;">
-            <button class="btn btn-primary" id="sync-all-btn" onclick="syncAll()">
-                🔄 Sync All Registrations
+    <!-- Page header -->
+    <div class="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200">
+        <h1 class="text-xl font-semibold text-gray-900">SportsEngine Integration</h1>
+        <div class="flex gap-2">
+            <button class="inline-flex items-center gap-1.5 px-4 py-2 bg-pines-500 text-white rounded-lg hover:bg-pines-600 text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed" id="sync-all-btn" onclick="syncAll()">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Sync All
             </button>
-            <button class="btn btn-secondary" id="refresh-list-btn" onclick="loadRegistrations()">
-                📋 Refresh List
+            <button class="inline-flex items-center gap-1.5 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium" id="refresh-list-btn" onclick="loadRegistrations()">
+                Refresh List
             </button>
         </div>
+    </div>
 
+    <main class="px-6 py-6 space-y-6">
+        <!-- Info box -->
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+            <h3 class="text-sm font-semibold text-blue-800 mb-1">About This Integration</h3>
+            <p class="text-sm text-blue-700">This connects directly to SportsEngine HQ's API to pull registration data. Instead of parsing forwarded emails, registrations are synced via the API for more reliable and complete data.</p>
+        </div>
+
+        <!-- Status Card -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-3 border-b-2 border-pines-500">Connection Status</h2>
+            <div id="status-loading">
+                <span class="loading-spinner"></span> <span class="text-sm text-gray-600">Checking connection...</span>
+            </div>
+            <div id="status-content" style="display: none;" class="divide-y divide-gray-100">
+                <div class="flex justify-between items-center py-3">
+                    <span class="text-sm font-medium text-gray-700">Integration Configured</span>
+                    <span id="status-configured" class="status-badge">-</span>
+                </div>
+                <div class="flex justify-between items-center py-3">
+                    <span class="text-sm font-medium text-gray-700">Client ID</span>
+                    <span id="status-client-id" class="status-badge">-</span>
+                </div>
+                <div class="flex justify-between items-center py-3">
+                    <span class="text-sm font-medium text-gray-700">Client Secret</span>
+                    <span id="status-client-secret" class="status-badge">-</span>
+                </div>
+                <div class="flex justify-between items-center py-3">
+                    <span class="text-sm font-medium text-gray-700">Organization ID</span>
+                    <span id="status-org-id" class="text-sm text-gray-600">-</span>
+                </div>
+                <div class="flex justify-between items-center py-3">
+                    <span class="text-sm font-medium text-gray-700">API Authentication</span>
+                    <span id="status-auth" class="status-badge">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sync Result -->
         <div id="sync-result" class="sync-result"></div>
-    </div>
 
-    <!-- Registrations List -->
-    <div class="card">
-        <h2>Available Registrations</h2>
-        <p>Click on a registration to sync just that one.</p>
-        
-        <div id="registrations-loading" style="text-align: center; padding: 20px;">
-            <span class="loading"></span> Loading registrations...
-        </div>
-        <div id="registrations-list" class="registration-list" style="display: none;"></div>
-        <div id="registrations-error" style="display: none; color: #dc2626; padding: 20px;"></div>
-    </div>
+        <!-- Registrations List -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-2 pb-3 border-b-2 border-pines-500">Available Registrations</h2>
+            <p class="text-sm text-gray-500 mb-4">Click on a registration to sync just that one.</p>
 
-    <!-- Configuration Help -->
-    <div class="card">
-        <h2>Configuration</h2>
-        <p>Set these environment variables to enable the integration:</p>
-        
-        <div style="background: #1f2937; color: #f3f4f6; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 13px; overflow-x: auto;">
-            <div>SPORTSENGINE_CLIENT_ID=your-client-id</div>
-            <div>SPORTSENGINE_CLIENT_SECRET=your-client-secret</div>
-            <div>SPORTSENGINE_ORG_ID=your-organization-id</div>
+            <div id="registrations-loading" class="text-center py-6">
+                <span class="loading-spinner"></span> <span class="text-sm text-gray-600">Loading registrations...</span>
+            </div>
+            <div id="registrations-list" class="space-y-2 max-h-96 overflow-y-auto" style="display: none;"></div>
+            <div id="registrations-error" style="display: none;" class="text-red-600 text-sm py-4"></div>
         </div>
-        
-        <p style="margin-top: 15px;">Get these values from SportsEngine HQ → Settings → API Integrations</p>
-    </div>
+
+        <!-- Configuration Help -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-3 border-b-2 border-pines-500">Configuration</h2>
+            <p class="text-sm text-gray-600 mb-3">Set these environment variables to enable the integration:</p>
+
+            <div class="bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-sm overflow-x-auto">
+                <div>SPORTSENGINE_CLIENT_ID=your-client-id</div>
+                <div>SPORTSENGINE_CLIENT_SECRET=your-client-secret</div>
+                <div>SPORTSENGINE_ORG_ID=your-organization-id</div>
+            </div>
+
+            <p class="text-sm text-gray-500 mt-4">Get these values from SportsEngine HQ &#8594; Settings &#8594; API Integrations</p>
+        </div>
+    </main>
 
     <script>
         // Check status on load
@@ -274,28 +153,28 @@
             try {
                 const response = await fetch('/sportsengine/status');
                 const data = await response.json();
-                
+
                 document.getElementById('status-loading').style.display = 'none';
                 document.getElementById('status-content').style.display = 'block';
-                
+
                 // Configured
                 const configBadge = document.getElementById('status-configured');
                 configBadge.textContent = data.configured ? 'Yes' : 'No';
                 configBadge.className = 'status-badge ' + (data.configured ? 'success' : 'warning');
-                
+
                 // Client ID
                 const clientIdBadge = document.getElementById('status-client-id');
                 clientIdBadge.textContent = data.client_id_set ? 'Set' : 'Missing';
                 clientIdBadge.className = 'status-badge ' + (data.client_id_set ? 'success' : 'error');
-                
+
                 // Client Secret
                 const secretBadge = document.getElementById('status-client-secret');
                 secretBadge.textContent = data.client_secret_set ? 'Set' : 'Missing';
                 secretBadge.className = 'status-badge ' + (data.client_secret_set ? 'success' : 'error');
-                
+
                 // Org ID
                 document.getElementById('status-org-id').textContent = data.org_id || 'Not set';
-                
+
                 // Auth status
                 const authBadge = document.getElementById('status-auth');
                 if (data.authenticated) {
@@ -308,49 +187,49 @@
                     authBadge.textContent = 'Not tested';
                     authBadge.className = 'status-badge warning';
                 }
-                
+
                 // Enable/disable sync buttons
                 document.getElementById('sync-all-btn').disabled = !data.configured;
-                
+
                 // Load registrations if configured
                 if (data.configured) {
                     loadRegistrations();
                 }
-                
+
             } catch (error) {
-                document.getElementById('status-loading').innerHTML = 
+                document.getElementById('status-loading').innerHTML =
                     '<span class="status-badge error">Error checking status</span>';
             }
         }
-        
+
         async function loadRegistrations() {
             const listEl = document.getElementById('registrations-list');
             const loadingEl = document.getElementById('registrations-loading');
             const errorEl = document.getElementById('registrations-error');
-            
+
             loadingEl.style.display = 'block';
             listEl.style.display = 'none';
             errorEl.style.display = 'none';
-            
+
             try {
                 const response = await fetch('/sportsengine/registrations');
                 const data = await response.json();
-                
+
                 loadingEl.style.display = 'none';
-                
+
                 if (data.status === 'success' && data.registrations) {
                     listEl.style.display = 'block';
                     listEl.innerHTML = data.registrations.map(reg => `
-                        <div class="registration-item" onclick="syncOne('${reg.id}', '${reg.name.replace(/'/g, "\\'")}')">
+                        <div class="flex justify-between items-center p-3 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors" onclick="syncOne('${reg.id}', '${reg.name.replace(/'/g, "\\'")}')">
                             <div>
-                                <div class="registration-name">${reg.name}</div>
-                                <div class="registration-meta">
-                                    ${reg.sport || 'Unknown Sport'} • 
-                                    Status: ${reg.status} • 
+                                <div class="text-sm font-medium text-gray-900">${reg.name}</div>
+                                <div class="text-xs text-gray-500 mt-0.5">
+                                    ${reg.sport || 'Unknown Sport'} &bull;
+                                    Status: ${reg.status} &bull;
                                     ID: ${reg.id}
                                 </div>
                             </div>
-                            <span class="registration-count">${reg.resultsCompleted || 0} registrants</span>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-pines-500 text-white">${reg.resultsCompleted || 0} registrants</span>
                         </div>
                     `).join('');
                 } else {
@@ -363,15 +242,15 @@
                 errorEl.textContent = 'Error loading registrations: ' + error.message;
             }
         }
-        
+
         async function syncAll() {
             const btn = document.getElementById('sync-all-btn');
             const resultEl = document.getElementById('sync-result');
-            
+
             btn.disabled = true;
-            btn.innerHTML = '<span class="loading"></span> Syncing...';
+            btn.innerHTML = '<span class="loading-spinner"></span> Syncing...';
             resultEl.style.display = 'none';
-            
+
             try {
                 const response = await fetch('/sportsengine/sync', {
                     method: 'POST',
@@ -379,39 +258,39 @@
                     body: JSON.stringify({})
                 });
                 const data = await response.json();
-                
+
                 resultEl.style.display = 'block';
                 if (data.status === 'success') {
                     resultEl.className = 'sync-result success';
                     resultEl.innerHTML = `
-                        <strong>✅ Sync Complete!</strong><br>
+                        <strong>&#10004; Sync Complete!</strong><br>
                         Created: ${data.created} players<br>
                         Updated: ${data.updated} players<br>
                         ${data.errors > 0 ? `Errors: ${data.errors}` : ''}
                     `;
                 } else {
                     resultEl.className = 'sync-result error';
-                    resultEl.textContent = '❌ Sync failed: ' + (data.detail || 'Unknown error');
+                    resultEl.textContent = '&#10060; Sync failed: ' + (data.detail || 'Unknown error');
                 }
             } catch (error) {
                 resultEl.style.display = 'block';
                 resultEl.className = 'sync-result error';
-                resultEl.textContent = '❌ Error: ' + error.message;
+                resultEl.textContent = '&#10060; Error: ' + error.message;
             }
-            
+
             btn.disabled = false;
-            btn.innerHTML = '🔄 Sync All Registrations';
+            btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> Sync All';
         }
-        
+
         async function syncOne(regId, regName) {
             const resultEl = document.getElementById('sync-result');
-            
+
             if (!confirm(`Sync registration "${regName}"?`)) return;
-            
+
             resultEl.style.display = 'block';
             resultEl.className = 'sync-result';
-            resultEl.innerHTML = '<span class="loading"></span> Syncing...';
-            
+            resultEl.innerHTML = '<span class="loading-spinner"></span> Syncing...';
+
             try {
                 const response = await fetch('/sportsengine/sync', {
                     method: 'POST',
@@ -419,11 +298,11 @@
                     body: JSON.stringify({ registration_id: regId })
                 });
                 const data = await response.json();
-                
+
                 if (data.status === 'success') {
                     resultEl.className = 'sync-result success';
                     resultEl.innerHTML = `
-                        <strong>✅ Sync Complete!</strong><br>
+                        <strong>&#10004; Sync Complete!</strong><br>
                         Registration: ${regName}<br>
                         Created: ${data.created} players<br>
                         Updated: ${data.updated} players<br>
@@ -431,16 +310,17 @@
                     `;
                 } else {
                     resultEl.className = 'sync-result error';
-                    resultEl.textContent = '❌ Sync failed: ' + (data.detail || 'Unknown error');
+                    resultEl.textContent = '&#10060; Sync failed: ' + (data.detail || 'Unknown error');
                 }
             } catch (error) {
                 resultEl.className = 'sync-result error';
-                resultEl.textContent = '❌ Error: ' + error.message;
+                resultEl.textContent = '&#10060; Error: ' + error.message;
             }
         }
-        
+
         // Initialize
         checkStatus();
     </script>
+    <script src="/static/sidebar.js"></script>
 </body>
 </html>
