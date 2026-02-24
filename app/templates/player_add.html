@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Player - POSA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    pines: { 50: '#f0f7f0', 100: '#d9edd9', 200: '#b3dbb3', 300: '#7fc07f', 400: '#5aa55a', 500: '#3C7939', 600: '#2f6130', 700: '#254d26', 800: '#1c3a1d', 900: '#142914' }
+                }
+            }
+        }
+    }
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>[x-cloak] { display: none !important; }</style>
+</head>
+<body class="bg-gray-50" x-data="addPlayerApp()" x-cloak>
+
+    <!-- Page header with breadcrumb -->
+    <div class="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200">
+        <div>
+            <div class="flex items-center text-sm text-gray-500 mb-0.5">
+                <a href="/admin" class="hover:text-pines-600 transition-colors">Players</a>
+                <svg class="w-4 h-4 mx-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <span class="text-gray-900 font-medium">Add Player</span>
+            </div>
+            <h1 class="text-xl font-semibold text-gray-900">Add New Player</h1>
+        </div>
+    </div>
+
+    <main class="px-6 py-6 max-w-2xl">
+        <!-- Success notification -->
+        <div x-show="successMessage" x-transition
+             class="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm font-medium flex items-center justify-between">
+            <span x-text="successMessage"></span>
+            <button @click="successMessage = ''" class="text-green-500 hover:text-green-700">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <!-- Error notification -->
+        <div x-show="errorMessage" x-transition
+             class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm font-medium flex items-center justify-between">
+            <span x-text="errorMessage"></span>
+            <button @click="errorMessage = ''" class="text-red-500 hover:text-red-700">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <div class="bg-white rounded-lg border border-gray-200 p-6">
+            <div class="space-y-5">
+                <!-- Full Name -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Full Name <span class="text-red-500">*</span></label>
+                    <input type="text" x-model="form.full_name"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm"
+                           placeholder="First Last">
+                </div>
+
+                <!-- Parent Email -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Parent Email <span class="text-red-500">*</span></label>
+                    <input type="email" x-model="form.parent_email"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm"
+                           placeholder="parent@example.com">
+                </div>
+
+                <!-- Birth Year + Jersey Number -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Birth Year</label>
+                        <input type="number" x-model.number="form.birth_year" min="2000" max="2030"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm"
+                               placeholder="e.g. 2016">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Jersey Number</label>
+                        <input type="number" x-model.number="form.jersey_number" min="0" max="99"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm"
+                               placeholder="e.g. 7">
+                    </div>
+                </div>
+
+                <!-- Optional Registration Section -->
+                <div class="border-t border-gray-200 pt-5">
+                    <h3 class="text-sm font-medium text-gray-900 mb-3">Registration (optional)</h3>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Sport</label>
+                            <select x-model="form.sport"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm">
+                                <option value="">None</option>
+                                <option>Basketball</option>
+                                <option>Soccer</option>
+                                <option>Flag Football</option>
+                                <option>Volleyball</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Season</label>
+                            <input type="text" x-model="form.season"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm"
+                                   placeholder="e.g. Spring 2026">
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Division</label>
+                        <input type="text" x-model="form.division"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm"
+                               placeholder="e.g. U10 Boys">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+                <a href="/admin" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">Cancel</a>
+                <button @click="saveAndAddAnother()" :disabled="saving"
+                        class="px-4 py-2 border border-pines-500 text-pines-600 rounded-lg hover:bg-pines-50 text-sm font-medium disabled:opacity-50">
+                    Save &amp; Add Another
+                </button>
+                <button @click="saveAndReturn()" :disabled="saving"
+                        class="px-4 py-2 bg-pines-500 text-white rounded-lg hover:bg-pines-600 text-sm font-medium disabled:opacity-50">
+                    Save
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    function addPlayerApp() {
+        return {
+            saving: false,
+            successMessage: '',
+            errorMessage: '',
+            form: {
+                full_name: '',
+                parent_email: '',
+                birth_year: null,
+                jersey_number: null,
+                sport: '',
+                division: '',
+                season: ''
+            },
+
+            async save() {
+                this.errorMessage = '';
+                if (!this.form.full_name.trim() || !this.form.parent_email.trim()) {
+                    this.errorMessage = 'Name and email are required';
+                    return false;
+                }
+                this.saving = true;
+                try {
+                    const res = await fetch('/api/admin/players', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(this.form)
+                    });
+                    if (!res.ok) {
+                        const err = await res.json();
+                        this.errorMessage = err.detail || 'Failed to save player';
+                        this.saving = false;
+                        return false;
+                    }
+                    this.saving = false;
+                    return true;
+                } catch (e) {
+                    this.errorMessage = 'Failed to save player';
+                    this.saving = false;
+                    return false;
+                }
+            },
+
+            async saveAndReturn() {
+                const ok = await this.save();
+                if (ok) window.location.href = '/admin';
+            },
+
+            async saveAndAddAnother() {
+                const savedName = this.form.full_name;
+                const ok = await this.save();
+                if (ok) {
+                    this.successMessage = '"' + savedName + '" saved successfully!';
+                    this.resetForm();
+                    setTimeout(() => { this.successMessage = ''; }, 4000);
+                }
+            },
+
+            resetForm() {
+                this.form = {
+                    full_name: '',
+                    parent_email: '',
+                    birth_year: null,
+                    jersey_number: null,
+                    sport: '',
+                    division: '',
+                    season: ''
+                };
+            }
+        }
+    }
+    </script>
+    <script src="/static/sidebar.js"></script>
+</body>
+</html>
