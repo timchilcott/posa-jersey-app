@@ -179,10 +179,10 @@
                                     </td>
                                 </template>
 
-                                <!-- EVENT ROW: Teams matchup -->
+                                <!-- EVENT ROW: Teams matchup (games only — practices show coach under Event name) -->
                                 <template x-if="!entry._isHeader">
                                     <td class="px-4 py-3 whitespace-nowrap">
-                                        <template x-if="entry.teams && entry.teams.length > 0">
+                                        <template x-if="entry.eventType !== 'practice' && entry.teams && entry.teams.length > 0">
                                             <div class="flex items-center gap-1.5">
                                                 <template x-for="(team, ti) in entry.teams" :key="ti">
                                                     <div class="flex items-center gap-1">
@@ -193,7 +193,7 @@
                                                 </template>
                                             </div>
                                         </template>
-                                        <span x-show="!entry.teams || entry.teams.length === 0" class="text-sm text-gray-300">--</span>
+                                        <span x-show="entry.eventType === 'practice' || !entry.teams || entry.teams.length === 0" class="text-sm text-gray-300">--</span>
                                     </td>
                                 </template>
 
