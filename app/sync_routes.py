@@ -12,6 +12,7 @@ Routes:
     GET  /sportsengine/status    - Connection status check
     GET  /sportsengine/registrations - List available registration forms
     POST /sportsengine/sync      - Sync (used by sportsengine.html page)
+    POST /sync/events            - Pull events from SportsEngine
     GET  /api/debug/player-lookup
     GET  /api/debug/sport-season-mismatches
 """
@@ -221,6 +222,38 @@ async def sportsengine_sync(request: Request, db: Session = Depends(get_db)):
         }
     except Exception as e:
         logger.error(f"Sync failed: {e}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "detail": str(e)},
+        )
+
+
+# ------------------------------------------------------------------
+# Event sync endpoint
+# ------------------------------------------------------------------
+@router.post("/sync/events")
+def sync_events(db: Session = Depends(get_db)):
+    """Pull events from SportsEngine."""
+    from app.services.sportsengine import is_configured, sync_all_events
+
+    if not is_configured():
+        return JSONResponse(
+            status_code=400,
+            content={"status": "error", "detail": "SportsEngine not configured"},
+        )
+
+    try:
+        results = sync_all_events(db)
+        return {
+            "status": "success",
+            "new_events": results["new_events"],
+            "updated_events": results["updated_events"],
+            "total_fetched": results["total_fetched"],
+            "errors": len(results["errors"]),
+            "error_details": results["errors"][:10],
+        }
+    except Exception as e:
+        logger.error(f"Event sync failed: {e}", exc_info=True)
         return JSONResponse(
             status_code=500,
             content={"status": "error", "detail": str(e)},

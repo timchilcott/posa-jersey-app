@@ -9,12 +9,14 @@ from app.models import Base, Player, Registration
 from app.api_routes import router as admin_api_router
 from app.sync_routes import router as sync_router
 from app.inventory_routes import router as inventory_router
+from app.events_routes import router as events_router
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="POSA Jersey Management")
 app.include_router(admin_api_router)
 app.include_router(sync_router)
 app.include_router(inventory_router)
+app.include_router(events_router)
 
 ADMIN_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
@@ -46,6 +48,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                 <div class="flex items-center space-x-3">
                     <a href="/admin/volunteers" class="text-pines-500 hover:text-pines-700 px-3 py-2 text-sm font-medium">Volunteers</a>
                     <a href="/inventory" class="text-pines-500 hover:text-pines-700 px-3 py-2 text-sm font-medium">Inventory</a>
+                    <a href="/events" class="text-pines-500 hover:text-pines-700 px-3 py-2 text-sm font-medium">Events</a>
                     <button @click="syncSportsEngine()" class="bg-pines-500 hover:bg-pines-600 text-white px-4 py-2 rounded-lg text-sm font-medium">Sync SportsEngine</button>
                 </div>
             </div>
@@ -550,6 +553,7 @@ VOLUNTEER_TEMPLATE = """<!DOCTYPE html>
                 <div class="flex items-center space-x-3">
                     <a href="/admin" class="text-pines-500 hover:text-pines-700 px-3 py-2 text-sm font-medium">&larr; Players</a>
                     <a href="/inventory" class="text-pines-500 hover:text-pines-700 px-3 py-2 text-sm font-medium">Inventory</a>
+                    <a href="/events" class="text-pines-500 hover:text-pines-700 px-3 py-2 text-sm font-medium">Events</a>
                 </div>
             </div>
         </div>
@@ -705,6 +709,13 @@ async def admin_volunteers(request: Request):
 async def inventory_page():
     import pathlib
     html_path = pathlib.Path(__file__).parent / "templates" / "inventory_page.html"
+    with open(html_path, "r") as f:
+        return HTMLResponse(f.read())
+
+@app.get("/events", response_class=HTMLResponse)
+async def events_page():
+    import pathlib
+    html_path = pathlib.Path(__file__).parent / "templates" / "events_page.html"
     with open(html_path, "r") as f:
         return HTMLResponse(f.read())
 

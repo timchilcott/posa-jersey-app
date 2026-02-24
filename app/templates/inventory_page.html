@@ -41,6 +41,7 @@
                         </button>
                         <span x-show="totalCheckedOut > 0" class="absolute -top-2 -right-0 bg-orange-500 text-white rounded-full w-4 h-4 flex items-center justify-center" style="font-size:10px" x-text="totalCheckedOut"></span>
                     </span>
+                    <a href="/events" class="text-gray-600 hover:text-gray-900 text-sm font-medium">Events</a>
                     <button @click="openBulkCheckout()" class="border border-pines-500 text-pines-600 hover:bg-pines-50 px-4 py-2 rounded-lg text-sm font-medium">Equipment Checkout</button>
                     <button @click="openAddModal()" class="bg-pines-500 hover:bg-pines-600 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Add Item</button>
                 </div>
