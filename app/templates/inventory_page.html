@@ -509,7 +509,7 @@
             </div>
             <div class="flex justify-end space-x-3">
                 <button @click="showBulkModal = false" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">Cancel</button>
-                <button @click="submitBulkCheckout()" :disabled="bulkForm.items.length === 0"
+                <button type="button" @click="submitBulkCheckout()" :disabled="bulkForm.items.length === 0"
                         class="px-4 py-2 bg-pines-500 text-white rounded-lg hover:bg-pines-600 text-sm disabled:opacity-50">
                     Check Out <span x-text="bulkForm.items.length"></span> Item<span x-show="bulkForm.items.length !== 1">s</span>
                 </button>
@@ -680,9 +680,13 @@
                 if (!this.checkoutForm.person_name.trim()) { alert('Please enter a name.'); return; }
                 try {
                     const res = await fetch(`/api/inventory/items/${this.checkoutItem.id}/checkout`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(this.checkoutForm) });
-                    if (!res.ok) { const err = await res.json(); alert(err.detail||'Failed'); return; }
+                    if (!res.ok) {
+                        let msg = 'Checkout failed (status ' + res.status + ')';
+                        try { const err = await res.json(); msg = err.detail || msg; } catch(_) {}
+                        alert(msg); return;
+                    }
                     this.showCheckoutModal = false; await this.refresh();
-                } catch(e) { alert('Failed'); }
+                } catch(e) { console.error('Checkout error:', e); alert('Checkout failed: ' + e.message); }
             },
 
             get availableForBulk() {
@@ -710,14 +714,19 @@
                 this.bulkAddQty = 1;
             },
             async submitBulkCheckout() {
+                console.log('submitBulkCheckout called', this.bulkForm);
                 if (!this.bulkForm.person_name.trim()) { alert('Please enter a name.'); return; }
                 if (this.bulkForm.items.length === 0) { alert('Add at least one item.'); return; }
                 try {
                     const payload = { person_name: this.bulkForm.person_name, items: this.bulkForm.items.map(bi => ({ item_id: bi.item_id, quantity: bi.quantity })) };
                     const res = await fetch('/api/inventory/checkout-bulk', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-                    if (!res.ok) { const err = await res.json(); alert(err.detail||'Failed'); return; }
+                    if (!res.ok) {
+                        let msg = 'Checkout failed (status ' + res.status + ')';
+                        try { const err = await res.json(); msg = err.detail || msg; } catch(_) {}
+                        alert(msg); return;
+                    }
                     this.showBulkModal = false; await this.refresh();
-                } catch(e) { alert('Failed'); }
+                } catch(e) { console.error('Bulk checkout error:', e); alert('Checkout failed: ' + e.message); }
             },
 
             async returnCheckoutRecord(itemId, recordId, personName, qty) {
