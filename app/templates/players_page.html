@@ -94,46 +94,46 @@
             <p class="mt-2 text-gray-600">Loading players...</p>
         </div>
 
-        <div x-show="!loading" class="bg-white rounded-lg shadow overflow-hidden">
+        <div x-show="!loading" class="bg-white overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 table-fixed">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="w-52 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Player</th>
-                            <th class="w-16 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jersey</th>
-                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registrations</th>
-                            <th class="w-24 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th class="w-20 px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            <th class="w-52 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Player</th>
+                            <th class="w-16 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jersey</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registrations</th>
+                            <th class="w-28 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200">
+                    <tbody class="divide-y divide-gray-100">
                         <template x-for="item in displayList" :key="item._key">
-                            <tr :class="item._isHeader ? 'bg-pines-50 border-t-2 border-pines-200' : rowClass(item)">
+                            <tr :class="item._isHeader ? 'bg-pines-50 border-t-2 border-pines-200' : rowClass(item)"
+                                @click="!item._isHeader && openPanel(item)">
                                 <template x-if="item._isHeader">
-                                    <td colspan="6" class="px-3 py-2">
+                                    <td colspan="5" class="px-4 py-2.5">
                                         <span class="text-sm font-bold text-pines-700" x-text="'Birth Year ' + item.birthYear"></span>
                                         <span class="ml-2 text-xs text-pines-500" x-text="item._count + ' players'"></span>
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-3 py-3">
+                                    <td class="px-4 py-3.5">
                                         <div class="text-sm font-medium text-gray-900" x-text="item.name"></div>
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-3 py-3 text-center">
+                                    <td class="px-4 py-3.5 text-center">
                                         <span class="px-2 py-0.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded" x-text="'#' + (item.jersey || '-')"></span>
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-3 py-3"><div class="text-sm text-gray-600 truncate" x-text="item.email"></div></td>
+                                    <td class="px-4 py-3.5"><div class="text-sm text-gray-600 truncate" x-text="item.email"></div></td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-3 py-3">
+                                    <td class="px-4 py-3.5">
                                         <div class="flex flex-wrap gap-1">
                                             <template x-for="reg in sortedRegs(item.registrations)" :key="reg.id">
-                                                <span class="inline-flex items-center px-1.5 py-0.5 text-xs rounded cursor-default"
+                                                <span class="inline-flex items-center px-1.5 py-0.5 text-xs rounded-full cursor-default"
                                                       :class="sportColor(reg.sport)"
                                                       :title="reg.sport + ' \u2013 ' + reg.season + ' (' + reg.division + ')'">
                                                     <span x-text="sportEmoji(reg.sport)"></span>
@@ -144,24 +144,9 @@
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-3 py-3 text-center">
-                                        <span x-show="!item.emailSent" class="px-2 py-0.5 text-xs font-medium bg-orange-100 text-orange-700 rounded">Needs Email</span>
-                                        <span x-show="item.emailSent" class="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded">&#10003; Sent</span>
-                                    </td>
-                                </template>
-                                <template x-if="!item._isHeader">
-                                    <td class="px-3 py-3 text-right">
-                                        <div class="flex items-center justify-end space-x-1">
-                                            <button @click="sendEmail(item)" class="p-1 rounded hover:bg-gray-100" :class="item.emailSent ? 'text-gray-400' : 'text-green-600'" :title="item.emailSent ? 'Resend Email' : 'Send Email'">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                                            </button>
-                                            <button @click="editPlayer(item)" class="p-1 rounded hover:bg-gray-100 text-pines-500" title="Edit">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                                            </button>
-                                            <button @click="markVolunteer(item)" class="p-1 rounded hover:bg-purple-100 text-purple-500" title="Mark as Volunteer">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                                            </button>
-                                        </div>
+                                    <td class="px-4 py-3.5 text-center">
+                                        <span x-show="!item.emailSent" class="px-2.5 py-1 text-xs font-medium bg-orange-100 text-orange-700 rounded-full">Needs Email</span>
+                                        <span x-show="item.emailSent" class="px-2.5 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">&#10003; Sent</span>
                                     </td>
                                 </template>
                             </tr>
@@ -177,32 +162,84 @@
         </div>
     </main>
 
-    <div x-show="editingPlayer" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="editingPlayer = null">
-        <div class="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 class="text-xl font-bold mb-4">Edit Player</h3>
-            <template x-if="editingPlayer">
+    <!-- Detail Side Panel -->
+    <div x-show="panelOpen" x-cloak class="fixed inset-0 z-30" @click.self="closePanel()">
+        <div x-show="panelOpen"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full"
+             class="absolute top-0 right-0 h-full w-full sm:w-96 bg-white border-l border-gray-200 shadow-lg flex flex-col">
+            <!-- Panel header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
+                <h2 class="text-lg font-semibold text-gray-900 truncate" x-text="selectedPlayer?.name || 'Player Details'"></h2>
+                <button @click="closePanel()" class="p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <!-- Panel body -->
+            <template x-if="selectedPlayer">
+            <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
                 <div>
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                        <input type="text" x-model="editingPlayer.name" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Name</label>
+                    <input type="text" x-model="selectedPlayer.name" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pines-500 focus:border-transparent">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Jersey #</label>
+                        <input type="number" x-model="selectedPlayer.jersey" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pines-500 focus:border-transparent">
                     </div>
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Jersey Number</label>
-                        <input type="number" x-model="editingPlayer.jersey" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                    </div>
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Birth Year</label>
-                        <input type="number" x-model="editingPlayer.birthYear" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                    </div>
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input type="email" x-model="editingPlayer.email" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                    </div>
-                    <div class="flex justify-end space-x-3">
-                        <button @click="editingPlayer = null" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                        <button @click="savePlayer()" class="px-4 py-2 bg-pines-500 text-white rounded-lg hover:bg-pines-600">Save</button>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Birth Year</label>
+                        <input type="number" x-model="selectedPlayer.birthYear" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pines-500 focus:border-transparent">
                     </div>
                 </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Email</label>
+                    <input type="email" x-model="selectedPlayer.email" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pines-500 focus:border-transparent">
+                </div>
+
+                <!-- Registrations -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Registrations</label>
+                    <div class="space-y-2">
+                        <template x-for="reg in sortedRegs(selectedPlayer.registrations || [])" :key="reg.id">
+                            <div class="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
+                                <div class="flex items-center gap-2">
+                                    <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full" :class="sportColor(reg.sport)">
+                                        <span x-text="sportEmoji(reg.sport)"></span>
+                                        <span class="ml-1" x-text="reg.sport"></span>
+                                    </span>
+                                    <span class="text-xs text-gray-500" x-text="reg.season"></span>
+                                </div>
+                                <span class="text-xs text-gray-400" x-text="reg.division"></span>
+                            </div>
+                        </template>
+                        <div x-show="!selectedPlayer.registrations || selectedPlayer.registrations.length === 0" class="text-sm text-gray-400 italic">No registrations</div>
+                    </div>
+                </div>
+
+                <!-- Email Status -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Email Status</label>
+                    <span x-show="!selectedPlayer.emailSent" class="px-2.5 py-1 text-xs font-medium bg-orange-100 text-orange-700 rounded-full">Needs Email</span>
+                    <span x-show="selectedPlayer.emailSent" class="px-2.5 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">&#10003; Sent</span>
+                </div>
+            </div>
+            </template>
+            <!-- Panel footer -->
+            <template x-if="selectedPlayer">
+            <div class="border-t border-gray-200 px-6 py-4 flex-shrink-0">
+                <div class="flex flex-col gap-2">
+                    <button @click="savePanel()" class="w-full px-4 py-2 bg-pines-500 text-white rounded-lg hover:bg-pines-600 text-sm font-medium">Save Changes</button>
+                    <div class="flex gap-2">
+                        <button @click="sendEmail(selectedPlayer)" class="flex-1 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium" :class="selectedPlayer.emailSent ? 'opacity-60' : ''">
+                            <span x-text="selectedPlayer.emailSent ? 'Resend Email' : 'Send Email'"></span>
+                        </button>
+                        <button @click="markVolunteer(selectedPlayer)" class="flex-1 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">Mark Volunteer</button>
+                    </div>
+                </div>
+            </div>
             </template>
         </div>
     </div>
@@ -211,7 +248,8 @@
     function tableApp() {
         return {
             loading: true,
-            editingPlayer: null,
+            panelOpen: false,
+            selectedPlayer: null,
             allPlayers: [],
             filteredPlayers: [],
             filters: { search: '', birthYear: '', sport: '', year: '', season: '', status: '' },
@@ -354,8 +392,41 @@
             },
 
             rowClass(player) {
-                if (this.duplicateJerseys.has(player.id)) return 'bg-red-50 hover:bg-red-100';
-                return 'bg-white hover:bg-gray-50';
+                if (this.duplicateJerseys.has(player.id)) return 'bg-red-50 hover:bg-red-100 cursor-pointer transition-colors';
+                return 'hover:bg-gray-50 cursor-pointer transition-colors';
+            },
+
+            openPanel(player) {
+                this.selectedPlayer = { ...player };
+                this.panelOpen = true;
+            },
+
+            closePanel() {
+                this.panelOpen = false;
+                this.selectedPlayer = null;
+            },
+
+            async savePanel() {
+                try {
+                    const response = await fetch(`/api/players/${this.selectedPlayer.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            full_name: this.selectedPlayer.name,
+                            parent_email: this.selectedPlayer.email,
+                            birth_year: this.selectedPlayer.birthYear,
+                            jersey_number: this.selectedPlayer.jersey
+                        })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        await this.loadPlayers();
+                        this.closePanel();
+                    }
+                } catch (error) {
+                    console.error('Failed to update player:', error);
+                    alert('Failed to update player');
+                }
             },
 
             sportEmoji(sport) {
@@ -398,36 +469,6 @@
             clearFilters() {
                 this.filters = { search: '', birthYear: '', sport: '', year: '', season: '', status: '' };
                 this.applyFilters();
-            },
-
-            editPlayer(player) {
-                this.editingPlayer = {
-                    ...player
-                };
-            },
-
-            async savePlayer() {
-                try {
-                    const response = await fetch(`/api/players/${this.editingPlayer.id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            full_name: this.editingPlayer.name,
-                            parent_email: this.editingPlayer.email,
-                            birth_year: this.editingPlayer.birthYear,
-                            jersey_number: this.editingPlayer.jersey
-                        })
-                    });
-                    const data = await response.json();
-                    if (data.success) {
-                        await this.loadPlayers();
-                        this.editingPlayer = null;
-                        alert('Player updated!');
-                    }
-                } catch (error) {
-                    console.error('Failed to update player:', error);
-                    alert('Failed to update player');
-                }
             },
 
             async markVolunteer(player) {
