@@ -1354,18 +1354,33 @@ def get_events(page: int = 1, per_page: int = 100) -> dict:
 
 
 def _extract_sport_from_event(event: dict) -> Optional[str]:
-    """Try to determine the sport from event name or team names."""
-    name = event.get("name", "")
-    sport = extract_sport_from_registration_name(name)
-    if sport != "Unknown":
-        return sport
+    """
+    Try to determine the sport from event name or team names.
+    Uses the same keyword matching as registration names but suppresses
+    warnings since event/team names are often just people's names.
+    """
+    name_lower = (event.get("name") or "").lower()
 
+    sports = [
+        ("flag football", "Flag Football"),
+        ("flag", "Flag Football"),
+        ("soccer", "Soccer"),
+        ("basketball", "Basketball"),
+        ("baseball", "Baseball"),
+        ("softball", "Softball"),
+        ("volleyball", "Volleyball"),
+    ]
+
+    for keyword, title_case in sports:
+        if keyword in name_lower:
+            return title_case
+
+    # Check team names (without logging warnings)
     for team in (event.get("eventTeams") or []):
-        team_name = team.get("name", "")
-        if team_name:
-            sport = extract_sport_from_registration_name(team_name)
-            if sport != "Unknown":
-                return sport
+        team_lower = (team.get("name") or "").lower()
+        for keyword, title_case in sports:
+            if keyword in team_lower:
+                return title_case
 
     return None
 
