@@ -94,46 +94,46 @@
             <p class="mt-2 text-gray-600">Loading players...</p>
         </div>
 
-        <div x-show="!loading" class="bg-white overflow-hidden">
+        <div x-show="!loading" class="bg-white border border-gray-200 rounded-lg overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200 table-fixed">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="w-52 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Player</th>
-                            <th class="w-16 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jersey</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registrations</th>
-                            <th class="w-28 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <table class="min-w-full table-fixed">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="w-52 px-4 py-2.5 text-left text-xs font-medium text-gray-500">Player</th>
+                            <th class="w-16 px-4 py-2.5 text-center text-xs font-medium text-gray-500">Jersey</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Email</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Registrations</th>
+                            <th class="w-28 px-4 py-2.5 text-center text-xs font-medium text-gray-500">Status</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
+                    <tbody>
                         <template x-for="item in displayList" :key="item._key">
-                            <tr :class="item._isHeader ? 'bg-pines-50 border-t-2 border-pines-200' : rowClass(item)"
+                            <tr :class="item._isHeader ? 'bg-gray-50 border-t border-gray-200' : rowClass(item)"
                                 @click="!item._isHeader && openPanel(item)">
                                 <template x-if="item._isHeader">
-                                    <td colspan="5" class="px-4 py-2.5">
-                                        <span class="text-sm font-bold text-pines-700" x-text="'Birth Year ' + item.birthYear"></span>
-                                        <span class="ml-2 text-xs text-pines-500" x-text="item._count + ' players'"></span>
+                                    <td colspan="5" class="px-4 py-2">
+                                        <span class="text-xs font-semibold text-gray-500" x-text="'Birth Year ' + item.birthYear"></span>
+                                        <span class="ml-1.5 text-xs text-gray-400" x-text="item._count + ' players'"></span>
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3.5">
+                                    <td class="px-4 py-3 border-b border-gray-100">
                                         <div class="text-sm font-medium text-gray-900" x-text="item.name"></div>
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3.5 text-center">
-                                        <span class="px-2 py-0.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded" x-text="'#' + (item.jersey || '-')"></span>
+                                    <td class="px-4 py-3 text-center border-b border-gray-100">
+                                        <span class="text-sm text-gray-600" x-text="item.jersey || '-'"></span>
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3.5"><div class="text-sm text-gray-600 truncate" x-text="item.email"></div></td>
+                                    <td class="px-4 py-3 border-b border-gray-100"><div class="text-sm text-gray-500 truncate" x-text="item.email"></div></td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3.5">
+                                    <td class="px-4 py-3 border-b border-gray-100">
                                         <div class="flex flex-wrap gap-1">
                                             <template x-for="reg in sortedRegs(item.registrations)" :key="reg.id">
-                                                <span class="inline-flex items-center px-1.5 py-0.5 text-xs rounded-full cursor-default"
+                                                <span class="inline-flex items-center px-1.5 py-0.5 text-xs rounded cursor-default"
                                                       :class="sportColor(reg.sport)"
                                                       :title="reg.sport + ' \u2013 ' + reg.season + ' (' + reg.division + ')'">
                                                     <span x-text="sportEmoji(reg.sport)"></span>
@@ -144,9 +144,9 @@
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3.5 text-center">
-                                        <span x-show="!item.emailSent" class="px-2.5 py-1 text-xs font-medium bg-orange-100 text-orange-700 rounded-full">Needs Email</span>
-                                        <span x-show="item.emailSent" class="px-2.5 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">&#10003; Sent</span>
+                                    <td class="px-4 py-3 text-center border-b border-gray-100">
+                                        <span x-show="!item.emailSent" class="text-xs text-orange-600">Needs Email</span>
+                                        <span x-show="item.emailSent" class="text-xs text-green-600">&#10003; Sent</span>
                                     </td>
                                 </template>
                             </tr>
@@ -222,8 +222,8 @@
                 <!-- Email Status -->
                 <div>
                     <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Email Status</label>
-                    <span x-show="!selectedPlayer.emailSent" class="px-2.5 py-1 text-xs font-medium bg-orange-100 text-orange-700 rounded-full">Needs Email</span>
-                    <span x-show="selectedPlayer.emailSent" class="px-2.5 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">&#10003; Sent</span>
+                    <span x-show="!selectedPlayer.emailSent" class="text-xs text-orange-600">Needs Email</span>
+                    <span x-show="selectedPlayer.emailSent" class="text-xs text-green-600">&#10003; Sent</span>
                 </div>
             </div>
             </template>
@@ -392,7 +392,7 @@
             },
 
             rowClass(player) {
-                if (this.duplicateJerseys.has(player.id)) return 'bg-red-50 hover:bg-red-100 cursor-pointer transition-colors';
+                if (this.duplicateJerseys.has(player.id)) return 'bg-red-50/50 hover:bg-red-50 cursor-pointer transition-colors';
                 return 'hover:bg-gray-50 cursor-pointer transition-colors';
             },
 

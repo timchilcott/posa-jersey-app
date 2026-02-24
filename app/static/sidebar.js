@@ -1,14 +1,11 @@
 /**
  * POSA Sidebar Component
  *
- * Self-injecting sidebar navigation for all pages.
+ * Self-injecting dual-panel sidebar navigation for all pages.
  * Include via <script src="/static/sidebar.js"></script> before </body>.
  *
- * Features:
- * - Collapsible sidebar with localStorage persistence
- * - Active page highlighting based on URL path
- * - Mobile hamburger menu with overlay
- * - Heroicon SVGs (no external deps)
+ * Layout: Icon rail (56px) + Nav panel (200px) on desktop.
+ * Mobile: hamburger menu with overlay.
  */
 (function() {
   'use strict';
@@ -26,8 +23,6 @@
     calendar: '<svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>',
     arrowPath: '<svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M21.015 4.36v4.992"/></svg>',
     envelope: '<svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>',
-    chevronDoubleLeft: '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5"/></svg>',
-    chevronDoubleRight: '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5"/></svg>',
     bars3: '<svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>',
     xMark: '<svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>',
   };
@@ -49,9 +44,7 @@
 
   function isActive(item) {
     if (!item.match) return false;
-    // Exact match for /admin (don't match /admin/volunteers)
     if (item.href === '/admin') return currentPath === '/admin';
-    // For items with children, check if current path matches any child or the parent
     if (item.children) {
       return currentPath.startsWith(item.match[0]);
     }
@@ -59,35 +52,47 @@
   }
 
   function isChildActive(child) {
-    // Exact match for /inventory (don't match /inventory/checked-out)
     if (child.href === '/inventory') return currentPath === '/inventory';
     return currentPath.startsWith(child.href);
   }
 
-  // ── Build sidebar nav items HTML ─────────────────────────────────
-  function buildNavItems(collapsed) {
+  // ── Build icon rail items ──────────────────────────────────────────
+  function buildRailItems() {
     return NAV_ITEMS.map(function(item) {
       if (item.type === 'divider') {
-        return '<div class="border-t border-pines-700 my-3 mx-2"></div>';
+        return '<div class="border-t border-white/15 my-2 mx-2"></div>';
       }
       var active = isActive(item);
       var classes = active
         ? 'bg-pines-600 text-white'
-        : 'text-pines-100 hover:bg-pines-700 hover:text-white';
-      var label = collapsed
-        ? ''
-        : '<span class="ml-3 sidebar-label">' + item.label + '</span>';
-      var html = '<a href="' + item.href + '" class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ' + classes + '" title="' + item.label + '">' +
-        item.icon + label + '</a>';
+        : 'text-pines-100 hover:bg-pines-400 hover:text-white';
+      return '<a href="' + item.href + '" class="flex items-center justify-center w-10 h-10 rounded-lg transition-colors ' + classes + '" title="' + item.label + '">' +
+        item.icon + '</a>';
+    }).join('\n');
+  }
 
-      // Render children when expanded and on a matching path
-      if (item.children && !collapsed && active) {
-        html += '<div class="ml-8 mt-1 space-y-0.5 sidebar-label">';
+  // ── Build nav panel items ──────────────────────────────────────────
+  function buildPanelItems() {
+    return NAV_ITEMS.map(function(item) {
+      if (item.type === 'divider') {
+        return '<div class="border-t border-white/15 my-3"></div>';
+      }
+      var active = isActive(item);
+      var classes = active
+        ? 'bg-pines-600 text-white'
+        : 'text-pines-100 hover:bg-pines-400 hover:text-white';
+
+      var html = '<a href="' + item.href + '" class="block px-3 py-2 rounded-lg text-sm font-medium transition-colors ' + classes + '">' +
+        item.label + '</a>';
+
+      // Show children inline when parent is active
+      if (item.children && active) {
+        html += '<div class="mt-1 ml-3 space-y-0.5">';
         item.children.forEach(function(child) {
           var childActive = isChildActive(child);
           var childClasses = childActive
             ? 'text-white font-semibold'
-            : 'text-pines-300 hover:text-white';
+            : 'text-pines-200 hover:text-white';
           html += '<a href="' + child.href + '" class="block px-3 py-1.5 rounded-lg text-xs transition-colors ' + childClasses + '">' + child.label + '</a>';
         });
         html += '</div>';
@@ -97,25 +102,57 @@
     }).join('\n');
   }
 
-  // ── Build full sidebar HTML ──────────────────────────────────────
+  // ── Build mobile nav items (icon + label, single column) ───────────
+  function buildMobileNavItems() {
+    return NAV_ITEMS.map(function(item) {
+      if (item.type === 'divider') {
+        return '<div class="border-t border-pines-400 my-3 mx-2"></div>';
+      }
+      var active = isActive(item);
+      var classes = active
+        ? 'bg-pines-600 text-white'
+        : 'text-pines-100 hover:bg-pines-400 hover:text-white';
+
+      var html = '<a href="' + item.href + '" class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ' + classes + '" title="' + item.label + '">' +
+        item.icon + '<span class="ml-3">' + item.label + '</span></a>';
+
+      if (item.children && active) {
+        html += '<div class="ml-8 mt-1 space-y-0.5">';
+        item.children.forEach(function(child) {
+          var childActive = isChildActive(child);
+          var childClasses = childActive
+            ? 'text-white font-semibold'
+            : 'text-pines-200 hover:text-white';
+          html += '<a href="' + child.href + '" class="block px-3 py-1.5 rounded-lg text-xs transition-colors ' + childClasses + '">' + child.label + '</a>';
+        });
+        html += '</div>';
+      }
+
+      return html;
+    }).join('\n');
+  }
+
+  // ── Build full sidebar HTML (dual panel) ───────────────────────────
   function buildSidebarHTML() {
     return '' +
-    '<aside id="posa-sidebar" class="hidden lg:flex flex-col bg-pines-800 text-white transition-all duration-300 h-screen flex-shrink-0 sidebar-expanded">' +
-      '<!-- Logo -->' +
-      '<div class="flex items-center h-16 px-4 border-b border-pines-700 flex-shrink-0">' +
-        '<img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-8 brightness-0 invert flex-shrink-0">' +
-        '<span class="ml-3 font-bold text-lg tracking-tight sidebar-label">POSA</span>' +
+    '<aside id="posa-sidebar" class="hidden lg:flex bg-pines-500 text-white h-screen flex-shrink-0">' +
+      '<!-- Icon Rail -->' +
+      '<div class="posa-rail flex flex-col h-full">' +
+        '<div class="flex items-center justify-center h-16 flex-shrink-0">' +
+          '<img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-7 brightness-0 invert">' +
+        '</div>' +
+        '<nav class="flex-1 flex flex-col items-center py-4 space-y-1 overflow-y-auto">' +
+          buildRailItems() +
+        '</nav>' +
       '</div>' +
-      '<!-- Nav -->' +
-      '<nav class="flex-1 px-2 py-4 space-y-1 overflow-y-auto">' +
-        buildNavItems(false) +
-      '</nav>' +
-      '<!-- Collapse toggle -->' +
-      '<div class="border-t border-pines-700 p-2 flex-shrink-0">' +
-        '<button id="sidebar-toggle" class="flex items-center w-full px-3 py-2 rounded-lg text-pines-200 hover:bg-pines-700 hover:text-white transition-colors text-sm">' +
-          ICONS.chevronDoubleLeft +
-          '<span class="ml-3 sidebar-label">Collapse</span>' +
-        '</button>' +
+      '<!-- Nav Panel -->' +
+      '<div class="posa-nav-panel flex flex-col h-full">' +
+        '<div class="flex items-center h-16 px-4 flex-shrink-0">' +
+          '<span class="font-bold text-lg tracking-tight">POSA</span>' +
+        '</div>' +
+        '<nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">' +
+          buildPanelItems() +
+        '</nav>' +
       '</div>' +
     '</aside>';
   }
@@ -123,8 +160,8 @@
   // ── Build mobile top bar ─────────────────────────────────────────
   function buildMobileBar() {
     return '' +
-    '<div id="posa-mobile-bar" class="lg:hidden flex items-center h-14 px-4 bg-pines-800 text-white flex-shrink-0">' +
-      '<button id="mobile-menu-btn" class="p-1.5 rounded-lg hover:bg-pines-700">' +
+    '<div id="posa-mobile-bar" class="lg:hidden flex items-center h-14 px-4 bg-pines-500 text-white flex-shrink-0">' +
+      '<button id="mobile-menu-btn" class="p-1.5 rounded-lg hover:bg-pines-400">' +
         ICONS.bars3 +
       '</button>' +
       '<img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-6 ml-3 brightness-0 invert">' +
@@ -137,33 +174,31 @@
     return '' +
     '<div id="posa-mobile-overlay" class="fixed inset-0 z-40 lg:hidden" style="display:none">' +
       '<div id="mobile-backdrop" class="fixed inset-0 bg-black/50"></div>' +
-      '<aside class="fixed inset-y-0 left-0 w-64 bg-pines-800 text-white z-50 flex flex-col">' +
-        '<div class="flex items-center justify-between h-14 px-4 border-b border-pines-700">' +
+      '<aside class="fixed inset-y-0 left-0 w-64 bg-pines-500 text-white z-50 flex flex-col">' +
+        '<div class="flex items-center justify-between h-14 px-4 border-b border-pines-400">' +
           '<div class="flex items-center">' +
             '<img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-7 brightness-0 invert">' +
             '<span class="ml-3 font-bold text-lg">POSA</span>' +
           '</div>' +
-          '<button id="mobile-close-btn" class="p-1.5 rounded-lg hover:bg-pines-700">' +
+          '<button id="mobile-close-btn" class="p-1.5 rounded-lg hover:bg-pines-400">' +
             ICONS.xMark +
           '</button>' +
         '</div>' +
         '<nav class="flex-1 px-2 py-4 space-y-1 overflow-y-auto">' +
-          buildNavItems(false) +
+          buildMobileNavItems() +
         '</nav>' +
       '</aside>' +
     '</div>';
   }
 
-  // ── CSS for sidebar transitions ──────────────────────────────────
+  // ── CSS ────────────────────────────────────────────────────────────
   function injectStyles() {
     var style = document.createElement('style');
     style.textContent = '' +
-      '#posa-sidebar.sidebar-expanded { width: 16rem; }' +
-      '#posa-sidebar.sidebar-collapsed { width: 4rem; }' +
-      '#posa-sidebar.sidebar-collapsed .sidebar-label { display: none; }' +
-      '#posa-sidebar.sidebar-collapsed img.h-8 { margin-left: auto; margin-right: auto; }' +
-      '#posa-sidebar { transition: width 0.3s ease; }' +
-      /* Prevent FOUC — body hidden until sidebar injects */
+      '#posa-sidebar { width: 16rem; }' +
+      '#posa-sidebar .posa-rail { width: 3.5rem; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.15); }' +
+      '#posa-sidebar .posa-nav-panel { width: 12.5rem; flex-shrink: 0; }' +
+      /* Prevent FOUC */
       'body.sidebar-loading > *:not(script):not(style):not(link) { visibility: hidden; }' +
       'body.sidebar-ready > * { visibility: visible; }';
     document.head.appendChild(style);
@@ -190,9 +225,6 @@
     // Get existing page content
     var pageContent = body.innerHTML;
 
-    // Read collapse state
-    var collapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-
     // Build layout
     var layoutHTML = '' +
       '<div id="posa-layout" class="flex h-screen overflow-hidden">' +
@@ -214,38 +246,7 @@
     body.classList.remove('sidebar-loading');
     body.classList.add('sidebar-ready');
 
-    // Apply initial collapse state
-    var sidebar = document.getElementById('posa-sidebar');
-    if (sidebar && collapsed) {
-      sidebar.classList.remove('sidebar-expanded');
-      sidebar.classList.add('sidebar-collapsed');
-      var toggleBtn = document.getElementById('sidebar-toggle');
-      if (toggleBtn) {
-        toggleBtn.innerHTML = ICONS.chevronDoubleRight;
-      }
-    }
-
     // ── Event listeners ────────────────────────────────────────────
-
-    // Collapse toggle
-    var toggleBtn = document.getElementById('sidebar-toggle');
-    if (toggleBtn) {
-      toggleBtn.addEventListener('click', function() {
-        var sb = document.getElementById('posa-sidebar');
-        var isCollapsed = sb.classList.contains('sidebar-collapsed');
-        if (isCollapsed) {
-          sb.classList.remove('sidebar-collapsed');
-          sb.classList.add('sidebar-expanded');
-          toggleBtn.innerHTML = ICONS.chevronDoubleLeft + '<span class="ml-3 sidebar-label">Collapse</span>';
-          localStorage.setItem('sidebarCollapsed', 'false');
-        } else {
-          sb.classList.remove('sidebar-expanded');
-          sb.classList.add('sidebar-collapsed');
-          toggleBtn.innerHTML = ICONS.chevronDoubleRight;
-          localStorage.setItem('sidebarCollapsed', 'true');
-        }
-      });
-    }
 
     // Mobile menu open
     var mobileBtn = document.getElementById('mobile-menu-btn');
@@ -274,7 +275,6 @@
 
   // ── Boot ─────────────────────────────────────────────────────────
   injectStyles();
-  // Add loading class to prevent FOUC
   document.body.classList.add('sidebar-loading');
 
   if (document.readyState === 'loading') {
