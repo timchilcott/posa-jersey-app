@@ -164,14 +164,10 @@
                                     </td>
                                 </template>
 
-                                <!-- EVENT ROW: Name + Coach/Sport -->
+                                <!-- EVENT ROW: Name + Sport -->
                                 <template x-if="!entry._isHeader">
                                     <td class="px-4 py-3 whitespace-nowrap">
                                         <div class="text-sm text-gray-900" x-text="entry.name"></div>
-                                        <!-- Show coach/team name for practices -->
-                                        <div x-show="entry.eventType === 'practice' && entry.teams && entry.teams.length > 0"
-                                             class="text-xs text-pines-600 font-medium mt-0.5"
-                                             x-text="entry.teams && entry.teams[0] ? entry.teams[0].name : ''"></div>
                                         <div x-show="entry.sport" class="text-xs text-gray-400 mt-0.5">
                                             <span x-html="sportEmoji(entry.sport)"></span>
                                             <span x-text="entry.sport"></span>
@@ -179,7 +175,7 @@
                                     </td>
                                 </template>
 
-                                <!-- EVENT ROW: Teams matchup -->
+                                <!-- EVENT ROW: Teams matchup / Coach -->
                                 <template x-if="!entry._isHeader">
                                     <td class="px-4 py-3 whitespace-nowrap">
                                         <template x-if="entry.teams && entry.teams.length > 0">
