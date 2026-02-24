@@ -162,7 +162,7 @@
         '<div class="flex items-center justify-center h-16 flex-shrink-0">' +
           '<img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-7">' +
         '</div>' +
-        '<nav class="flex-1 flex flex-col items-center py-4 space-y-1 overflow-y-auto">' +
+        '<nav class="flex-1 flex flex-col items-center py-4 space-y-1 overflow-visible">' +
           buildRailItems() +
         '</nav>' +
       '</div>';
@@ -226,7 +226,7 @@
     var style = document.createElement('style');
     style.textContent = '' +
       '#posa-sidebar { width: ' + (hasPanel ? '16rem' : '3.5rem') + '; }' +
-      '#posa-sidebar .posa-rail { width: 3.5rem; flex-shrink: 0; }' +
+      '#posa-sidebar .posa-rail { width: 3.5rem; flex-shrink: 0; overflow: visible; }' +
       '#posa-sidebar .posa-nav-panel { width: 12.5rem; flex-shrink: 0; border-left: 1px solid #e5e7eb; }' +
       /* Tooltips */
       '.posa-tooltip {' +

@@ -18,6 +18,7 @@
     </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>[x-cloak] { display: none !important; }</style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body class="bg-gray-50" x-data="eventsApp()" x-init="init()" x-cloak>
 
@@ -163,10 +164,14 @@
                                     </td>
                                 </template>
 
-                                <!-- EVENT ROW: Name + Sport -->
+                                <!-- EVENT ROW: Name + Coach/Sport -->
                                 <template x-if="!entry._isHeader">
                                     <td class="px-4 py-3 whitespace-nowrap">
                                         <div class="text-sm text-gray-900" x-text="entry.name"></div>
+                                        <!-- Show coach/team name for practices -->
+                                        <div x-show="entry.eventType === 'practice' && entry.teams && entry.teams.length > 0"
+                                             class="text-xs text-pines-600 font-medium mt-0.5"
+                                             x-text="entry.teams && entry.teams[0] ? entry.teams[0].name : ''"></div>
                                         <div x-show="entry.sport" class="text-xs text-gray-400 mt-0.5">
                                             <span x-html="sportEmoji(entry.sport)"></span>
                                             <span x-text="entry.sport"></span>
@@ -255,6 +260,10 @@
                         <span x-html="sportEmoji(selectedEvent.sport)"></span>
                         <span x-text="selectedEvent.sport || '--'"></span>
                     </p>
+                </div>
+                <div x-show="selectedEvent.eventType === 'practice' && selectedEvent.teams && selectedEvent.teams.length > 0">
+                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Coach / Group</label>
+                    <p class="text-sm font-medium text-pines-700" x-text="selectedEvent.teams && selectedEvent.teams[0] ? selectedEvent.teams[0].name : '--'"></p>
                 </div>
                 <div x-show="selectedEvent.location">
                     <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Location</label>
