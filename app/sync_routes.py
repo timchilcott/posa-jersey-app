@@ -265,7 +265,11 @@ def sync_events(db: Session = Depends(get_db)):
 # ------------------------------------------------------------------
 @router.get("/api/debug/schema-introspect")
 def debug_schema_introspect(type_name: str = "Team"):
-    """Introspect a GraphQL type to discover all available fields."""
+    """
+    Introspect a GraphQL type to discover all available fields.
+    Also recursively resolves OBJECT-type fields one level deep.
+    Usage: /api/debug/schema-introspect?type_name=Brand
+    """
     from app.services.sportsengine import is_configured, graphql_query
 
     if not is_configured():
@@ -275,12 +279,13 @@ def debug_schema_introspect(type_name: str = "Team"):
     query IntrospectType($typeName: String!) {
         __type(name: $typeName) {
             name
+            kind
             fields {
                 name
                 type {
                     name
                     kind
-                    ofType { name kind ofType { name kind } }
+                    ofType { name kind ofType { name kind ofType { name kind } } }
                 }
             }
         }
@@ -288,7 +293,38 @@ def debug_schema_introspect(type_name: str = "Team"):
     """
     try:
         data = graphql_query(query, {"typeName": type_name})
-        return data
+        type_info = (data or {}).get("__type")
+
+        if not type_info:
+            return {"error": f"Type '{type_name}' not found", "hint": "Try 'Event', 'Team', 'Brand', or 'Query'"}
+
+        # For each OBJECT field, fetch its sub-fields too
+        nested = {}
+        for field in (type_info.get("fields") or []):
+            ft = field.get("type", {})
+            # Resolve through NON_NULL / LIST wrappers
+            resolved = ft
+            while resolved and resolved.get("kind") in ("NON_NULL", "LIST"):
+                resolved = resolved.get("ofType") or {}
+            resolved_name = resolved.get("name") if resolved else None
+            resolved_kind = resolved.get("kind") if resolved else None
+
+            if resolved_kind == "OBJECT" and resolved_name:
+                try:
+                    sub = graphql_query(query, {"typeName": resolved_name})
+                    sub_type = (sub or {}).get("__type")
+                    if sub_type and sub_type.get("fields"):
+                        nested[field["name"]] = {
+                            "typeName": resolved_name,
+                            "fields": [f["name"] for f in sub_type["fields"]],
+                        }
+                except Exception:
+                    pass
+
+        result = {"type": type_info}
+        if nested:
+            result["nestedObjectFields"] = nested
+        return result
     except Exception as e:
         return {"error": str(e)}
 
