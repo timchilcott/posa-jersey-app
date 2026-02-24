@@ -1326,14 +1326,79 @@ query GetEvents($orgId: Int!, $page: Int!, $perPage: Int!) {
                 primaryColor
                 homeTeam
                 name
-                brand {
-                    logoUrl
-                }
             }
         }
     }
 }
 """
+
+
+TEAMS_LOGO_QUERY = """
+query GetTeams($orgId: Int!, $page: Int!, $perPage: Int!) {
+    teams(
+        organizationId: $orgId
+        page: $page
+        perPage: $perPage
+    ) {
+        pageInformation {
+            pages
+            count
+            page
+            perPage
+        }
+        results {
+            id
+            name
+            brand {
+                logoUrl
+            }
+        }
+    }
+}
+"""
+
+
+def get_team_logo_map() -> dict:
+    """
+    Fetch all teams for the org and return a dict mapping
+    lowercased team name -> logoUrl.  Only includes teams
+    that actually have a logo.
+    """
+    org_id = os.getenv("SPORTSENGINE_ORG_ID")
+    if not org_id:
+        return {}
+
+    logo_map = {}
+    page = 1
+
+    while True:
+        try:
+            data = graphql_query(TEAMS_LOGO_QUERY, {
+                "orgId": int(org_id),
+                "page": page,
+                "perPage": 100,
+            })
+        except Exception as e:
+            logger.warning(f"TEAMS LOGO: Failed to fetch page {page}: {e}")
+            break
+
+        teams_data = data.get("teams", {})
+        page_info = teams_data.get("pageInformation", {})
+        results = teams_data.get("results", [])
+
+        for team in results:
+            brand = team.get("brand") or {}
+            logo_url = brand.get("logoUrl")
+            name = team.get("name")
+            if logo_url and name:
+                logo_map[name.lower()] = logo_url
+
+        if page >= page_info.get("pages", 1):
+            break
+        page += 1
+
+    logger.info(f"TEAMS LOGO: Found {len(logo_map)} teams with logos")
+    return logo_map
 
 
 def get_events(page: int = 1, per_page: int = 100) -> dict:
@@ -1424,6 +1489,13 @@ def sync_all_events(db: Session, days_back: int = 30, days_forward: int = 90) ->
 
     logger.info(f"EVENT SYNC: Fetching events (date window {window_start.date()} to {window_end.date()})")
 
+    # Fetch team logos once up-front so we can attach them to event teams
+    logo_map = {}
+    try:
+        logo_map = get_team_logo_map()
+    except Exception as e:
+        logger.warning(f"EVENT SYNC: Could not fetch team logos: {e}")
+
     page = 1
     while True:
         try:
@@ -1448,7 +1520,7 @@ def sync_all_events(db: Session, days_back: int = 30, days_forward: int = 90) ->
                 if event_start and (event_start < window_start or event_start > window_end):
                     results["skipped_out_of_range"] += 1
                     continue
-                _upsert_event(event_data, db, results)
+                _upsert_event(event_data, db, results, logo_map=logo_map)
             except Exception as e:
                 logger.error(f"EVENT SYNC: Error processing event {event_data.get('id')}: {e}")
                 results["errors"].append(str(e))
@@ -1464,13 +1536,16 @@ def sync_all_events(db: Session, days_back: int = 30, days_forward: int = 90) ->
     return results
 
 
-def _upsert_event(event_data: dict, db: Session, results: dict) -> None:
+def _upsert_event(event_data: dict, db: Session, results: dict, logo_map: dict = None) -> None:
     """Create or update a single event from SportsEngine data."""
     from app.models_events import Event
 
     se_id = str(event_data.get("id"))
     if not se_id:
         return
+
+    if logo_map is None:
+        logo_map = {}
 
     # Extract location
     location = event_data.get("location") or {}
@@ -1487,7 +1562,7 @@ def _upsert_event(event_data: dict, db: Session, results: dict) -> None:
     else:
         address_str = str(address_data) if address_data else None
 
-    # Extract teams (including brand logoUrl if available)
+    # Extract teams and match logos from the pre-fetched logo_map
     teams_raw = event_data.get("eventTeams") or []
     teams_json = []
     for t in teams_raw:
@@ -1497,9 +1572,11 @@ def _upsert_event(event_data: dict, db: Session, results: dict) -> None:
             "primaryColor": t.get("primaryColor"),
             "homeTeam": t.get("homeTeam"),
         }
-        brand = t.get("brand") or {}
-        if brand.get("logoUrl"):
-            team_entry["logoUrl"] = brand["logoUrl"]
+        # Match logo by team name (case-insensitive)
+        team_name = t.get("name") or ""
+        logo_url = logo_map.get(team_name.lower())
+        if logo_url:
+            team_entry["logoUrl"] = logo_url
         teams_json.append(team_entry)
 
     sport = _extract_sport_from_event(event_data)
