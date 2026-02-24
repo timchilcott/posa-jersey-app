@@ -1333,7 +1333,7 @@ query GetEvents($orgId: Int!, $page: Int!, $perPage: Int!) {
 """
 
 
-TEAMS_LOGO_QUERY = """
+TEAMS_QUERY = """
 query GetTeams($orgId: Int!, $page: Int!, $perPage: Int!) {
     teams(
         organizationId: $orgId
@@ -1352,28 +1352,6 @@ query GetTeams($orgId: Int!, $page: Int!, $perPage: Int!) {
             brand {
                 logoUrl
             }
-        }
-    }
-}
-"""
-
-
-TEAMS_EVENTS_QUERY = """
-query GetTeamEvents($orgId: Int!, $page: Int!, $perPage: Int!) {
-    teams(
-        organizationId: $orgId
-        page: $page
-        perPage: $perPage
-    ) {
-        pageInformation {
-            pages
-            count
-            page
-            perPage
-        }
-        results {
-            id
-            name
             events(perPage: 200) {
                 results {
                     id
@@ -1385,73 +1363,31 @@ query GetTeamEvents($orgId: Int!, $page: Int!, $perPage: Int!) {
 """
 
 
-def get_team_logo_map() -> dict:
+def get_team_data() -> tuple:
     """
-    Fetch all teams for the org and return a dict mapping
-    lowercased team name -> logoUrl.  Only includes teams
-    that actually have a logo.
+    Fetch all teams in a single API call and return both:
+      - logo_map: dict of lowercased team name -> logoUrl
+      - event_team_map: dict of SportsEngine event_id (str) -> team_name (str)
+
+    Previously these were two separate API round-trips; now combined into one.
     """
     org_id = os.getenv("SPORTSENGINE_ORG_ID")
     if not org_id:
-        return {}
+        return {}, {}
 
     logo_map = {}
-    page = 1
-
-    while True:
-        try:
-            data = graphql_query(TEAMS_LOGO_QUERY, {
-                "orgId": int(org_id),
-                "page": page,
-                "perPage": 100,
-            })
-        except Exception as e:
-            logger.warning(f"TEAMS LOGO: Failed to fetch page {page}: {e}")
-            break
-
-        teams_data = data.get("teams", {})
-        page_info = teams_data.get("pageInformation", {})
-        results = teams_data.get("results", [])
-
-        for team in results:
-            brand = team.get("brand") or {}
-            logo_url = brand.get("logoUrl")
-            name = team.get("name")
-            if logo_url and name:
-                logo_map[name.lower()] = logo_url
-
-        if page >= page_info.get("pages", 1):
-            break
-        page += 1
-
-    logger.info(f"TEAMS LOGO: Found {len(logo_map)} teams with logos")
-    return logo_map
-
-
-def get_event_team_map() -> dict:
-    """
-    Fetch all teams and their associated events, returning a dict mapping
-    SportsEngine event_id (str) -> team_name (str).
-
-    This solves the problem where practice events have null eventTeams.name
-    in the events API, but teams still know which events they're associated with.
-    """
-    org_id = os.getenv("SPORTSENGINE_ORG_ID")
-    if not org_id:
-        return {}
-
     event_team_map = {}
     page = 1
 
     while True:
         try:
-            data = graphql_query(TEAMS_EVENTS_QUERY, {
+            data = graphql_query(TEAMS_QUERY, {
                 "orgId": int(org_id),
                 "page": page,
                 "perPage": 100,
             })
         except Exception as e:
-            logger.warning(f"TEAM EVENTS: Failed to fetch page {page}: {e}")
+            logger.warning(f"TEAMS: Failed to fetch page {page}: {e}")
             break
 
         teams_data = data.get("teams", {})
@@ -1459,23 +1395,29 @@ def get_event_team_map() -> dict:
         results = teams_data.get("results", [])
 
         for team in results:
-            team_name = team.get("name")
-            if not team_name:
+            name = team.get("name")
+            if not name:
                 continue
+
+            # Logos
+            brand = team.get("brand") or {}
+            logo_url = brand.get("logoUrl")
+            if logo_url:
+                logo_map[name.lower()] = logo_url
+
+            # Event-to-team mapping (for resolving practice coach names)
             events = (team.get("events") or {}).get("results") or []
             for evt in events:
                 evt_id = str(evt.get("id"))
                 if evt_id:
-                    # If multiple teams share an event (games), the last one wins
-                    # but for practices (single team), this gives us the right name
-                    event_team_map[evt_id] = team_name
+                    event_team_map[evt_id] = name
 
         if page >= page_info.get("pages", 1):
             break
         page += 1
 
-    logger.info(f"TEAM EVENTS: Mapped {len(event_team_map)} events to team names")
-    return event_team_map
+    logger.info(f"TEAMS: Found {len(logo_map)} logos, mapped {len(event_team_map)} events to teams")
+    return logo_map, event_team_map
 
 
 def get_events(page: int = 1, per_page: int = 100) -> dict:
@@ -1566,20 +1508,13 @@ def sync_all_events(db: Session, days_back: int = 30, days_forward: int = 90) ->
 
     logger.info(f"EVENT SYNC: Fetching events (date window {window_start.date()} to {window_end.date()})")
 
-    # Fetch team logos once up-front so we can attach them to event teams
+    # Fetch team logos + event mappings in a single API call
     logo_map = {}
-    try:
-        logo_map = get_team_logo_map()
-    except Exception as e:
-        logger.warning(f"EVENT SYNC: Could not fetch team logos: {e}")
-
-    # Fetch team→event mappings so we can resolve team names for practices
-    # (practice events have null eventTeams.name in the events API)
     event_team_map = {}
     try:
-        event_team_map = get_event_team_map()
+        logo_map, event_team_map = get_team_data()
     except Exception as e:
-        logger.warning(f"EVENT SYNC: Could not fetch event-team map: {e}")
+        logger.warning(f"EVENT SYNC: Could not fetch team data: {e}")
 
     page = 1
     while True:
