@@ -59,27 +59,14 @@
     ]},
   ];
 
-  // ── Page titles for the heading bar ───────────────────────────────
-  var PAGE_TITLES = {
-    '/admin': 'All Players',
-    '/admin/add': 'Add Player',
-    '/admin/settings': 'Player Settings',
-    '/sportsengine': 'Sync Registrations',
-    '/admin/volunteers': 'All Volunteers',
-    '/admin/volunteers/settings': 'Volunteer Settings',
-    '/inventory': 'Equipment',
-    '/inventory/checked-out': 'Checked Out',
-    '/inventory/add': 'Add Item',
-    '/inventory/settings': 'Equipment Settings',
-    '/members': 'Members',
-    '/members/settings': 'Member Settings',
-    '/events': 'Schedule',
-    '/events/settings': 'Schedule Settings',
-    '/email-templates': 'Email Templates',
-  };
-
+  // ── Derive page title from the active child nav item for consistency ──
   function getPageTitle() {
-    return PAGE_TITLES[currentPath] || '';
+    var active = getActiveSection();
+    if (!active || !active.children) return '';
+    for (var i = 0; i < active.children.length; i++) {
+      if (isChildActive(active.children[i])) return active.children[i].label;
+    }
+    return '';
   }
 
   function isActive(item) {

@@ -152,11 +152,11 @@
                 <table class="min-w-full">
                     <thead>
                         <tr class="border-b border-gray-200">
-                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Player</th>
-                            <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Jersey</th>
-                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Email</th>
-                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Registrations</th>
-                            <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Status</th>
+                            <th x-show="ecv('player')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Player</th>
+                            <th x-show="ecv('jersey')" class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Jersey</th>
+                            <th x-show="ecv('email')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Email</th>
+                            <th x-show="ecv('registrations')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Registrations</th>
+                            <th x-show="ecv('status')" class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -164,26 +164,26 @@
                             <tr :class="item._isHeader ? 'bg-gray-100/70 border-t border-gray-200' : rowClass(item)"
                                 @click="!item._isHeader && openPanel(item)">
                                 <template x-if="item._isHeader">
-                                    <td colspan="5" class="px-4 py-2.5">
+                                    <td :colspan="visibleCount" class="px-4 py-2.5">
                                         <span class="text-sm font-bold text-gray-900" x-text="'Birth Year ' + item.birthYear"></span>
                                         <span class="ml-2 text-xs text-gray-500 font-normal" x-text="item._count + ' players'"></span>
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3 whitespace-nowrap">
+                                    <td x-show="ecv('player')" class="px-4 py-3 whitespace-nowrap">
                                         <div class="text-sm font-medium text-gray-900" x-text="item.name"></div>
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3 text-center whitespace-nowrap">
+                                    <td x-show="ecv('jersey')" class="px-4 py-3 text-center whitespace-nowrap">
                                         <span class="text-sm text-gray-900" x-text="item.jersey || '-'"></span>
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3 whitespace-nowrap"><div class="text-sm text-gray-900" x-text="item.email"></div></td>
+                                    <td x-show="ecv('email')" class="px-4 py-3 whitespace-nowrap"><div class="text-sm text-gray-900" x-text="item.email"></div></td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3 whitespace-nowrap">
+                                    <td x-show="ecv('registrations')" class="px-4 py-3 whitespace-nowrap">
                                         <div class="flex flex-nowrap gap-1">
                                             <template x-for="reg in sortedRegs(item.registrations)" :key="reg.id">
                                                 <span class="inline-flex items-center px-1.5 py-0.5 text-xs rounded cursor-default"
@@ -197,7 +197,7 @@
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3 text-center whitespace-nowrap">
+                                    <td x-show="ecv('status')" class="px-4 py-3 text-center whitespace-nowrap">
                                         <span x-show="!item.emailSent" class="text-xs text-orange-600">Needs Email</span>
                                         <span x-show="item.emailSent" class="text-xs text-green-600">&#10003; Sent</span>
                                     </td>
@@ -297,6 +297,7 @@
         </div>
     </div>
 
+    <script src="/static/column-config.js"></script>
     <script>
     function tableApp() {
         return {
@@ -313,8 +314,25 @@
             birthYearColorMap: {},
             duplicateJerseys: new Set(),
             displayList: [],
+            colVis: {},
+            _filterColMap: { status: 'status' },
+
+            ecv(colId) {
+                if (this.colVis[colId]) return true;
+                for (var fk in this._filterColMap) {
+                    if (this._filterColMap[fk] === colId && this.filters[fk]) return true;
+                }
+                return false;
+            },
+
+            get visibleCount() {
+                var c = 0;
+                for (var k in this.colVis) { if (this.ecv(k)) c++; }
+                return c || 1;
+            },
 
             async init() {
+                this.colVis = window.POSA_COLUMNS.load('players');
                 await this.loadPlayers();
                 this.loading = false;
             },

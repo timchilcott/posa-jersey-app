@@ -105,27 +105,27 @@
                 <table class="min-w-full">
                     <thead>
                         <tr class="border-b border-gray-200">
-                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Name</th>
-                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Email</th>
-                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Registration Type</th>
-                            <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Status</th>
+                            <th x-show="ecv('name')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Name</th>
+                            <th x-show="ecv('email')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Email</th>
+                            <th x-show="ecv('registration_type')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Registration Type</th>
+                            <th x-show="ecv('status')" class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         <template x-for="vol in filtered" :key="vol.id">
                             <tr class="hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100" @click="openPanel(vol)">
-                                <td class="px-4 py-3 whitespace-nowrap">
+                                <td x-show="ecv('name')" class="px-4 py-3 whitespace-nowrap">
                                     <div class="text-sm font-medium text-gray-900" x-text="vol.name"></div>
                                 </td>
-                                <td class="px-4 py-3 whitespace-nowrap"><div class="text-sm text-gray-900" x-text="vol.email"></div></td>
-                                <td class="px-4 py-3 whitespace-nowrap">
+                                <td x-show="ecv('email')" class="px-4 py-3 whitespace-nowrap"><div class="text-sm text-gray-900" x-text="vol.email"></div></td>
+                                <td x-show="ecv('registration_type')" class="px-4 py-3 whitespace-nowrap">
                                     <div class="flex flex-nowrap gap-1">
                                         <template x-for="reg in vol.registrations" :key="reg.id">
                                             <span class="inline-flex items-center px-2 py-0.5 text-xs rounded text-gray-700 bg-gray-100" x-text="reg.division"></span>
                                         </template>
                                     </div>
                                 </td>
-                                <td class="px-4 py-3 text-center whitespace-nowrap">
+                                <td x-show="ecv('status')" class="px-4 py-3 text-center whitespace-nowrap">
                                     <span x-show="!vol.emailSent" class="text-xs text-orange-600">Needs Email</span>
                                     <span x-show="vol.emailSent" class="text-xs text-green-600">&#10003; Sent</span>
                                 </td>
@@ -192,6 +192,7 @@
         </div>
     </div>
 
+    <script src="/static/column-config.js"></script>
     <script>
     function volunteerApp() {
         return {
@@ -204,8 +205,19 @@
             typeFilter: '',
             statusFilter: '',
             availableTypes: [],
+            colVis: {},
+            _filterColMap: { typeFilter: 'registration_type', statusFilter: 'status' },
+
+            ecv(colId) {
+                if (this.colVis[colId]) return true;
+                for (var fk in this._filterColMap) {
+                    if (this._filterColMap[fk] === colId && this[fk]) return true;
+                }
+                return false;
+            },
 
             async init() {
+                this.colVis = window.POSA_COLUMNS.load('volunteers');
                 try {
                     const response = await fetch('/api/admin/players?volunteers_only=true');
                     const data = await response.json();

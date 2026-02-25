@@ -106,22 +106,14 @@
         <div x-show="!loading">
             <div class="overflow-x-auto">
                 <table class="min-w-full">
-                    <colgroup>
-                        <col style="width: 20%"><!-- Member -->
-                        <col style="width: 8%"><!-- Jersey -->
-                        <col style="width: 22%"><!-- Email -->
-                        <col style="width: 14%"><!-- Phone -->
-                        <col style="width: 20%"><!-- Registrations -->
-                        <col style="width: 16%"><!-- Guardians -->
-                    </colgroup>
                     <thead>
                         <tr class="border-b border-gray-200">
-                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Member</th>
-                            <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Jersey</th>
-                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Email</th>
-                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Phone</th>
-                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Registrations</th>
-                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Guardians</th>
+                            <th x-show="ecv('member')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Member</th>
+                            <th x-show="ecv('jersey')" class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Jersey</th>
+                            <th x-show="ecv('email')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Email</th>
+                            <th x-show="ecv('phone')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Phone</th>
+                            <th x-show="ecv('registrations')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Registrations</th>
+                            <th x-show="ecv('guardians')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Guardians</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -131,40 +123,40 @@
 
                                 <!-- Letter header row -->
                                 <template x-if="item._isHeader">
-                                    <td colspan="6" class="px-4 py-2.5">
+                                    <td :colspan="visibleCount" class="px-4 py-2.5">
                                         <span class="text-sm font-bold text-gray-900" x-text="item._letter"></span>
                                         <span class="ml-2 text-xs text-gray-500 font-normal" x-text="item._count + ' members'"></span>
                                     </td>
                                 </template>
 
                                 <!-- Member name -->
-                                <template x-if="!item._isHeader">
+                                <template x-if="!item._isHeader && ecv('member')">
                                     <td class="px-4 py-3 whitespace-nowrap">
                                         <div class="text-sm font-medium text-gray-900" x-text="displayName(item)"></div>
                                         <div class="text-xs text-gray-500" x-show="item.dateOfBirth" x-text="formatDob(item.dateOfBirth)"></div>
                                     </td>
                                 </template>
                                 <!-- Jersey -->
-                                <template x-if="!item._isHeader">
+                                <template x-if="!item._isHeader && ecv('jersey')">
                                     <td class="px-4 py-3 text-center whitespace-nowrap">
                                         <span x-show="item.player && item.player.jerseyNumber" class="text-sm text-gray-900" x-text="item.player ? item.player.jerseyNumber : ''"></span>
                                         <span x-show="!item.player || !item.player.jerseyNumber" class="text-sm text-gray-300">-</span>
                                     </td>
                                 </template>
                                 <!-- Email -->
-                                <template x-if="!item._isHeader">
+                                <template x-if="!item._isHeader && ecv('email')">
                                     <td class="px-4 py-3 whitespace-nowrap">
                                         <div class="text-sm text-gray-900" x-text="item.email || '-'"></div>
                                     </td>
                                 </template>
                                 <!-- Phone -->
-                                <template x-if="!item._isHeader">
+                                <template x-if="!item._isHeader && ecv('phone')">
                                     <td class="px-4 py-3 whitespace-nowrap">
                                         <div class="text-sm text-gray-900" x-text="formatPhone(item.phone) || '-'"></div>
                                     </td>
                                 </template>
                                 <!-- Registrations -->
-                                <template x-if="!item._isHeader">
+                                <template x-if="!item._isHeader && ecv('registrations')">
                                     <td class="px-4 py-3 whitespace-nowrap">
                                         <template x-if="item.player && item.player.registrations && item.player.registrations.length > 0">
                                             <div class="flex flex-nowrap gap-1">
@@ -184,7 +176,7 @@
                                     </td>
                                 </template>
                                 <!-- Guardians -->
-                                <template x-if="!item._isHeader">
+                                <template x-if="!item._isHeader && ecv('guardians')">
                                     <td class="px-4 py-3 whitespace-nowrap">
                                         <template x-if="item.guardians && item.guardians.length > 0">
                                             <div class="flex flex-wrap gap-0.5">
@@ -340,6 +332,7 @@
         </div>
     </div>
 
+    <script src="/static/column-config.js"></script>
     <script>
     function membersApp() {
         return {
@@ -352,8 +345,32 @@
             selectedMember: null,
             filters: { search: '', type: '', city: '' },
             availableCities: [],
+            colVis: {},
+            _filterColMap: {},
+
+            get visibleCount() {
+                var n = 0;
+                var cols = ['member', 'jersey', 'email', 'phone', 'registrations', 'guardians'];
+                for (var i = 0; i < cols.length; i++) {
+                    if (this.ecv(cols[i])) n++;
+                }
+                return n;
+            },
+
+            ecv(colId) {
+                if (this.colVis[colId] !== undefined && this.colVis[colId]) return true;
+                var fKeys = Object.keys(this._filterColMap);
+                for (var i = 0; i < fKeys.length; i++) {
+                    if (this._filterColMap[fKeys[i]] === colId) {
+                        var v = this.filters[fKeys[i]];
+                        if (Array.isArray(v) ? v.length > 0 : !!v) return true;
+                    }
+                }
+                return this.colVis[colId] !== undefined ? this.colVis[colId] : true;
+            },
 
             async init() {
+                this.colVis = window.POSA_COLUMNS.load('members');
                 await this.loadMembers();
                 this.loading = false;
             },
