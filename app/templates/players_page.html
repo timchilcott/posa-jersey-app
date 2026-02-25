@@ -162,20 +162,20 @@
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3 border-b border-gray-100 whitespace-nowrap">
+                                    <td class="px-4 py-3 whitespace-nowrap">
                                         <div class="text-sm font-medium text-gray-900" x-text="item.name"></div>
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3 text-center border-b border-gray-100 whitespace-nowrap">
+                                    <td class="px-4 py-3 text-center whitespace-nowrap">
                                         <span class="text-sm text-gray-900" x-text="item.jersey || '-'"></span>
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3 border-b border-gray-100 whitespace-nowrap"><div class="text-sm text-gray-900" x-text="item.email"></div></td>
+                                    <td class="px-4 py-3 whitespace-nowrap"><div class="text-sm text-gray-900" x-text="item.email"></div></td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3 border-b border-gray-100 whitespace-nowrap">
+                                    <td class="px-4 py-3 whitespace-nowrap">
                                         <div class="flex flex-nowrap gap-1">
                                             <template x-for="reg in sortedRegs(item.registrations)" :key="reg.id">
                                                 <span class="inline-flex items-center px-1.5 py-0.5 text-xs rounded cursor-default"
@@ -189,7 +189,7 @@
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3 text-center border-b border-gray-100 whitespace-nowrap">
+                                    <td class="px-4 py-3 text-center whitespace-nowrap">
                                         <span x-show="!item.emailSent" class="text-xs text-orange-600">Needs Email</span>
                                         <span x-show="item.emailSent" class="text-xs text-green-600">&#10003; Sent</span>
                                     </td>
@@ -437,8 +437,8 @@
             },
 
             rowClass(player) {
-                if (this.duplicateJerseys.has(player.id)) return 'bg-red-50/50 hover:bg-red-50 cursor-pointer transition-colors';
-                return 'hover:bg-gray-50 cursor-pointer transition-colors';
+                if (this.duplicateJerseys.has(player.id)) return 'bg-red-50/50 hover:bg-red-50 cursor-pointer transition-colors border-b border-gray-200';
+                return 'hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-200';
             },
 
             openPanel(player) {

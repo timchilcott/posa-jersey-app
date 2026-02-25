@@ -151,7 +151,7 @@
                     </thead>
                     <tbody>
                         <template x-for="entry in displayList" :key="entry._key">
-                            <tr :class="entry._type === 'sportHeader' ? 'bg-gray-50 border-t border-gray-200' : 'hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100'"
+                            <tr :class="entry._type === 'sportHeader' ? 'bg-gray-50 border-t border-gray-200' : 'hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-200'"
                                 @click="entry._type === 'item' && openPanel(entry)">
                             <!-- SPORT HEADER -->
                             <template x-if="entry._type === 'sportHeader'">
