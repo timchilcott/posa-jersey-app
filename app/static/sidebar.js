@@ -37,30 +37,45 @@
       { label: 'Add Player', href: '/admin/add', childIcon: 'fa-solid fa-plus' },
       { label: 'Sync Registrations', href: '/sportsengine', childIcon: 'fa-solid fa-arrows-rotate' },
       { label: 'Email Templates', href: '/email-templates', childIcon: 'fa-regular fa-envelope' },
+      { label: 'Settings', href: '/admin/settings', childIcon: 'fa-solid fa-gear' },
     ]},
-    { label: 'Volunteers', href: '/admin/volunteers', icon: ICONS.handshakeAngle, match: ['/admin/volunteers'] },
+    { label: 'Volunteers', href: '/admin/volunteers', icon: ICONS.handshakeAngle, match: ['/admin/volunteers'], children: [
+      { label: 'All Volunteers', href: '/admin/volunteers', childIcon: 'fa-solid fa-list' },
+      { label: 'Settings', href: '/admin/volunteers/settings', childIcon: 'fa-solid fa-gear' },
+    ]},
     { label: 'Equipment', href: '/inventory', icon: ICONS.barcode, match: ['/inventory'], children: [
       { label: 'All Equipment', href: '/inventory', childIcon: 'fa-solid fa-list' },
       { label: 'Checked Out', href: '/inventory/checked-out', childIcon: 'fa-solid fa-arrow-right-from-bracket' },
       { label: 'Add Item', href: '/inventory/add', childIcon: 'fa-solid fa-plus' },
+      { label: 'Settings', href: '/inventory/settings', childIcon: 'fa-solid fa-gear' },
     ]},
-    { label: 'Members', href: '/members', icon: ICONS.users, match: ['/members'] },
-    { label: 'Schedule', href: '/events', icon: ICONS.calendar, match: ['/events'] },
+    { label: 'Members', href: '/members', icon: ICONS.users, match: ['/members'], children: [
+      { label: 'All Members', href: '/members', childIcon: 'fa-solid fa-list' },
+      { label: 'Settings', href: '/members/settings', childIcon: 'fa-solid fa-gear' },
+    ]},
+    { label: 'Schedule', href: '/events', icon: ICONS.calendar, match: ['/events'], children: [
+      { label: 'All Events', href: '/events', childIcon: 'fa-solid fa-list' },
+      { label: 'Settings', href: '/events/settings', childIcon: 'fa-solid fa-gear' },
+    ]},
   ];
 
   // ── Page titles for the heading bar ───────────────────────────────
   var PAGE_TITLES = {
     '/admin': 'All Players',
     '/admin/add': 'Add Player',
+    '/admin/settings': 'Player Settings',
     '/sportsengine': 'Sync Registrations',
-    '/admin/volunteers': 'Volunteers',
+    '/admin/volunteers': 'All Volunteers',
+    '/admin/volunteers/settings': 'Volunteer Settings',
     '/inventory': 'Equipment',
     '/inventory/checked-out': 'Checked Out',
     '/inventory/add': 'Add Item',
+    '/inventory/settings': 'Equipment Settings',
     '/members': 'Members',
+    '/members/settings': 'Member Settings',
     '/events': 'Schedule',
+    '/events/settings': 'Schedule Settings',
     '/email-templates': 'Email Templates',
-    '/settings': 'Settings',
   };
 
   function getPageTitle() {
@@ -73,14 +88,13 @@
     if (item.children) {
       return item.children.some(function(c) { return isChildActive(c); });
     }
-    // Volunteers needs exact prefix match that doesn't collide with /admin
-    if (item.href === '/admin/volunteers') return currentPath.startsWith('/admin/volunteers');
     return item.match.some(function(p) { return currentPath.startsWith(p); });
   }
 
   function isChildActive(child) {
-    // Exact match for index pages (e.g., /inventory, /admin)
-    if (child.href === '/inventory' || child.href === '/admin') {
+    // Exact match for index pages (e.g., /inventory, /admin, /admin/volunteers)
+    if (child.href === '/inventory' || child.href === '/admin' || child.href === '/admin/volunteers' ||
+        child.href === '/members' || child.href === '/events') {
       return currentPath === child.href;
     }
     // Exact match for cross-section children (e.g., /email-templates under Players)
@@ -138,21 +152,6 @@
     }
 
     return html;
-  }
-
-  // ── Build settings link (always shown at bottom of nav panel) ────
-  function buildSettingsLink() {
-    var isSettingsActive = currentPath === '/settings';
-    var classes = isSettingsActive
-      ? 'bg-gray-100 text-pines-600 font-semibold'
-      : 'text-gray-900 hover:bg-gray-50';
-    return '' +
-      '<div class="px-3 py-3 border-t border-gray-100">' +
-        '<a href="/settings" class="flex items-center px-3 py-2 rounded-lg text-sm transition-colors ' + classes + '">' +
-          '<i class="fa-solid fa-gear text-xs w-4 text-center mr-2 opacity-60"></i>' +
-          'Settings' +
-        '</a>' +
-      '</div>';
   }
 
   // ── Build mobile nav items (icon + label, single column) ───────────
@@ -213,7 +212,6 @@
         '<span class="font-semibold text-sm text-gray-900">' + (active ? active.label : '') + '</span>' +
       '</div>' +
       '<nav class="flex-1 px-3 py-3 overflow-y-auto">' + panelContent + '</nav>' +
-      buildSettingsLink() +
     '</div>';
 
     html += '</aside>';
@@ -259,10 +257,6 @@
         '</div>' +
         '<nav class="flex-1 px-2 py-4 space-y-1 overflow-y-auto">' +
           buildMobileNavItems() +
-          '<div class="border-t border-pines-400 my-3 mx-2"></div>' +
-          '<a href="/settings" class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ' +
-            (currentPath === '/settings' ? 'bg-pines-600 text-white' : 'text-pines-100 hover:bg-pines-400 hover:text-white') +
-          '" title="Settings">' + ICONS.gear + '<span class="ml-3">Settings</span></a>' +
         '</nav>' +
       '</aside>' +
     '</div>';

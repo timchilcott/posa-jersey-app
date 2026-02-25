@@ -78,8 +78,24 @@ async def members_page():
 async def sportsengine_page():
     return HTMLResponse(_read_template("sportsengine.html"))
 
-@app.get("/settings", response_class=HTMLResponse)
-async def settings_page():
+@app.get("/admin/settings", response_class=HTMLResponse)
+async def players_settings_page():
+    return HTMLResponse(_read_template("settings_page.html"))
+
+@app.get("/admin/volunteers/settings", response_class=HTMLResponse)
+async def volunteers_settings_page():
+    return HTMLResponse(_read_template("settings_page.html"))
+
+@app.get("/inventory/settings", response_class=HTMLResponse)
+async def inventory_settings_page():
+    return HTMLResponse(_read_template("settings_page.html"))
+
+@app.get("/members/settings", response_class=HTMLResponse)
+async def members_settings_page():
+    return HTMLResponse(_read_template("settings_page.html"))
+
+@app.get("/events/settings", response_class=HTMLResponse)
+async def events_settings_page():
     return HTMLResponse(_read_template("settings_page.html"))
 
 @app.get("/email-templates", response_class=HTMLResponse)
