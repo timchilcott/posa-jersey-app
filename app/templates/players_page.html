@@ -130,6 +130,14 @@
                     @click="clearFilters(); showMore = false" class="text-xs text-gray-400 hover:text-gray-600 px-1.5 py-1.5">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
+            <!-- Spacer + actions -->
+            <div class="ml-auto flex items-center gap-2">
+                <a href="/sportsengine" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+                    <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                    Sync
+                </a>
+                <a href="/admin/add" class="bg-pines-500 hover:bg-pines-600 text-white px-2.5 py-1.5 rounded-md text-xs font-medium">+ Add</a>
+            </div>
         </div>
     </div>
 

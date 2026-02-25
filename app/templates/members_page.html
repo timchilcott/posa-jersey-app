@@ -84,15 +84,15 @@
                     @click="clearFilters(); showMore = false" class="text-xs text-gray-400 hover:text-gray-600 px-1.5 py-1.5">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
-            <!-- Spacer -->
-            <div class="flex-1"></div>
-            <!-- Sync button -->
-            <button @click="syncMembers()" :disabled="syncing"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                    :class="syncing ? 'border-gray-200 text-gray-400 cursor-wait' : 'border-pines-200 bg-pines-50 text-pines-700 hover:bg-pines-100'">
-                <i class="fa-solid fa-arrows-rotate text-xs" :class="syncing && 'animate-spin'"></i>
-                <span x-text="syncing ? 'Syncing...' : 'Sync Members'"></span>
-            </button>
+            <!-- Spacer + actions -->
+            <div class="ml-auto flex items-center gap-2">
+                <button @click="syncMembers()" :disabled="syncing"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors"
+                        :class="syncing ? 'border-gray-200 text-gray-400 cursor-wait' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                    <i class="fa-solid fa-arrows-rotate text-xs" :class="syncing && 'animate-spin'"></i>
+                    <span x-text="syncing ? 'Syncing...' : 'Sync'"></span>
+                </button>
+            </div>
         </div>
     </div>
 
