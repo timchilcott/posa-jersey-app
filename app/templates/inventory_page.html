@@ -33,7 +33,7 @@
                        class="pl-8 pr-3 py-1.5 border border-gray-200 rounded-md text-xs w-44 focus:ring-1 focus:ring-pines-500 focus:border-pines-500 placeholder-gray-400">
             </div>
             <!-- All filter pills (behind + Filter) -->
-            <template x-if="showMore || filters.sport || filters.category || filters.divisions.length || filters.condition">
+            <template x-if="showMore || filters.sport || filters.category || filters.divisions.length || filters.condition || filters.location">
                 <div class="contents">
                     <!-- Sport pill -->
                     <div class="relative" x-data="{ open: false }">
@@ -100,8 +100,23 @@
                             </template>
                         </div>
                     </div>
+                    <!-- Location pill -->
+                    <div class="relative" x-data="{ open: false }">
+                        <button @click="open = !open" @click.outside="open = false"
+                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
+                                :class="filters.location ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                            <span x-text="filters.location || 'All locations'"></span>
+                            <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <div x-show="open" x-transition class="absolute z-20 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 max-h-48 overflow-y-auto">
+                            <div @click="filters.location = ''; applyFilters(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs text-gray-500">All locations</div>
+                            <template x-for="loc in uniqueLocations" :key="loc">
+                                <div @click="filters.location = loc; applyFilters(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs" :class="filters.location === loc ? 'bg-pines-50 text-pines-700 font-medium' : ''" x-text="loc"></div>
+                            </template>
+                        </div>
+                    </div>
                     <!-- Collapse filters -->
-                    <button x-show="showMore && !filters.sport && !filters.category && !filters.divisions.length && !filters.condition"
+                    <button x-show="showMore && !filters.sport && !filters.category && !filters.divisions.length && !filters.condition && !filters.location"
                             @click="showMore = false"
                             class="text-xs text-gray-400 hover:text-gray-600 px-1 py-1.5">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -109,14 +124,14 @@
                 </div>
             </template>
             <!-- + Filter toggle -->
-            <button x-show="!showMore && !filters.sport && !filters.category && !filters.divisions.length && !filters.condition"
+            <button x-show="!showMore && !filters.sport && !filters.category && !filters.divisions.length && !filters.condition && !filters.location"
                     @click="showMore = true"
                     class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border border-dashed border-gray-300 text-gray-400 hover:text-gray-600 hover:border-gray-400 transition-colors">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 Filter
             </button>
             <!-- Clear -->
-            <button x-show="filters.search || filters.sport || filters.category || filters.divisions.length || filters.condition"
+            <button x-show="filters.search || filters.sport || filters.category || filters.divisions.length || filters.condition || filters.location"
                     @click="clearFilters(); showMore = false" class="text-xs text-gray-400 hover:text-gray-600 px-1.5 py-1.5">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
@@ -475,7 +490,7 @@
             uniqueCategories: [],
             uniqueDivisions: [],
             uniqueLocations: [],
-            filters: { search: '', category: '', sport: '', divisions: [], condition: '', lowStock: false },
+            filters: { search: '', category: '', sport: '', divisions: [], condition: '', location: '', lowStock: false },
             checkoutItem: null,
             checkoutForm: { person_name: '', quantity: 1, notes: '' },
             bulkForm: { person_name: '', items: [] },
@@ -512,6 +527,7 @@
                         const conds = this.itemConditions(item);
                         if (!conds.some(c => c.condition === this.filters.condition)) return false;
                     }
+                    if (this.filters.location) { const locs = this.parseLocations(item.location).map(lb => lb.location); if (!locs.includes(this.filters.location)) return false; }
                     if (this.filters.lowStock && !item.lowStock) return false;
                     return true;
                 });
@@ -551,7 +567,7 @@
                     });
                 });
             },
-            clearFilters() { this.filters = { search: '', category: '', sport: '', divisions: [], condition: '', lowStock: false }; this.applyFilters(); },
+            clearFilters() { this.filters = { search: '', category: '', sport: '', divisions: [], condition: '', location: '', lowStock: false }; this.applyFilters(); },
 
             // ── Side Panel ─────────────────────────────
             openPanel(item) {
