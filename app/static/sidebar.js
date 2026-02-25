@@ -25,6 +25,7 @@
     calendar: '<i class="fa-regular fa-calendar-days text-base"></i>',
     arrowPath: '<i class="fa-solid fa-arrows-rotate text-base"></i>',
     envelope: '<i class="fa-regular fa-envelope text-base"></i>',
+    gear: '<i class="fa-solid fa-gear text-base"></i>',
     bars3: '<i class="fa-solid fa-bars text-xl"></i>',
     xMark: '<i class="fa-solid fa-xmark text-xl"></i>',
   };
@@ -32,20 +33,21 @@
   // ── Navigation items ─────────────────────────────────────────────
   const NAV_ITEMS = [
     { label: 'Players', href: '/admin', icon: ICONS.shirt, match: ['/admin'], children: [
-      { label: 'All Players', href: '/admin' },
-      { label: 'Add Player', href: '/admin/add' },
-      { label: 'Sync Registrations', href: '/sportsengine' },
+      { label: 'All Players', href: '/admin', childIcon: 'fa-solid fa-list' },
+      { label: 'Add Player', href: '/admin/add', childIcon: 'fa-solid fa-plus' },
+      { label: 'Sync Registrations', href: '/sportsengine', childIcon: 'fa-solid fa-arrows-rotate' },
     ]},
     { label: 'Volunteers', href: '/admin/volunteers', icon: ICONS.handshakeAngle, match: ['/admin/volunteers'] },
     { label: 'Equipment', href: '/inventory', icon: ICONS.barcode, match: ['/inventory'], children: [
-      { label: 'All Equipment', href: '/inventory' },
-      { label: 'Checked Out', href: '/inventory/checked-out' },
-      { label: 'Add Item', href: '/inventory/add' },
+      { label: 'All Equipment', href: '/inventory', childIcon: 'fa-solid fa-list' },
+      { label: 'Checked Out', href: '/inventory/checked-out', childIcon: 'fa-solid fa-arrow-right-from-bracket' },
+      { label: 'Add Item', href: '/inventory/add', childIcon: 'fa-solid fa-plus' },
     ]},
     { label: 'Members', href: '/members', icon: ICONS.users, match: ['/members'] },
     { label: 'Schedule', href: '/events', icon: ICONS.calendar, match: ['/events'] },
     { type: 'divider' },
     { label: 'Email Templates', href: '/email-templates', icon: ICONS.envelope, match: ['/email-templates'] },
+    { label: 'Settings', href: '/settings', icon: ICONS.gear, match: ['/settings'] },
   ];
 
   // ── Page titles for the heading bar ───────────────────────────────
@@ -60,6 +62,7 @@
     '/members': 'Members',
     '/events': 'Schedule',
     '/email-templates': 'Email Templates',
+    '/settings': 'Settings',
   };
 
   function getPageTitle() {
@@ -126,7 +129,10 @@
         var childClasses = childActive
           ? 'bg-gray-100 text-pines-600 font-semibold'
           : 'text-gray-900 hover:bg-gray-50';
-        html += '<a href="' + child.href + '" class="block px-3 py-2 rounded-lg text-sm transition-colors ' + childClasses + '">' + child.label + '</a>';
+        var iconHtml = child.childIcon
+          ? '<i class="' + child.childIcon + ' text-xs w-4 text-center mr-2 opacity-60"></i>'
+          : '';
+        html += '<a href="' + child.href + '" class="flex items-center px-3 py-2 rounded-lg text-sm transition-colors ' + childClasses + '">' + iconHtml + child.label + '</a>';
       });
       html += '</div>';
     }
@@ -155,7 +161,10 @@
           var childClasses = childActive
             ? 'text-white font-semibold'
             : 'text-pines-200 hover:text-white';
-          html += '<a href="' + child.href + '" class="block px-3 py-1.5 rounded-lg text-xs transition-colors ' + childClasses + '">' + child.label + '</a>';
+          var iconHtml = child.childIcon
+            ? '<i class="' + child.childIcon + ' text-xs w-4 text-center mr-2 opacity-70"></i>'
+            : '';
+          html += '<a href="' + child.href + '" class="flex items-center px-3 py-1.5 rounded-lg text-xs transition-colors ' + childClasses + '">' + iconHtml + child.label + '</a>';
         });
         html += '</div>';
       }
