@@ -526,7 +526,7 @@
             sportDisplay(sportStr) {
                 const sports = (sportStr || '').split(',').map(s => s.trim()).filter(Boolean);
                 if (sports.length === 0) return '--';
-                return sports.map(s => this.sportEmoji(s) + ' ' + s).join(', ');
+                return sports.map(s => this.sportEmoji(s)).join(' ');
             },
             clearFilters() { this.filters = { search: '', category: '', sport: '', divisions: [], condition: '', location: '', lowStock: false }; this.applyFilters(); },
 
