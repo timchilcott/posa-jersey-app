@@ -192,7 +192,15 @@
             </div>
 
             <div class="overflow-x-auto">
-                <table x-show="displayList.length > 0" class="min-w-full">
+                <table x-show="displayList.length > 0" class="min-w-full table-fixed">
+                    <colgroup>
+                        <col style="width: 14%"><!-- Time -->
+                        <col style="width: 10%"><!-- Type -->
+                        <col style="width: 24%"><!-- Teams -->
+                        <col style="width: 24%"><!-- Venue -->
+                        <col style="width: 18%"><!-- Location -->
+                        <col style="width: 10%"><!-- Status -->
+                    </colgroup>
                     <thead>
                         <tr class="border-b border-gray-200">
                             <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">Time</th>
@@ -248,16 +256,16 @@
 
                                 <!-- EVENT ROW: Venue (school/facility name) -->
                                 <template x-if="!entry._isHeader">
-                                    <td class="px-4 py-3 whitespace-nowrap">
-                                        <span x-show="entry.location" class="text-sm text-gray-900" x-text="entry.location?.name"></span>
+                                    <td class="px-4 py-3">
+                                        <span x-show="entry.location" class="text-sm text-gray-900 block truncate" x-text="entry.location?.name"></span>
                                         <span x-show="!entry.location" class="text-sm text-gray-300">--</span>
                                     </td>
                                 </template>
 
                                 <!-- EVENT ROW: Location (court/field) -->
                                 <template x-if="!entry._isHeader">
-                                    <td class="px-4 py-3 whitespace-nowrap">
-                                        <span x-show="entry.location && entry.location.description" class="text-sm text-gray-900" x-text="entry.location?.description"></span>
+                                    <td class="px-4 py-3">
+                                        <span x-show="entry.location && entry.location.description" class="text-sm text-gray-900 block truncate" x-text="entry.location?.description"></span>
                                         <span x-show="!entry.location || !entry.location.description" class="text-sm text-gray-300">--</span>
                                     </td>
                                 </template>
