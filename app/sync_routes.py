@@ -305,6 +305,185 @@ def debug_player_lookup(name: str = "", email: str = "", db: Session = Depends(g
     )
 
 
+@router.get("/api/debug/schema-introspect")
+def debug_schema_introspect(type_name: str = "Profile"):
+    """
+    Introspect the SportsEngine GraphQL schema to discover available fields.
+    Usage: /api/debug/schema-introspect?type_name=Profile
+    """
+    from app.services.sportsengine import is_configured, graphql_query
+
+    if not is_configured():
+        return JSONResponse(
+            status_code=400,
+            content={"status": "error", "detail": "SportsEngine not configured"},
+        )
+
+    # GraphQL introspection query - get all fields for a type
+    introspection_query = """
+    query IntrospectType($typeName: String!) {
+        __type(name: $typeName) {
+            name
+            kind
+            description
+            fields {
+                name
+                description
+                type {
+                    name
+                    kind
+                    ofType {
+                        name
+                        kind
+                        ofType {
+                            name
+                            kind
+                        }
+                    }
+                }
+                args {
+                    name
+                    type {
+                        name
+                        kind
+                        ofType { name kind }
+                    }
+                }
+            }
+        }
+    }
+    """
+
+    try:
+        data = graphql_query(introspection_query, {"typeName": type_name})
+        type_info = data.get("__type")
+
+        if not type_info:
+            # Try to find types that contain the search term
+            all_types_query = """
+            {
+                __schema {
+                    types {
+                        name
+                        kind
+                        description
+                    }
+                }
+            }
+            """
+            schema_data = graphql_query(all_types_query)
+            all_types = schema_data.get("__schema", {}).get("types", [])
+            search = type_name.lower()
+            matches = [
+                t for t in all_types
+                if search in (t.get("name") or "").lower()
+                and not t["name"].startswith("__")
+            ]
+            lines = [
+                f"<h2>Type '{type_name}' not found</h2>",
+                f"<p>Similar types ({len(matches)}):</p><ul>",
+            ]
+            for t in sorted(matches, key=lambda x: x["name"]):
+                desc = t.get("description") or ""
+                lines.append(
+                    f'<li><a href="?type_name={t["name"]}">{t["name"]}</a> '
+                    f'({t["kind"]}) {desc[:100]}</li>'
+                )
+            lines.append("</ul>")
+            return HTMLResponse(
+                f"<html><body style='font-family:monospace;padding:20px;'>{''.join(lines)}</body></html>"
+            )
+
+        # Build HTML output
+        fields = type_info.get("fields") or []
+        lines = [
+            f"<h2>{type_info['name']} ({type_info['kind']})</h2>",
+            f"<p>{type_info.get('description') or 'No description'}</p>",
+            f"<p>{len(fields)} fields</p>",
+            "<table border='1' cellpadding='5' cellspacing='0'>",
+            "<tr><th>Field</th><th>Type</th><th>Description</th><th>Args</th></tr>",
+        ]
+
+        # Highlight fields related to members/parents/contacts/households
+        keywords = {
+            "parent", "guardian", "household", "family", "contact", "phone",
+            "address", "member", "child", "relation", "email", "person",
+        }
+
+        for f in sorted(fields, key=lambda x: x["name"]):
+            fname = f["name"]
+            ftype = f["type"]
+            type_str = _format_gql_type(ftype)
+            desc = f.get("description") or ""
+            args = f.get("args") or []
+            args_str = ", ".join(
+                f'{a["name"]}: {_format_gql_type(a["type"])}' for a in args
+            ) if args else ""
+
+            # Highlight interesting fields
+            is_interesting = any(
+                kw in fname.lower() or kw in desc.lower() for kw in keywords
+            )
+            style = "background:#ffffcc;font-weight:bold;" if is_interesting else ""
+
+            # Make object types clickable
+            link_type = _extract_type_name(ftype)
+            if link_type and not link_type.startswith(("String", "Int", "Float", "Boolean", "ID", "Date", "ISO")):
+                type_str = f'<a href="?type_name={link_type}">{type_str}</a>'
+
+            lines.append(
+                f"<tr style='{style}'>"
+                f"<td>{fname}</td>"
+                f"<td>{type_str}</td>"
+                f"<td>{desc[:200]}</td>"
+                f"<td>{args_str}</td>"
+                f"</tr>"
+            )
+
+        lines.append("</table>")
+
+        # Also search for related types
+        lines.append("<h3>Explore related types:</h3><ul>")
+        for search in ["Member", "Parent", "Guardian", "Household", "Contact", "Person", "Family", "Roster"]:
+            lines.append(f'<li><a href="?type_name={search}">{search}</a></li>')
+        lines.append("</ul>")
+
+        return HTMLResponse(
+            f"<html><body style='font-family:monospace;padding:20px;'>{''.join(lines)}</body></html>"
+        )
+
+    except Exception as e:
+        logger.error(f"Introspection failed: {e}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "detail": str(e)},
+        )
+
+
+def _format_gql_type(t: dict) -> str:
+    """Format a GraphQL type for display."""
+    if not t:
+        return "?"
+    name = t.get("name")
+    kind = t.get("kind")
+    if name:
+        return name
+    if kind == "NON_NULL":
+        return f"{_format_gql_type(t.get('ofType', {}))}!"
+    if kind == "LIST":
+        return f"[{_format_gql_type(t.get('ofType', {}))}]"
+    return kind or "?"
+
+
+def _extract_type_name(t: dict) -> str:
+    """Extract the base type name from a potentially wrapped GraphQL type."""
+    if not t:
+        return ""
+    if t.get("name"):
+        return t["name"]
+    return _extract_type_name(t.get("ofType", {}))
+
+
 @router.get("/api/debug/sport-season-mismatches")
 def debug_sport_season_mismatches(db: Session = Depends(get_db)):
     """Find registrations with inconsistent sport casing or season format issues."""
