@@ -105,7 +105,7 @@
         var childActive = isChildActive(child);
         var childClasses = childActive
           ? 'bg-gray-100 text-pines-600 font-semibold'
-          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900';
+          : 'text-gray-900 hover:bg-gray-50';
         html += '<a href="' + child.href + '" class="block px-3 py-2 rounded-lg text-sm transition-colors ' + childClasses + '">' + child.label + '</a>';
       });
       html += '</div>';

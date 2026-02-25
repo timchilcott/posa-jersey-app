@@ -96,11 +96,11 @@
                                 <td class="px-4 py-3 whitespace-nowrap">
                                     <div class="text-sm font-medium text-gray-900" x-text="vol.name"></div>
                                 </td>
-                                <td class="px-4 py-3 whitespace-nowrap"><div class="text-sm text-gray-500" x-text="vol.email"></div></td>
+                                <td class="px-4 py-3 whitespace-nowrap"><div class="text-sm text-gray-900" x-text="vol.email"></div></td>
                                 <td class="px-4 py-3 whitespace-nowrap">
                                     <div class="flex flex-nowrap gap-1">
                                         <template x-for="reg in vol.registrations" :key="reg.id">
-                                            <span class="inline-flex items-center px-2 py-0.5 text-xs rounded text-gray-600 bg-gray-100" x-text="reg.division"></span>
+                                            <span class="inline-flex items-center px-2 py-0.5 text-xs rounded text-gray-700 bg-gray-100" x-text="reg.division"></span>
                                         </template>
                                     </div>
                                 </td>
@@ -143,15 +143,15 @@
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Email</label>
-                    <p class="text-sm text-gray-600" x-text="selectedVol.email"></p>
+                    <p class="text-sm text-gray-900" x-text="selectedVol.email"></p>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Registrations</label>
                     <div class="space-y-2">
                         <template x-for="reg in selectedVol.registrations" :key="reg.id">
                             <div class="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
-                                <span class="inline-flex items-center px-2 py-0.5 text-xs rounded text-gray-600 bg-gray-100" x-text="reg.division"></span>
-                                <span class="text-xs text-gray-400" x-text="reg.season"></span>
+                                <span class="inline-flex items-center px-2 py-0.5 text-xs rounded text-gray-700 bg-gray-100" x-text="reg.division"></span>
+                                <span class="text-xs text-gray-600" x-text="reg.season"></span>
                             </div>
                         </template>
                     </div>
