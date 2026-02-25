@@ -133,7 +133,7 @@
         </div>
     </div>
 
-    <main class="px-6 py-6">
+    <main class="bg-white">
         <div x-show="loading" class="text-center py-12">
             <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pines-500"></div>
             <p class="mt-2 text-gray-600">Loading players...</p>
@@ -143,7 +143,7 @@
             <div class="overflow-x-auto">
                 <table class="min-w-full">
                     <thead>
-                        <tr class="border-b border-gray-100">
+                        <tr class="border-b border-gray-200">
                             <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">Player</th>
                             <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">Jersey</th>
                             <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">Email</th>
@@ -153,7 +153,7 @@
                     </thead>
                     <tbody>
                         <template x-for="item in displayList" :key="item._key">
-                            <tr :class="item._isHeader ? 'bg-gray-100/50' : rowClass(item)"
+                            <tr :class="item._isHeader ? 'bg-gray-50' : rowClass(item)"
                                 @click="!item._isHeader && openPanel(item)">
                                 <template x-if="item._isHeader">
                                     <td colspan="5" class="px-4 py-2">
@@ -437,8 +437,8 @@
             },
 
             rowClass(player) {
-                if (this.duplicateJerseys.has(player.id)) return 'bg-red-50/50 hover:bg-red-50 cursor-pointer transition-colors';
-                return 'hover:bg-gray-50 cursor-pointer transition-colors';
+                if (this.duplicateJerseys.has(player.id)) return 'bg-red-50/50 hover:bg-red-50 cursor-pointer transition-colors border-b border-gray-100';
+                return 'hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100';
             },
 
             openPanel(player) {
