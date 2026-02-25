@@ -93,11 +93,11 @@
             <p class="mt-2 text-gray-600">Loading volunteers...</p>
         </div>
 
-        <div x-show="!loading" class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div x-show="!loading">
             <div class="overflow-x-auto">
                 <table class="min-w-full">
                     <thead>
-                        <tr class="border-b border-gray-200">
+                        <tr class="border-b border-gray-100">
                             <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">Name</th>
                             <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">Email</th>
                             <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">Registration Type</th>
@@ -106,7 +106,7 @@
                     </thead>
                     <tbody>
                         <template x-for="vol in filtered" :key="vol.id">
-                            <tr class="hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-200" @click="openPanel(vol)">
+                            <tr class="hover:bg-gray-50 cursor-pointer transition-colors" @click="openPanel(vol)">
                                 <td class="px-4 py-3 whitespace-nowrap">
                                     <div class="text-sm font-medium text-gray-900" x-text="vol.name"></div>
                                 </td>
