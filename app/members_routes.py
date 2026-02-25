@@ -2,22 +2,47 @@
 Members directory routes — sync and API for the members page.
 """
 import logging
+import threading
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.database import get_db, SessionLocal
 from app.models_members import Member, MemberGuardian
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["members"])
 
+# Track background sync status
+_sync_status = {
+    "running": False,
+    "results": None,
+    "error": None,
+}
+
+
+def _run_sync_background():
+    """Run members sync in a background thread with its own DB session."""
+    global _sync_status
+    db = SessionLocal()
+    try:
+        from app.services.members_sync import sync_members
+        results = sync_members(db)
+        _sync_status["results"] = results
+        _sync_status["error"] = None
+    except Exception as e:
+        logger.error(f"Background members sync failed: {e}", exc_info=True)
+        _sync_status["error"] = str(e)
+        _sync_status["results"] = None
+    finally:
+        db.close()
+        _sync_status["running"] = False
+
 
 @router.post("/api/members/sync")
-def members_sync(db: Session = Depends(get_db)):
-    """Pull all member profiles from SportsEngine."""
+def members_sync():
+    """Kick off members sync in background thread. Returns immediately."""
     from app.services.sportsengine import is_configured
-    from app.services.members_sync import sync_members
 
     if not is_configured():
         return JSONResponse(
@@ -25,15 +50,29 @@ def members_sync(db: Session = Depends(get_db)):
             content={"status": "error", "detail": "SportsEngine not configured"},
         )
 
-    try:
-        results = sync_members(db)
-        return {"status": "success", **results}
-    except Exception as e:
-        logger.error(f"Members sync failed: {e}", exc_info=True)
-        return JSONResponse(
-            status_code=500,
-            content={"status": "error", "detail": str(e)},
-        )
+    if _sync_status["running"]:
+        return {"status": "already_running"}
+
+    _sync_status["running"] = True
+    _sync_status["results"] = None
+    _sync_status["error"] = None
+
+    thread = threading.Thread(target=_run_sync_background, daemon=True)
+    thread.start()
+
+    return {"status": "started"}
+
+
+@router.get("/api/members/sync-status")
+def members_sync_status():
+    """Poll for background sync completion."""
+    if _sync_status["running"]:
+        return {"status": "running"}
+    if _sync_status["error"]:
+        return {"status": "error", "detail": _sync_status["error"]}
+    if _sync_status["results"]:
+        return {"status": "success", **_sync_status["results"]}
+    return {"status": "idle"}
 
 
 @router.get("/api/members")

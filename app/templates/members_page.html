@@ -454,22 +454,45 @@
             },
 
             async syncMembers() {
-                if (!confirm('Sync members directory from SportsEngine? This may take a minute.')) return;
+                if (!confirm('Sync members directory from SportsEngine? This may take several minutes.')) return;
                 this.syncing = true;
                 try {
                     const response = await fetch('/api/members/sync', { method: 'POST' });
                     const data = await response.json();
-                    if (data.status === 'success') {
-                        alert(`Sync complete!\n\nNew: ${data.new_members}\nUpdated: ${data.updated_members}\nGuardians: ${data.guardians_added}`);
-                        await this.loadMembers();
+                    if (data.status === 'started' || data.status === 'already_running') {
+                        // Poll for completion
+                        this._pollSync();
                     } else {
                         alert('Sync failed: ' + (data.detail || 'Unknown error'));
+                        this.syncing = false;
                     }
                 } catch (error) {
                     console.error('Sync failed:', error);
                     alert('Sync failed: ' + error.message);
+                    this.syncing = false;
                 }
-                this.syncing = false;
+            },
+
+            async _pollSync() {
+                try {
+                    const response = await fetch('/api/members/sync-status');
+                    const data = await response.json();
+                    if (data.status === 'running') {
+                        setTimeout(() => this._pollSync(), 3000);
+                    } else if (data.status === 'success') {
+                        this.syncing = false;
+                        alert(`Sync complete!\n\nNew: ${data.new_members}\nUpdated: ${data.updated_members}\nGuardians: ${data.guardians_added}\nSkipped (existing): ${data.skipped_existing || 0}`);
+                        await this.loadMembers();
+                    } else if (data.status === 'error') {
+                        this.syncing = false;
+                        alert('Sync failed: ' + (data.detail || 'Unknown error'));
+                    } else {
+                        this.syncing = false;
+                    }
+                } catch (error) {
+                    console.error('Poll failed:', error);
+                    setTimeout(() => this._pollSync(), 5000);
+                }
             },
         }
     }
