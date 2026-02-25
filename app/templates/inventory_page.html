@@ -154,39 +154,39 @@
                 <table x-show="filteredItems.length > 0" class="min-w-full">
                     <thead>
                         <tr class="border-b border-gray-200">
-                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Sport</th>
-                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Category</th>
-                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Item</th>
-                            <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Total</th>
-                            <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Avail</th>
-                            <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Out</th>
-                            <th x-show="filters.divisions.length > 0" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Division</th>
-                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Condition</th>
-                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Location</th>
+                            <th x-show="ecv('sport')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Sport</th>
+                            <th x-show="ecv('category')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Category</th>
+                            <th x-show="ecv('item')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Item</th>
+                            <th x-show="ecv('total')" class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Total</th>
+                            <th x-show="ecv('avail')" class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Avail</th>
+                            <th x-show="ecv('out')" class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Out</th>
+                            <th x-show="ecv('division')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Division</th>
+                            <th x-show="ecv('condition')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Condition</th>
+                            <th x-show="ecv('location')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Location</th>
                         </tr>
                     </thead>
                     <tbody>
                         <template x-for="entry in displayList" :key="entry._key">
                             <tr class="hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100"
                                 @click="openPanel(entry)">
-                            <td class="px-4 py-3 whitespace-nowrap">
+                            <td x-show="ecv('sport')" class="px-4 py-3 whitespace-nowrap">
                                 <span class="text-sm text-gray-900" x-text="sportDisplay(entry.sport)"></span>
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-900 whitespace-nowrap" x-text="entry.category"></td>
-                            <td class="px-4 py-3 whitespace-nowrap">
+                            <td x-show="ecv('category')" class="px-4 py-3 text-sm text-gray-900 whitespace-nowrap" x-text="entry.category"></td>
+                            <td x-show="ecv('item')" class="px-4 py-3 whitespace-nowrap">
                                 <span class="text-sm text-gray-900" x-text="entry.name"></span>
                             </td>
-                            <td class="px-4 py-3 text-center text-sm text-gray-900 whitespace-nowrap" x-text="entry.quantityTotal"></td>
-                            <td class="px-4 py-3 text-center text-sm font-medium text-gray-900 whitespace-nowrap" x-text="entry.quantityAvailable"></td>
-                            <td class="px-4 py-3 text-center text-sm whitespace-nowrap" :class="entry.checkedOut > 0 ? 'text-orange-600 font-medium' : 'text-gray-300'" x-text="entry.checkedOut"></td>
-                            <td x-show="filters.divisions.length > 0" class="px-4 py-3 whitespace-nowrap">
+                            <td x-show="ecv('total')" class="px-4 py-3 text-center text-sm text-gray-900 whitespace-nowrap" x-text="entry.quantityTotal"></td>
+                            <td x-show="ecv('avail')" class="px-4 py-3 text-center text-sm font-medium text-gray-900 whitespace-nowrap" x-text="entry.quantityAvailable"></td>
+                            <td x-show="ecv('out')" class="px-4 py-3 text-center text-sm whitespace-nowrap" :class="entry.checkedOut > 0 ? 'text-orange-600 font-medium' : 'text-gray-300'" x-text="entry.checkedOut"></td>
+                            <td x-show="ecv('division')" class="px-4 py-3 whitespace-nowrap">
                                 <div class="flex flex-nowrap gap-1">
                                     <template x-for="div in parseDivisions(entry.division)" :key="div">
                                         <span class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700 whitespace-nowrap" x-text="div"></span>
                                     </template>
                                 </div>
                             </td>
-                            <td class="px-4 py-3 whitespace-nowrap">
+                            <td x-show="ecv('condition')" class="px-4 py-3 whitespace-nowrap">
                                 <div class="flex flex-nowrap gap-1">
                                     <template x-for="(cb, cbIdx) in itemConditions(entry)" :key="cbIdx">
                                         <span class="text-xs px-2 py-0.5 rounded whitespace-nowrap" :class="conditionColor(cb.condition)">
@@ -195,7 +195,7 @@
                                     </template>
                                 </div>
                             </td>
-                            <td class="px-4 py-3 whitespace-nowrap">
+                            <td x-show="ecv('location')" class="px-4 py-3 whitespace-nowrap">
                                 <div class="flex flex-nowrap gap-1">
                                     <template x-for="(lb, lbIdx) in parseLocations(entry.location)" :key="lbIdx">
                                         <span class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700">
@@ -450,6 +450,7 @@
         </div>
     </div>
 
+    <script src="/static/column-config.js"></script>
     <script>
     function inventoryApp() {
         return {
@@ -476,8 +477,21 @@
             bulkForm: { person_name: '', items: [] },
             bulkAddItemId: '',
             bulkAddQty: 1,
+            colVis: {},
+            _filterColMap: { sport: 'sport', category: 'category', condition: 'condition', location: 'location' },
+
+            ecv(colId) {
+                if (this.colVis[colId]) return true;
+                // Division special case: show when divisions filter is active
+                if (colId === 'division' && this.filters.divisions && this.filters.divisions.length > 0) return true;
+                for (var fk in this._filterColMap) {
+                    if (this._filterColMap[fk] === colId && this.filters[fk]) return true;
+                }
+                return false;
+            },
 
             async init() {
+                this.colVis = window.POSA_COLUMNS.load('inventory');
                 await Promise.all([this.loadItems(), this.loadCategories()]);
                 this.loading = false;
             },
