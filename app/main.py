@@ -78,6 +78,10 @@ async def members_page():
 async def sportsengine_page():
     return HTMLResponse(_read_template("sportsengine.html"))
 
+@app.get("/settings", response_class=HTMLResponse)
+async def settings_page():
+    return HTMLResponse(_read_template("settings_page.html"))
+
 @app.get("/email-templates", response_class=HTMLResponse)
 async def email_templates_page(db: Session = Depends(get_db)):
     standard_template = db.query(EmailTemplate).filter(
