@@ -48,6 +48,24 @@
     { label: 'Email Templates', href: '/email-templates', icon: ICONS.envelope, match: ['/email-templates'] },
   ];
 
+  // ── Page titles for the heading bar ───────────────────────────────
+  var PAGE_TITLES = {
+    '/admin': 'All Players',
+    '/admin/add': 'Add Player',
+    '/sportsengine': 'Sync Registrations',
+    '/admin/volunteers': 'Volunteers',
+    '/inventory': 'Equipment',
+    '/inventory/checked-out': 'Checked Out',
+    '/inventory/add': 'Add Item',
+    '/members': 'Members',
+    '/events': 'Schedule',
+    '/email-templates': 'Email Templates',
+  };
+
+  function getPageTitle() {
+    return PAGE_TITLES[currentPath] || '';
+  }
+
   function isActive(item) {
     if (!item.match) return false;
     // Items with children: check if current path matches any child href
@@ -164,22 +182,30 @@
         '</nav>' +
       '</div>';
 
-    // Always show nav panel when a section is active
-    if (active) {
-      html +=
-      '<!-- Nav Panel -->' +
-      '<div class="posa-nav-panel flex flex-col h-full">' +
-        '<div class="flex items-center h-16 px-4 flex-shrink-0 border-b border-gray-100">' +
-          '<span class="font-semibold text-sm text-gray-900">' + active.label + '</span>' +
-        '</div>';
-      if (hasChildren) {
-        html += '<nav class="flex-1 px-3 py-3 overflow-y-auto">' + panelContent + '</nav>';
-      }
-      html += '</div>';
+    // Always show nav panel — consistent width on every page
+    html +=
+    '<!-- Nav Panel -->' +
+    '<div class="posa-nav-panel flex flex-col h-full">' +
+      '<div class="flex items-center h-16 px-4 flex-shrink-0 border-b border-gray-100">' +
+        '<span class="font-semibold text-sm text-gray-900">' + (active ? active.label : '') + '</span>' +
+      '</div>';
+    if (hasChildren) {
+      html += '<nav class="flex-1 px-3 py-3 overflow-y-auto">' + panelContent + '</nav>';
     }
+    html += '</div>';
 
     html += '</aside>';
     return html;
+  }
+
+  // ── Build page heading bar ─────────────────────────────────────────
+  function buildPageHeading() {
+    var title = getPageTitle();
+    if (!title) return '';
+    return '' +
+    '<div class="bg-white border-b border-gray-200 px-6 py-4">' +
+      '<h1 class="text-lg font-bold text-gray-900">' + title + '</h1>' +
+    '</div>';
   }
 
   // ── Build mobile top bar ─────────────────────────────────────────
@@ -218,35 +244,20 @@
 
   // ── CSS ────────────────────────────────────────────────────────────
   function injectStyles() {
-    var active = getActiveSection();
-    var hasChildren = active && active.children && active.children.length > 0;
-    // Panel width: wider if has children (sub-nav links), narrower if title-only
-    var panelWidth = hasChildren ? '12.5rem' : '8rem';
-    var totalWidth = active ? ('calc(3.5rem + ' + panelWidth + ')') : '3.5rem';
+    // Always same width: rail (3.5rem) + panel (12.5rem) = 16rem
     var style = document.createElement('style');
     style.textContent = '' +
-      '#posa-sidebar { width: ' + totalWidth + '; }' +
+      '#posa-sidebar { width: 16rem; }' +
       '#posa-sidebar .posa-rail { width: 3.5rem; flex-shrink: 0; overflow: visible; }' +
-      '#posa-sidebar .posa-nav-panel { width: ' + panelWidth + '; flex-shrink: 0; border-left: 1px solid #e5e7eb; }' +
+      '#posa-sidebar .posa-nav-panel { width: 12.5rem; flex-shrink: 0; border-left: 1px solid #e5e7eb; }' +
       /* Icon colors — use hex since Tailwind CDN can't resolve custom pines- classes in JS */
       '.posa-icon { color: #3C7939; }' +
       '.posa-icon:hover { color: #2f6130; }' +
       '.posa-icon-active { color: #2f6130; }' +
-      /* Tooltips */
+      /* Tooltips — hidden by default since panel label is visible */
       '.posa-tooltip {' +
-        'position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%);' +
-        'background: #1f2937; color: #fff; font-size: 12px; font-weight: 500;' +
-        'padding: 4px 10px; border-radius: 6px; white-space: nowrap;' +
-        'pointer-events: none; opacity: 0; transition: opacity 0.15s ease;' +
-        'z-index: 50;' +
+        'display: none;' +
       '}' +
-      '.posa-tooltip::before {' +
-        'content: ""; position: absolute; right: 100%; top: 50%; transform: translateY(-50%);' +
-        'border: 5px solid transparent; border-right-color: #1f2937;' +
-      '}' +
-      '.posa-rail-item:hover .posa-tooltip { opacity: 1; }' +
-      /* Hide tooltips when panel is open (label is already visible) */
-      (active ? '.posa-rail-item .posa-tooltip { display: none; }' : '') +
       /* Prevent FOUC */
       'body.sidebar-loading > *:not(script):not(style):not(link) { visibility: hidden; }' +
       'body.sidebar-ready > * { visibility: visible; }';
@@ -280,6 +291,7 @@
         buildSidebarHTML() +
         '<div class="flex-1 flex flex-col overflow-hidden min-w-0">' +
           buildMobileBar() +
+          buildPageHeading() +
           '<main id="posa-content" class="flex-1 overflow-y-auto bg-gray-50"' +
             (xData ? ' x-data="' + xData.replace(/"/g, '&quot;') + '"' : '') +
             (xInit ? ' x-init="' + xInit.replace(/"/g, '&quot;') + '"' : '') +
