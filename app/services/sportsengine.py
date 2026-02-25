@@ -1258,6 +1258,8 @@ def process_webhook(payload: dict, db: Session) -> dict:
     and filtering on specific field names (resourceType, resourceOperation)
     caused missed syncs.  A full sync is cheap thanks to the incremental
     known_names optimization.
+
+    Syncs: registrations, events, and members.
     """
     # Log whatever we got for debugging
     resource_type = payload.get("resourceType") or payload.get("type") or "unknown"
@@ -1267,8 +1269,8 @@ def process_webhook(payload: dict, db: Session) -> dict:
     logger.info(f"WEBHOOK: Received — operation={operation} type={resource_type} id={resource_id}")
     logger.info(f"WEBHOOK: Full payload: {payload}")
 
-    # Always sync both registrations and events
-    results = {"registration_sync": None, "event_sync": None}
+    # Always sync registrations, events, and members
+    results = {"registration_sync": None, "event_sync": None, "members_sync": None}
 
     try:
         reg_results = sync_all_registrations(db)
@@ -1283,6 +1285,14 @@ def process_webhook(payload: dict, db: Session) -> dict:
     except Exception as e:
         logger.error(f"WEBHOOK: Event sync failed: {e}", exc_info=True)
         results["event_sync"] = {"action": "error", "message": str(e)}
+
+    try:
+        from app.services.members_sync import sync_members
+        member_results = sync_members(db)
+        results["members_sync"] = {"action": "synced", "results": member_results}
+    except Exception as e:
+        logger.error(f"WEBHOOK: Members sync failed: {e}", exc_info=True)
+        results["members_sync"] = {"action": "error", "message": str(e)}
 
     return results
 

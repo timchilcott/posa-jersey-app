@@ -68,10 +68,29 @@ def _bg_sync_events():
         db.close()
 
 
+def _bg_sync_members():
+    """Run full members sync in background with its own DB session."""
+    db = SessionLocal()
+    try:
+        from app.services.members_sync import sync_members
+        results = sync_members(db)
+        logger.info(
+            f"BG members sync done: "
+            f"{results['new_members']} new, {results['updated_members']} updated, "
+            f"{results['guardians_added']} guardians, "
+            f"{len(results['errors'])} errors"
+        )
+    except Exception as e:
+        logger.error(f"BG members sync failed: {e}", exc_info=True)
+    finally:
+        db.close()
+
+
 def _bg_sync_all():
-    """Run both registration + event sync in background."""
+    """Run registration + event + members sync in background."""
     _bg_sync_registrations()
     _bg_sync_events()
+    _bg_sync_members()
 
 
 # ------------------------------------------------------------------
