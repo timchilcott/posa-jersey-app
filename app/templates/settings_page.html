@@ -62,16 +62,21 @@ function settingsApp() {
             var path = window.location.pathname;
             var COLS = window.POSA_COLUMNS;
 
+            // Deep-clone columns so Alpine proxies don't conflict with shared POSA_COLUMNS
+            function cloneCols(arr) {
+                return arr.map(function(c) { return { id: c.id, label: c.label, defaultOn: c.defaultOn }; });
+            }
+
             // Inventory settings manages both Equipment and Checked Out tables
             if (path === '/inventory/settings') {
                 this.columnGroups = [
-                    { key: 'inventory', title: 'Equipment', columns: COLS.inventory.columns },
-                    { key: 'checked_out', title: 'Checked Out', columns: COLS.checked_out.columns },
+                    { key: 'inventory', title: 'Equipment', columns: cloneCols(COLS.inventory.columns) },
+                    { key: 'checked_out', title: 'Checked Out', columns: cloneCols(COLS.checked_out.columns) },
                 ];
             } else {
                 var section = COLS.getSection(path);
                 if (section && COLS[section]) {
-                    this.columnGroups = [{ key: section, title: '', columns: COLS[section].columns }];
+                    this.columnGroups = [{ key: section, title: '', columns: cloneCols(COLS[section].columns) }];
                 }
             }
 

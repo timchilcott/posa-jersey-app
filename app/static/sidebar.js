@@ -20,7 +20,7 @@
   const ICONS = {
     shirt: '<i class="fa-solid fa-shirt text-base"></i>',
     handshakeAngle: '<i class="fa-solid fa-handshake-angle text-base"></i>',
-    barcode: '<i class="fa-solid fa-barcode text-base"></i>',
+    goalNet: '<i class="fa-solid fa-goal-net text-base"></i>',
     users: '<i class="fa-solid fa-users text-base"></i>',
     calendar: '<i class="fa-regular fa-calendar-days text-base"></i>',
     arrowPath: '<i class="fa-solid fa-arrows-rotate text-base"></i>',
@@ -43,7 +43,7 @@
       { label: 'All Volunteers', href: '/admin/volunteers', childIcon: 'fa-solid fa-list' },
       { label: 'Settings', href: '/admin/volunteers/settings', childIcon: 'fa-solid fa-gear' },
     ]},
-    { label: 'Equipment', href: '/inventory', icon: ICONS.barcode, match: ['/inventory'], children: [
+    { label: 'Equipment', href: '/inventory', icon: ICONS.goalNet, match: ['/inventory'], children: [
       { label: 'All Equipment', href: '/inventory', childIcon: 'fa-solid fa-list' },
       { label: 'Checked Out', href: '/inventory/checked-out', childIcon: 'fa-solid fa-arrow-right-from-bracket' },
       { label: 'Add Item', href: '/inventory/add', childIcon: 'fa-solid fa-plus' },
