@@ -22,15 +22,15 @@
 </head>
 <body class="bg-gray-50" x-data="membersApp()" x-init="init()" x-cloak>
 
-    <!-- Filter bar -->
+    <!-- Filters -->
     <div class="bg-white border-b border-gray-200" x-data="{ showMore: false }">
-        <div class="flex items-center gap-2 flex-nowrap px-6 py-2.5">
-            <span class="text-xs text-gray-400 mr-1 shrink-0" x-text="filteredMembers.length + ' members'"></span>
+        <div class="px-6 py-2.5 flex items-center gap-2 flex-wrap">
+            <span class="text-xs text-gray-400 mr-1" x-text="filteredMembers.length + ' members'"></span>
             <!-- Search -->
             <div class="relative">
                 <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 <input type="search" x-model="filters.search" @input.debounce.300ms="applyFilters()" placeholder="Search..."
-                       class="pl-8 pr-3 py-1.5 border border-gray-200 rounded-md text-xs w-48 focus:ring-1 focus:ring-pines-500 focus:border-pines-500 placeholder-gray-400">
+                       class="pl-8 pr-3 py-1.5 border border-gray-200 rounded-md text-xs w-44 focus:ring-1 focus:ring-pines-500 focus:border-pines-500 placeholder-gray-400">
             </div>
             <!-- All filter pills (behind + Filter) -->
             <template x-if="showMore || filters.type || filters.city">
@@ -64,19 +64,26 @@
                             </template>
                         </div>
                     </div>
+                    <!-- Collapse filters -->
+                    <button x-show="showMore && !filters.type && !filters.city"
+                            @click="showMore = false"
+                            class="text-xs text-gray-400 hover:text-gray-600 px-1 py-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
                 </div>
             </template>
-            <!-- + Filter button -->
-            <template x-if="!showMore && !filters.type && !filters.city">
-                <button @click="showMore = true" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                    Filter
-                </button>
-            </template>
+            <!-- + Filter toggle -->
+            <button x-show="!showMore && !filters.type && !filters.city"
+                    @click="showMore = true"
+                    class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border border-dashed border-gray-300 text-gray-400 hover:text-gray-600 hover:border-gray-400 transition-colors">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Filter
+            </button>
             <!-- Clear -->
-            <template x-if="filters.search || filters.type || filters.city">
-                <button @click="clearFilters()" class="px-2 py-1.5 text-xs text-gray-400 hover:text-gray-600">Clear</button>
-            </template>
+            <button x-show="filters.search || filters.type || filters.city"
+                    @click="clearFilters(); showMore = false" class="text-xs text-gray-400 hover:text-gray-600 px-1.5 py-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
             <!-- Spacer -->
             <div class="flex-1"></div>
             <!-- Sync button -->
@@ -89,91 +96,97 @@
         </div>
     </div>
 
-    <!-- Main Content: Table + Sidebar -->
-    <div class="flex" style="height: calc(100vh - 42px);">
+    <!-- Main Content -->
+    <main class="bg-white px-6 pt-4">
+        <div x-show="loading" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pines-500"></div>
+            <p class="mt-2 text-gray-600">Loading members...</p>
+        </div>
 
-        <!-- Member List (left) -->
-        <div class="flex-1 overflow-y-auto" :class="selectedMember ? 'border-r border-gray-200' : ''">
-            <div x-show="loading" class="text-center py-12">
-                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pines-500"></div>
-                <p class="mt-2 text-gray-600 text-sm">Loading members...</p>
-            </div>
-
-            <div x-show="!loading">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50 sticky top-0 z-[5]">
-                        <tr>
-                            <th class="w-64 px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                            <th class="w-16 px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jersey</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
-                            <th class="w-32 px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guardians</th>
+        <div x-show="!loading">
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Member</th>
+                            <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Jersey</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Email</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Phone</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Registrations</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Guardians</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
+                    <tbody>
                         <template x-for="item in displayList" :key="item._key">
-                            <tr :class="item._isHeader
-                                ? 'bg-pines-50 border-t-2 border-pines-200'
-                                : (selectedMember && selectedMember.id === item.id ? 'bg-pines-50 cursor-pointer' : 'hover:bg-gray-50 cursor-pointer')"
-                                @click="!item._isHeader && selectMember(item)">
+                            <tr :class="item._isHeader ? 'bg-gray-50' : (selectedMember && selectedMember.id === item.id ? 'bg-pines-50/50 cursor-pointer transition-colors border-b border-gray-100' : 'hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100')"
+                                @click="!item._isHeader && openPanel(item)">
 
                                 <!-- Letter header row -->
                                 <template x-if="item._isHeader">
-                                    <td colspan="6" class="px-4 py-1.5">
-                                        <span class="text-xs font-bold text-pines-700" x-text="item._letter"></span>
-                                        <span class="ml-2 text-xs text-pines-500" x-text="item._count + ' members'"></span>
+                                    <td colspan="6" class="px-4 py-2">
+                                        <span class="text-xs font-semibold text-gray-700" x-text="item._letter"></span>
+                                        <span class="ml-1.5 text-xs text-gray-500" x-text="item._count + ' members'"></span>
                                     </td>
                                 </template>
 
-                                <!-- Data rows -->
+                                <!-- Member name -->
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-2">
-                                        <div class="flex items-center">
-                                            <div class="flex-shrink-0 h-7 w-7 rounded-full bg-pines-100 flex items-center justify-center text-pines-700 text-[10px] font-bold" x-text="initials(item)"></div>
-                                            <div class="ml-2.5">
-                                                <div class="text-xs font-medium text-gray-900" x-text="displayName(item)"></div>
-                                                <div class="text-[10px] text-gray-400" x-show="item.dateOfBirth" x-text="formatDob(item.dateOfBirth)"></div>
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <div class="text-sm font-medium text-gray-900" x-text="displayName(item)"></div>
+                                        <div class="text-xs text-gray-500" x-show="item.dateOfBirth" x-text="formatDob(item.dateOfBirth)"></div>
+                                    </td>
+                                </template>
+                                <!-- Jersey -->
+                                <template x-if="!item._isHeader">
+                                    <td class="px-4 py-3 text-center whitespace-nowrap">
+                                        <span x-show="item.player && item.player.jerseyNumber" class="text-sm text-gray-900" x-text="item.player ? item.player.jerseyNumber : ''"></span>
+                                        <span x-show="!item.player || !item.player.jerseyNumber" class="text-sm text-gray-300">-</span>
+                                    </td>
+                                </template>
+                                <!-- Email -->
+                                <template x-if="!item._isHeader">
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900" x-text="item.email || '-'"></div>
+                                    </td>
+                                </template>
+                                <!-- Phone -->
+                                <template x-if="!item._isHeader">
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900" x-text="formatPhone(item.phone) || '-'"></div>
+                                    </td>
+                                </template>
+                                <!-- Registrations -->
+                                <template x-if="!item._isHeader">
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <template x-if="item.player && item.player.registrations && item.player.registrations.length > 0">
+                                            <div class="flex flex-nowrap gap-1">
+                                                <template x-for="reg in sortedRegs(item.player.registrations)" :key="reg.id">
+                                                    <span class="inline-flex items-center px-1.5 py-0.5 text-xs rounded cursor-default"
+                                                          :class="sportColor(reg.sport)"
+                                                          :title="reg.sport + ' \u2013 ' + reg.season + ' (' + reg.division + ')'">
+                                                        <span x-text="sportEmoji(reg.sport)"></span>
+                                                        <span class="ml-0.5" x-text="shortSeason(reg.season)"></span>
+                                                    </span>
+                                                </template>
                                             </div>
-                                        </div>
-                                    </td>
-                                </template>
-                                <template x-if="!item._isHeader">
-                                    <td class="px-4 py-2 text-center">
-                                        <template x-if="item.player && item.player.jerseyNumber">
-                                            <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-pines-100 text-pines-700 text-xs font-bold" x-text="item.player.jerseyNumber"></span>
                                         </template>
-                                        <template x-if="!item.player || !item.player.jerseyNumber">
-                                            <span class="text-[10px] text-gray-300">—</span>
+                                        <template x-if="!item.player || !item.player.registrations || item.player.registrations.length === 0">
+                                            <span class="text-sm text-gray-300">-</span>
                                         </template>
                                     </td>
                                 </template>
+                                <!-- Guardians -->
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-2">
-                                        <div class="text-xs text-gray-600 truncate max-w-48" x-text="item.email || '-'"></div>
-                                    </td>
-                                </template>
-                                <template x-if="!item._isHeader">
-                                    <td class="px-4 py-2">
-                                        <div class="text-xs text-gray-600" x-text="formatPhone(item.phone) || '-'"></div>
-                                    </td>
-                                </template>
-                                <template x-if="!item._isHeader">
-                                    <td class="px-4 py-2">
-                                        <div class="text-xs text-gray-600" x-text="item.address ? item.address.city || '-' : '-'"></div>
-                                    </td>
-                                </template>
-                                <template x-if="!item._isHeader">
-                                    <td class="px-4 py-2">
+                                    <td class="px-4 py-3 whitespace-nowrap">
                                         <template x-if="item.guardians && item.guardians.length > 0">
                                             <div class="flex flex-wrap gap-0.5">
                                                 <template x-for="g in item.guardians" :key="g.id">
-                                                    <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] rounded bg-blue-50 text-blue-700" x-text="g.firstName + ' ' + g.lastName.charAt(0) + '.'"></span>
+                                                    <span class="inline-flex items-center px-1.5 py-0.5 text-xs rounded bg-blue-50 text-blue-700" x-text="g.firstName + ' ' + g.lastName.charAt(0) + '.'"></span>
                                                 </template>
                                             </div>
                                         </template>
                                         <template x-if="!item.guardians || item.guardians.length === 0">
-                                            <span class="text-[10px] text-gray-400">-</span>
+                                            <span class="text-sm text-gray-300">-</span>
                                         </template>
                                     </td>
                                 </template>
@@ -181,194 +194,140 @@
                         </template>
                     </tbody>
                 </table>
-
-                <div x-show="filteredMembers.length === 0 && !loading" class="text-center py-12">
-                    <div class="text-gray-400 text-4xl mb-3"><i class="fa-solid fa-users"></i></div>
-                    <h3 class="text-sm font-medium text-gray-900 mb-1">No members found</h3>
-                    <p class="text-xs text-gray-500" x-show="allMembers.length === 0">Click "Sync Members" to pull data from SportsEngine</p>
-                    <p class="text-xs text-gray-500" x-show="allMembers.length > 0">Try adjusting your filters</p>
-                </div>
+            </div>
+            <div x-show="filteredMembers.length === 0 && !loading" class="text-center py-12">
+                <div class="text-gray-400 text-5xl mb-3"><i class="fa-solid fa-users"></i></div>
+                <h3 class="text-lg font-medium text-gray-900 mb-1">No members found</h3>
+                <p class="text-gray-500" x-show="allMembers.length === 0">Click "Sync Members" to pull data from SportsEngine</p>
+                <p class="text-gray-500" x-show="allMembers.length > 0">Try adjusting your filters</p>
             </div>
         </div>
+    </main>
 
-        <!-- Sidebar Detail (right) -->
-        <div x-show="selectedMember" x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="translate-x-full opacity-0" x-transition:enter-end="translate-x-0 opacity-100"
-             class="w-80 bg-white overflow-y-auto flex-shrink-0 shadow-lg">
-
+    <!-- Detail Side Panel -->
+    <div x-show="panelOpen" x-cloak class="fixed inset-0 z-30" @click.self="closePanel()">
+        <div x-show="panelOpen"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full"
+             class="absolute top-0 right-0 h-full w-full sm:w-96 bg-white border-l border-gray-200 shadow-lg flex flex-col">
+            <!-- Panel header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
+                <h2 class="text-lg font-semibold text-gray-900 truncate" x-text="selectedMember ? displayName(selectedMember) : 'Member Details'"></h2>
+                <button @click="closePanel()" class="p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <!-- Panel body -->
             <template x-if="selectedMember">
+            <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+                <!-- Profile -->
                 <div>
-                    <!-- Sidebar Header -->
-                    <div class="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between z-[5]">
-                        <h2 class="text-sm font-bold text-gray-900 truncate" x-text="displayName(selectedMember)"></h2>
-                        <button @click="selectedMember = null" class="p-1 rounded hover:bg-gray-100 text-gray-400">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
+                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Profile</label>
+                    <div class="space-y-1.5">
+                        <div class="text-sm font-medium text-gray-900" x-text="displayName(selectedMember)"></div>
+                        <div class="text-xs text-gray-500" x-show="selectedMember.preferredName" x-text="'Goes by ' + selectedMember.preferredName"></div>
+                        <template x-if="selectedMember.dateOfBirth">
+                            <div class="text-xs text-gray-700">
+                                <span x-text="formatDob(selectedMember.dateOfBirth)"></span>
+                                <span class="text-gray-400 ml-1" x-text="'(' + age(selectedMember.dateOfBirth) + ' yrs)'"></span>
+                            </div>
+                        </template>
+                        <div class="text-xs text-gray-700" x-show="selectedMember.gender" x-text="selectedMember.gender"></div>
+                        <div class="text-xs text-gray-700" x-show="selectedMember.graduationYear" x-text="'Class of ' + selectedMember.graduationYear"></div>
                     </div>
-
-                    <!-- Profile Section -->
-                    <div class="px-4 py-3 border-b border-gray-100">
-                        <div class="flex items-center mb-3">
-                            <div class="h-10 w-10 rounded-full bg-pines-100 flex items-center justify-center text-pines-700 text-sm font-bold" x-text="initials(selectedMember)"></div>
-                            <div class="ml-3">
-                                <div class="text-sm font-semibold text-gray-900" x-text="displayName(selectedMember)"></div>
-                                <div class="text-xs text-gray-500" x-show="selectedMember.preferredName" x-text="'Goes by ' + selectedMember.preferredName"></div>
-                            </div>
-                        </div>
-
-                        <div class="space-y-1.5">
-                            <template x-if="selectedMember.dateOfBirth">
-                                <div class="flex items-center text-xs">
-                                    <i class="fa-regular fa-calendar-days w-4 text-gray-400 text-center"></i>
-                                    <span class="ml-2 text-gray-600" x-text="formatDob(selectedMember.dateOfBirth)"></span>
-                                    <span class="ml-1 text-gray-400" x-text="'(' + age(selectedMember.dateOfBirth) + ' yrs)'"></span>
-                                </div>
-                            </template>
-                            <template x-if="selectedMember.gender">
-                                <div class="flex items-center text-xs">
-                                    <i class="fa-solid fa-user w-4 text-gray-400 text-center"></i>
-                                    <span class="ml-2 text-gray-600" x-text="selectedMember.gender"></span>
-                                </div>
-                            </template>
-                            <template x-if="selectedMember.graduationYear">
-                                <div class="flex items-center text-xs">
-                                    <i class="fa-solid fa-graduation-cap w-4 text-gray-400 text-center"></i>
-                                    <span class="ml-2 text-gray-600" x-text="'Class of ' + selectedMember.graduationYear"></span>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-
-                    <!-- Jersey & Registrations Section -->
-                    <template x-if="selectedMember.player">
-                        <div class="px-4 py-3 border-b border-gray-100">
-                            <h3 class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Jersey & Registrations</h3>
-                            <!-- Jersey number -->
-                            <div class="flex items-center mb-3">
-                                <template x-if="selectedMember.player.jerseyNumber">
-                                    <div class="flex items-center">
-                                        <div class="flex items-center justify-center w-10 h-10 rounded-full bg-pines-100 text-pines-700 text-lg font-bold" x-text="selectedMember.player.jerseyNumber"></div>
-                                        <div class="ml-2.5">
-                                            <div class="text-xs font-medium text-gray-900">Jersey Number</div>
-                                            <div class="text-[10px] text-gray-500" x-text="selectedMember.player.locked ? 'Locked' : 'Unlocked'"
-                                                 :class="selectedMember.player.locked ? 'text-pines-600' : 'text-gray-400'"></div>
-                                        </div>
-                                    </div>
-                                </template>
-                                <template x-if="!selectedMember.player.jerseyNumber">
-                                    <div class="flex items-center">
-                                        <div class="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 text-gray-400 text-xs">
-                                            <i class="fa-solid fa-shirt"></i>
-                                        </div>
-                                        <div class="ml-2.5 text-xs text-gray-400">No jersey assigned</div>
-                                    </div>
-                                </template>
-                            </div>
-                            <!-- Registrations -->
-                            <template x-if="selectedMember.player.registrations && selectedMember.player.registrations.length > 0">
-                                <div class="space-y-1.5">
-                                    <template x-for="r in selectedMember.player.registrations" :key="r.id">
-                                        <div class="flex items-center bg-gray-50 rounded-lg px-2.5 py-1.5">
-                                            <i class="fa-solid fa-futbol w-4 text-gray-400 text-[10px] text-center"></i>
-                                            <div class="ml-2 flex-1 min-w-0">
-                                                <div class="text-xs font-medium text-gray-900 truncate" x-text="r.sport"></div>
-                                                <div class="text-[10px] text-gray-500 truncate" x-text="r.division + ' · ' + r.season"></div>
-                                            </div>
-                                        </div>
-                                    </template>
-                                </div>
-                            </template>
-                            <template x-if="!selectedMember.player.registrations || selectedMember.player.registrations.length === 0">
-                                <div class="text-xs text-gray-400 italic">No registrations</div>
-                            </template>
-                        </div>
-                    </template>
-
-                    <!-- Contact Section -->
-                    <div class="px-4 py-3 border-b border-gray-100">
-                        <h3 class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Contact</h3>
-                        <div class="space-y-1.5">
-                            <template x-if="selectedMember.email">
-                                <div class="flex items-center text-xs">
-                                    <i class="fa-regular fa-envelope w-4 text-gray-400 text-center"></i>
-                                    <a :href="'mailto:' + selectedMember.email" class="ml-2 text-pines-600 hover:underline truncate" x-text="selectedMember.email"></a>
-                                </div>
-                            </template>
-                            <template x-if="selectedMember.phone">
-                                <div class="flex items-center text-xs">
-                                    <i class="fa-solid fa-phone w-4 text-gray-400 text-center"></i>
-                                    <a :href="'tel:' + selectedMember.phone" class="ml-2 text-pines-600 hover:underline" x-text="formatPhone(selectedMember.phone)"></a>
-                                </div>
-                            </template>
-                            <div x-show="!selectedMember.email && !selectedMember.phone" class="text-xs text-gray-400 italic">No contact info</div>
-                        </div>
-                    </div>
-
-                    <!-- Address Section -->
-                    <template x-if="selectedMember.address">
-                        <div class="px-4 py-3 border-b border-gray-100">
-                            <h3 class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Address</h3>
-                            <div class="text-xs text-gray-600 space-y-0.5">
-                                <div x-show="selectedMember.address.address1" x-text="selectedMember.address.address1"></div>
-                                <div x-show="selectedMember.address.address2" x-text="selectedMember.address.address2"></div>
-                                <div>
-                                    <span x-text="selectedMember.address.city"></span><span x-show="selectedMember.address.city && selectedMember.address.state">, </span>
-                                    <span x-text="selectedMember.address.state"></span>
-                                    <span class="ml-1" x-text="selectedMember.address.postalCode"></span>
-                                </div>
-                            </div>
-                        </div>
-                    </template>
-
-                    <!-- Guardians Section -->
-                    <template x-if="selectedMember.guardians && selectedMember.guardians.length > 0">
-                        <div class="px-4 py-3 border-b border-gray-100">
-                            <h3 class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                                Parents / Guardians
-                                <span class="ml-1 text-gray-400" x-text="'(' + selectedMember.guardians.length + ')'"></span>
-                            </h3>
-                            <div class="space-y-2">
-                                <template x-for="g in selectedMember.guardians" :key="g.id">
-                                    <div class="bg-gray-50 rounded-lg p-2.5">
-                                        <div class="flex items-center mb-1.5">
-                                            <div class="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-[9px] font-bold" x-text="g.firstName.charAt(0) + g.lastName.charAt(0)"></div>
-                                            <div class="ml-2">
-                                                <div class="text-xs font-medium text-gray-900" x-text="g.firstName + ' ' + g.lastName"></div>
-                                                <div class="text-[10px] text-gray-500 capitalize" x-show="g.type" x-text="g.type"></div>
-                                            </div>
-                                        </div>
-                                        <div class="space-y-1 ml-8">
-                                            <template x-if="g.email">
-                                                <div class="flex items-center text-[10px]">
-                                                    <i class="fa-regular fa-envelope w-3 text-gray-400 text-center"></i>
-                                                    <a :href="'mailto:' + g.email" class="ml-1.5 text-pines-600 hover:underline truncate" x-text="g.email"></a>
-                                                </div>
-                                            </template>
-                                            <template x-if="g.phone">
-                                                <div class="flex items-center text-[10px]">
-                                                    <i class="fa-solid fa-phone w-3 text-gray-400 text-center"></i>
-                                                    <a :href="'tel:' + g.phone" class="ml-1.5 text-pines-600 hover:underline" x-text="formatPhone(g.phone)"></a>
-                                                </div>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
-
-                    <!-- Memberships Section -->
-                    <template x-if="selectedMember.memberships">
-                        <div class="px-4 py-3">
-                            <h3 class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Memberships</h3>
-                            <div class="flex flex-wrap gap-1">
-                                <template x-for="m in selectedMember.memberships.split(', ')" :key="m">
-                                    <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] rounded bg-pines-50 text-pines-700" x-text="m"></span>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
                 </div>
+
+                <!-- Jersey & Registrations -->
+                <template x-if="selectedMember.player">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Jersey & Registrations</label>
+                        <div class="grid grid-cols-2 gap-4 mb-3">
+                            <div>
+                                <div class="text-xs text-gray-500">Jersey #</div>
+                                <div class="text-sm font-medium text-gray-900" x-text="selectedMember.player.jerseyNumber || 'None'"></div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500">Status</div>
+                                <div class="text-xs" :class="selectedMember.player.locked ? 'text-pines-600' : 'text-gray-400'" x-text="selectedMember.player.locked ? 'Locked' : 'Unlocked'"></div>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <template x-for="reg in sortedRegs(selectedMember.player.registrations || [])" :key="reg.id">
+                                <div class="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
+                                    <div class="flex items-center gap-2">
+                                        <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full" :class="sportColor(reg.sport)">
+                                            <span x-text="sportEmoji(reg.sport)"></span>
+                                            <span class="ml-1" x-text="reg.sport"></span>
+                                        </span>
+                                        <span class="text-xs text-gray-700" x-text="reg.season"></span>
+                                    </div>
+                                    <span class="text-xs text-gray-600" x-text="reg.division"></span>
+                                </div>
+                            </template>
+                            <div x-show="!selectedMember.player.registrations || selectedMember.player.registrations.length === 0" class="text-sm text-gray-400 italic">No registrations</div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Contact -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Contact</label>
+                    <div class="space-y-1">
+                        <div class="text-sm text-gray-900" x-show="selectedMember.email" x-text="selectedMember.email"></div>
+                        <div class="text-sm text-gray-900" x-show="selectedMember.phone" x-text="formatPhone(selectedMember.phone)"></div>
+                        <div x-show="!selectedMember.email && !selectedMember.phone" class="text-sm text-gray-400 italic">No contact info</div>
+                    </div>
+                </div>
+
+                <!-- Address -->
+                <template x-if="selectedMember.address">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Address</label>
+                        <div class="text-sm text-gray-900 space-y-0.5">
+                            <div x-show="selectedMember.address.address1" x-text="selectedMember.address.address1"></div>
+                            <div x-show="selectedMember.address.address2" x-text="selectedMember.address.address2"></div>
+                            <div>
+                                <span x-text="selectedMember.address.city"></span><span x-show="selectedMember.address.city && selectedMember.address.state">, </span>
+                                <span x-text="selectedMember.address.state"></span>
+                                <span class="ml-1" x-text="selectedMember.address.postalCode"></span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Guardians -->
+                <template x-if="selectedMember.guardians && selectedMember.guardians.length > 0">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Parents / Guardians</label>
+                        <div class="space-y-2">
+                            <template x-for="g in selectedMember.guardians" :key="g.id">
+                                <div class="p-2.5 bg-gray-50 rounded-lg">
+                                    <div class="text-sm font-medium text-gray-900" x-text="g.firstName + ' ' + g.lastName"></div>
+                                    <div class="text-xs text-gray-500 capitalize" x-show="g.type" x-text="g.type"></div>
+                                    <div class="mt-1 space-y-0.5">
+                                        <div class="text-xs text-gray-700" x-show="g.email" x-text="g.email"></div>
+                                        <div class="text-xs text-gray-700" x-show="g.phone" x-text="formatPhone(g.phone)"></div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Memberships -->
+                <template x-if="selectedMember.memberships">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Memberships</label>
+                        <div class="flex flex-wrap gap-1">
+                            <template x-for="m in selectedMember.memberships.split(', ')" :key="m">
+                                <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-pines-50 text-pines-700" x-text="m"></span>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
             </template>
         </div>
     </div>
@@ -378,6 +337,7 @@
         return {
             loading: true,
             syncing: false,
+            panelOpen: false,
             allMembers: [],
             filteredMembers: [],
             displayList: [],
@@ -426,10 +386,10 @@
                         if (!name.includes(s) && !email.includes(s) && !phone.includes(s) && !jersey.includes(s) && !guardianMatch) return false;
                     }
                     if (this.filters.type === 'child') {
-                        if (!m.guardians || m.guardians.length === 0) return false;
+                        if (!m.isChild) return false;
                     }
                     if (this.filters.type === 'adult') {
-                        if (m.guardians && m.guardians.length > 0) return false;
+                        if (m.isChild) return false;
                     }
                     if (this.filters.city) {
                         if (!m.address || m.address.city !== this.filters.city) return false;
@@ -464,8 +424,14 @@
                 });
             },
 
-            selectMember(member) {
-                this.selectedMember = (this.selectedMember && this.selectedMember.id === member.id) ? null : member;
+            openPanel(member) {
+                this.selectedMember = { ...member };
+                this.panelOpen = true;
+            },
+
+            closePanel() {
+                this.panelOpen = false;
+                this.selectedMember = null;
             },
 
             clearFilters() {
@@ -516,6 +482,44 @@
                     return '(' + digits.slice(1,4) + ') ' + digits.slice(4,7) + '-' + digits.slice(7);
                 }
                 return phone;
+            },
+
+            // Sport display helpers (matching players_page.html)
+            sportEmoji(sport) {
+                const map = { 'Soccer': '\u26bd', 'Basketball': '\ud83c\udfc0', 'Flag Football': '\ud83c\udfc8', 'Volleyball': '\ud83c\udfd0', 'Baseball': '\u26be', 'Softball': '\ud83e\udd4e' };
+                return map[sport] || '\ud83c\udfc3';
+            },
+
+            shortSeason(season) {
+                if (!season) return '';
+                const abbrevs = { 'spring': 'Spr', 'summer': 'Sum', 'fall': 'Fall', 'winter': 'Win' };
+                const parts = season.split(' ');
+                if (parts.length === 2) {
+                    const word = parts[0].toLowerCase();
+                    const yr = parts[1].length === 4 ? "'" + parts[1].slice(2) : parts[1];
+                    return (abbrevs[word] || parts[0]) + ' ' + yr;
+                }
+                return season;
+            },
+
+            sportColor(sport) {
+                if (sport === 'Soccer') return 'bg-green-50 text-green-700';
+                if (sport === 'Basketball') return 'bg-orange-50 text-orange-700';
+                if (sport === 'Flag Football') return 'bg-yellow-50 text-yellow-700';
+                if (sport === 'Volleyball') return 'bg-purple-50 text-purple-700';
+                return 'bg-blue-50 text-blue-700';
+            },
+
+            sortedRegs(regs) {
+                const seasonOrder = { 'spring': 5, 'summer': 4, 'fall': 2, 'winter': 1 };
+                return [...regs].sort((a, b) => {
+                    const yearA = parseInt((a.season || '').match(/\d{4}/)?.[0] || 0);
+                    const yearB = parseInt((b.season || '').match(/\d{4}/)?.[0] || 0);
+                    if (yearB !== yearA) return yearB - yearA;
+                    const wordA = (a.season || '').split(' ')[0].toLowerCase();
+                    const wordB = (b.season || '').split(' ')[0].toLowerCase();
+                    return (seasonOrder[wordB] || 3) - (seasonOrder[wordA] || 3);
+                });
             },
 
             async syncMembers() {
