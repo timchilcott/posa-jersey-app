@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POSA Equipment Inventory</title>
+    <title>POSA Equipment</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
     tailwind.config = {
@@ -170,7 +170,7 @@
                             <tr class="hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100"
                                 @click="openPanel(entry)">
                             <td class="px-4 py-3 whitespace-nowrap">
-                                <span class="text-sm text-gray-900" x-text="entry._sportLabel"></span>
+                                <span class="text-sm text-gray-900" x-text="sportDisplay(entry.sport)"></span>
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-900 whitespace-nowrap" x-text="entry.category"></td>
                             <td class="px-4 py-3 whitespace-nowrap">
@@ -259,7 +259,7 @@
                                    :class="panelSports.includes(sp) ? 'bg-pines-50 border-pines-400 text-pines-700' : 'bg-white border-gray-300 text-gray-500 hover:border-gray-400'">
                                 <input type="checkbox" :value="sp" :checked="panelSports.includes(sp)"
                                        @change="togglePanelSport(sp)" class="sr-only">
-                                <span x-text="sp"></span>
+                                <span x-text="sportEmoji(sp) + ' ' + sp"></span>
                             </label>
                         </template>
                     </div>
@@ -516,13 +516,17 @@
             buildDisplayList() {
                 const sorted = [...this.filteredItems].sort((a, b) => a.name.localeCompare(b.name));
                 this.displayList = sorted.map(item => {
-                    const sports = (item.sport||'').split(',').map(s => s.trim()).filter(Boolean);
-                    let label;
-                    if (sports.length === 0) label = '--';
-                    else if (sports.length > 1) label = 'All Sports';
-                    else label = sports[0];
-                    return { ...item, _key: 'item-' + item.id, _sportLabel: label };
+                    return { ...item, _key: 'item-' + item.id };
                 });
+            },
+            sportEmoji(sport) {
+                const map = { 'Soccer': '\u26bd', 'Basketball': '\ud83c\udfc0', 'Flag Football': '\ud83c\udfc8', 'Volleyball': '\ud83c\udfd0', 'Baseball': '\u26be', 'Softball': '\ud83e\udd4e', 'POSA': '\ud83c\udfdf\ufe0f' };
+                return map[sport] || '\ud83c\udfc3';
+            },
+            sportDisplay(sportStr) {
+                const sports = (sportStr || '').split(',').map(s => s.trim()).filter(Boolean);
+                if (sports.length === 0) return '--';
+                return sports.map(s => this.sportEmoji(s) + ' ' + s).join(', ');
             },
             clearFilters() { this.filters = { search: '', category: '', sport: '', divisions: [], condition: '', location: '', lowStock: false }; this.applyFilters(); },
 
