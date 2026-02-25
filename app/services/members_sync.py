@@ -5,6 +5,10 @@ Pulls all profiles from the organization with extended data:
 - Contact info (email, phone, address)
 - Parent/guardian relationships
 - Memberships
+
+Two-step approach:
+1. List all profiles (returns SimpleProfile with basic fields)
+2. Fetch each profile individually (returns full Profile with guardians, address, etc.)
 """
 
 import logging
@@ -16,10 +20,77 @@ from app.services.sportsengine import is_configured, get_access_token, graphql_q
 logger = logging.getLogger(__name__)
 
 
+# Step 1 query: list profiles (SimpleProfile type — no guardians/address)
+LIST_QUERY = """
+query GetMembers($orgId: Int!, $page: Int!) {
+    profiles(
+        organizationId: $orgId
+        page: $page
+        perPage: 50
+    ) {
+        pageInformation {
+            pages
+            count
+            page
+            perPage
+        }
+        results {
+            id
+            firstName
+            lastName
+            email
+            dateOfBirth
+        }
+    }
+}
+"""
+
+# Step 2 query: fetch individual profile (full Profile type — has everything)
+DETAIL_QUERY = """
+query GetProfile($profileId: Int!, $orgId: Int!) {
+    profile(id: $profileId, organizationId: $orgId) {
+        id
+        firstName
+        lastName
+        middleName
+        preferredName
+        suffix
+        email
+        phone
+        dateOfBirth
+        gender
+        graduationYear
+        photoUrl
+        address {
+            address1
+            address2
+            city
+            state
+            postalCode
+            country
+        }
+        memberships {
+            name
+            status
+        }
+        parentGuardians {
+            firstName
+            lastName
+            email
+            phone
+            photoUrl
+            type
+        }
+    }
+}
+"""
+
+
 def sync_members(db: Session) -> dict:
     """
     Sync all member profiles from SportsEngine into the members table.
-    Pulls profiles page by page with full contact and guardian data.
+    Step 1: List all profile IDs page by page (SimpleProfile).
+    Step 2: Fetch each profile individually for full data (Profile).
     """
     import os
     from app.models_members import Member, MemberGuardian
@@ -34,68 +105,27 @@ def sync_members(db: Session) -> dict:
         "updated_members": 0,
         "guardians_added": 0,
         "pages_processed": 0,
+        "profiles_fetched": 0,
+        "skipped_existing": 0,
         "errors": [],
     }
+
+    # Collect all known SE profile IDs for incremental sync
+    known_ids = set(
+        row[0] for row in db.query(Member.se_profile_id).all()
+    )
+    if known_ids:
+        print(f"MEMBERS SYNC: {len(known_ids)} profiles already in DB", flush=True)
 
     page = 1
     total_pages = None
 
     while True:
-        query = """
-        query GetMembers($orgId: Int!, $page: Int!) {
-            profiles(
-                organizationId: $orgId
-                page: $page
-                perPage: 50
-            ) {
-                pageInformation {
-                    pages
-                    count
-                    page
-                    perPage
-                }
-                results {
-                    id
-                    firstName
-                    lastName
-                    middleName
-                    preferredName
-                    suffix
-                    email
-                    phone
-                    dateOfBirth
-                    gender
-                    graduationYear
-                    photoUrl
-                    address {
-                        address1
-                        address2
-                        city
-                        state
-                        postalCode
-                        country
-                    }
-                    memberships {
-                        name
-                        status
-                    }
-                    parentGuardians {
-                        firstName
-                        lastName
-                        email
-                        phone
-                        photoUrl
-                        type
-                    }
-                }
-            }
-        }
-        """
-
+        # Step 1: Get list of profile IDs
         try:
-            data = graphql_query(query, {"orgId": org_id, "page": page})
+            data = graphql_query(LIST_QUERY, {"orgId": org_id, "page": page})
         except Exception as e:
-            logger.error(f"MEMBERS SYNC: Query failed on page {page}: {e}")
+            logger.error(f"MEMBERS SYNC: List query failed on page {page}: {e}")
             results["errors"].append(f"Page {page}: {str(e)}")
             break
 
@@ -110,13 +140,35 @@ def sync_members(db: Session) -> dict:
 
         print(f"MEMBERS SYNC: Processing page {page}/{total_pages} ({len(profiles)} profiles)", flush=True)
 
-        for profile in profiles:
+        # Step 2: Fetch full details for each profile
+        for i, simple_profile in enumerate(profiles):
+            profile_id = simple_profile.get("id")
+            if not profile_id:
+                continue
+
+            # Skip profiles we already have (incremental sync)
+            if int(profile_id) in known_ids:
+                results["skipped_existing"] += 1
+                continue
+
+            # Rate limit: 1.5s between detail queries
+            if results["profiles_fetched"] > 0:
+                time.sleep(1.5)
+
             try:
-                _upsert_member(db, profile, results)
+                detail_data = graphql_query(DETAIL_QUERY, {
+                    "profileId": int(profile_id),
+                    "orgId": org_id,
+                })
+                full_profile = detail_data.get("profile")
+                if full_profile:
+                    _upsert_member(db, full_profile, results)
+                    results["profiles_fetched"] += 1
+                else:
+                    logger.warning(f"MEMBERS SYNC: No data for profile {profile_id}")
             except Exception as e:
-                se_id = profile.get("id", "?")
-                logger.error(f"MEMBERS SYNC: Error processing profile {se_id}: {e}", exc_info=True)
-                results["errors"].append(f"Profile {se_id}: {str(e)}")
+                logger.error(f"MEMBERS SYNC: Error fetching profile {profile_id}: {e}", exc_info=True)
+                results["errors"].append(f"Profile {profile_id}: {str(e)}")
 
         results["pages_processed"] += 1
         db.commit()
@@ -125,7 +177,7 @@ def sync_members(db: Session) -> dict:
             break
 
         page += 1
-        time.sleep(0.5)  # Rate limit
+        time.sleep(0.5)  # Rate limit between pages
 
     print(f"MEMBERS SYNC: Complete — {results}", flush=True)
     return results
