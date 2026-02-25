@@ -3,6 +3,7 @@ Members directory routes — sync and API for the members page.
 """
 import logging
 import threading
+from datetime import date
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session, joinedload
@@ -120,11 +121,31 @@ def list_members(db: Session = Depends(get_db)):
         if key:
             player_lookup[key] = p
 
+    def _is_child(member):
+        """Determine if a member is a child (under 18) based on date of birth."""
+        if not member.date_of_birth:
+            # No DOB — fall back to whether they have guardians in DB
+            return bool(guardians_by_member.get(member.id))
+        try:
+            # date_of_birth may be a string "YYYY-MM-DD" or a date object
+            dob = member.date_of_birth
+            if isinstance(dob, str):
+                parts = dob.split("-")
+                dob = date(int(parts[0]), int(parts[1]), int(parts[2]))
+            today = date.today()
+            age = today.year - dob.year - (
+                (today.month, today.day) < (dob.month, dob.day)
+            )
+            return age < 18
+        except Exception:
+            return bool(guardians_by_member.get(member.id))
+
     result = []
     for m in members:
         # Match member to player by name (case-insensitive)
         member_full = f"{m.first_name} {m.last_name}".strip().lower()
         matched_player = player_lookup.get(member_full)
+        is_child = _is_child(m)
 
         entry = {
             "id": m.id,
@@ -149,7 +170,8 @@ def list_members(db: Session = Depends(get_db)):
                 "country": m.country,
             } if m.address1 or m.city else None,
             "memberships": m.memberships,
-            "guardians": guardians_by_member.get(m.id, []),
+            "isChild": is_child,
+            "guardians": guardians_by_member.get(m.id, []) if is_child else [],
             "player": None,
         }
 

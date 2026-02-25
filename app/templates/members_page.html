@@ -426,10 +426,10 @@
                         if (!name.includes(s) && !email.includes(s) && !phone.includes(s) && !jersey.includes(s) && !guardianMatch) return false;
                     }
                     if (this.filters.type === 'child') {
-                        if (!m.guardians || m.guardians.length === 0) return false;
+                        if (!m.isChild) return false;
                     }
                     if (this.filters.type === 'adult') {
-                        if (m.guardians && m.guardians.length > 0) return false;
+                        if (m.isChild) return false;
                     }
                     if (this.filters.city) {
                         if (!m.address || m.address.city !== this.filters.city) return false;
