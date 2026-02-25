@@ -73,8 +73,8 @@
       }
       var active = isActive(item);
       var classes = active
-        ? 'bg-gray-100 text-pines-600'
-        : 'text-pines-500 hover:bg-gray-50 hover:text-pines-600';
+        ? 'bg-gray-100 posa-icon-active'
+        : 'posa-icon hover:bg-gray-50';
       return '<a href="' + item.href + '" class="posa-rail-item relative flex items-center justify-center w-10 h-10 rounded-lg transition-colors ' + classes + '">' +
         item.icon +
         '<span class="posa-tooltip">' + item.label + '</span>' +
@@ -223,6 +223,10 @@
       '#posa-sidebar { width: ' + (hasPanel ? '16rem' : '3.5rem') + '; }' +
       '#posa-sidebar .posa-rail { width: 3.5rem; flex-shrink: 0; overflow: visible; }' +
       '#posa-sidebar .posa-nav-panel { width: 12.5rem; flex-shrink: 0; border-left: 1px solid #e5e7eb; }' +
+      /* Icon colors — use hex since Tailwind CDN can't resolve custom pines- classes in JS */
+      '.posa-icon { color: #3C7939; }' +
+      '.posa-icon:hover { color: #2f6130; }' +
+      '.posa-icon-active { color: #2f6130; }' +
       /* Tooltips */
       '.posa-tooltip {' +
         'position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%);' +
