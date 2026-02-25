@@ -33,9 +33,9 @@
                        class="pl-8 pr-3 py-1.5 border border-gray-200 rounded-md text-xs w-48 focus:ring-1 focus:ring-pines-500 focus:border-pines-500 placeholder-gray-400">
             </div>
             <!-- All filter pills (behind + Filter) -->
-            <template x-if="showMore || filters.sport || filters.eventType || filters.team || filters.venue || filters.subLocation || filters.status || filters.startDate || filters.endDate">
+            <template x-if="showMore || hasAnyFilter()">
                 <div class="contents">
-                    <!-- Sport pill -->
+                    <!-- Sport pill (single-select, server-side) -->
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
@@ -51,7 +51,7 @@
                             </template>
                         </div>
                     </div>
-                    <!-- Type pill -->
+                    <!-- Type pill (single-select, server-side) -->
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
@@ -69,67 +69,79 @@
                             </template>
                         </div>
                     </div>
-                    <!-- Team pill -->
+                    <!-- Team pill (multi-select) -->
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.team ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
-                            <span x-text="filters.team || 'All teams'"></span>
+                                :class="filters.team.length ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                            <span x-text="filterLabel(filters.team, 'team', 'teams')"></span>
                             <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
                         <div x-show="open" x-transition class="absolute z-20 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg py-1 max-h-48 overflow-y-auto">
-                            <div @click="filters.team = ''; applyClientFilters(); buildDisplayList(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs text-gray-500">All teams</div>
                             <template x-for="tm in availableTeams" :key="tm">
-                                <div @click="filters.team = tm; applyClientFilters(); buildDisplayList(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs"
-                                     :class="filters.team === tm ? 'bg-pines-50 text-pines-700 font-medium' : ''" x-text="tm"></div>
+                                <label class="flex items-center px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs">
+                                    <input type="checkbox" :checked="filters.team.includes(tm)"
+                                           @change="toggleFilter('team', tm)"
+                                           class="rounded border-gray-300 text-pines-500 focus:ring-pines-500 mr-2 w-3.5 h-3.5">
+                                    <span x-text="tm"></span>
+                                </label>
                             </template>
                         </div>
                     </div>
-                    <!-- Venue pill -->
+                    <!-- Venue pill (multi-select) -->
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.venue ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
-                            <span x-text="filters.venue || 'All venues'"></span>
+                                :class="filters.venue.length ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                            <span x-text="filterLabel(filters.venue, 'venue', 'venues')"></span>
                             <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
                         <div x-show="open" x-transition class="absolute z-20 mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg py-1 max-h-48 overflow-y-auto">
-                            <div @click="filters.venue = ''; applyClientFilters(); buildDisplayList(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs text-gray-500">All venues</div>
                             <template x-for="v in availableVenues" :key="v">
-                                <div @click="filters.venue = v; applyClientFilters(); buildDisplayList(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs"
-                                     :class="filters.venue === v ? 'bg-pines-50 text-pines-700 font-medium' : ''" x-text="v"></div>
+                                <label class="flex items-center px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs">
+                                    <input type="checkbox" :checked="filters.venue.includes(v)"
+                                           @change="toggleFilter('venue', v)"
+                                           class="rounded border-gray-300 text-pines-500 focus:ring-pines-500 mr-2 w-3.5 h-3.5">
+                                    <span x-text="v"></span>
+                                </label>
                             </template>
                         </div>
                     </div>
-                    <!-- Location (sub-location) pill -->
+                    <!-- Location (sub-location) pill (multi-select) -->
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.subLocation ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
-                            <span x-text="filters.subLocation || 'All locations'"></span>
+                                :class="filters.subLocation.length ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                            <span x-text="filterLabel(filters.subLocation, 'location', 'locations')"></span>
                             <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
                         <div x-show="open" x-transition class="absolute z-20 mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg py-1 max-h-48 overflow-y-auto">
-                            <div @click="filters.subLocation = ''; applyClientFilters(); buildDisplayList(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs text-gray-500">All locations</div>
                             <template x-for="sl in availableSubLocations" :key="sl">
-                                <div @click="filters.subLocation = sl; applyClientFilters(); buildDisplayList(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs"
-                                     :class="filters.subLocation === sl ? 'bg-pines-50 text-pines-700 font-medium' : ''" x-text="sl"></div>
+                                <label class="flex items-center px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs">
+                                    <input type="checkbox" :checked="filters.subLocation.includes(sl)"
+                                           @change="toggleFilter('subLocation', sl)"
+                                           class="rounded border-gray-300 text-pines-500 focus:ring-pines-500 mr-2 w-3.5 h-3.5">
+                                    <span x-text="sl"></span>
+                                </label>
                             </template>
                         </div>
                     </div>
-                    <!-- Status pill -->
+                    <!-- Status pill (multi-select) -->
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.status ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
-                            <span x-text="filters.status || 'All statuses'"></span>
+                                :class="filters.status.length ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                            <span x-text="filterLabel(filters.status, 'status', 'statuses')"></span>
                             <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
                         <div x-show="open" x-transition class="absolute z-20 mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
-                            <div @click="filters.status = ''; applyClientFilters(); buildDisplayList(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs text-gray-500">All statuses</div>
                             <template x-for="st in availableStatuses" :key="st">
-                                <div @click="filters.status = st; applyClientFilters(); buildDisplayList(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs"
-                                     :class="filters.status === st ? 'bg-pines-50 text-pines-700 font-medium' : ''" x-text="st"></div>
+                                <label class="flex items-center px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs">
+                                    <input type="checkbox" :checked="filters.status.includes(st)"
+                                           @change="toggleFilter('status', st)"
+                                           class="rounded border-gray-300 text-pines-500 focus:ring-pines-500 mr-2 w-3.5 h-3.5">
+                                    <span x-text="st"></span>
+                                </label>
                             </template>
                         </div>
                     </div>
@@ -145,7 +157,7 @@
                                class="border-0 p-0 text-xs w-28 focus:ring-0 text-gray-600">
                     </div>
                     <!-- Collapse filters -->
-                    <button x-show="showMore && !filters.sport && !filters.eventType && !filters.team && !filters.venue && !filters.subLocation && !filters.status && !filters.startDate && !filters.endDate"
+                    <button x-show="showMore && !hasAnyFilter()"
                             @click="showMore = false"
                             class="text-xs text-gray-400 hover:text-gray-600 px-1 py-1.5">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -153,14 +165,14 @@
                 </div>
             </template>
             <!-- + Filter button -->
-            <button x-show="!showMore && !filters.sport && !filters.eventType && !filters.team && !filters.venue && !filters.subLocation && !filters.status && !filters.startDate && !filters.endDate"
+            <button x-show="!showMore && !hasAnyFilter()"
                     @click="showMore = true"
                     class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border border-dashed border-gray-300 text-gray-400 hover:text-gray-600 hover:border-gray-400 transition-colors">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 Filter
             </button>
             <!-- Clear -->
-            <button x-show="filters.search || filters.sport || filters.eventType || filters.team || filters.venue || filters.subLocation || filters.status || filters.startDate || filters.endDate"
+            <button x-show="filters.search || hasAnyFilter()"
                     @click="showMore = false; clearFilters()" class="text-xs text-gray-400 hover:text-gray-600 px-1.5 py-1.5">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
@@ -234,9 +246,9 @@
                                 <!-- EVENT ROW: Teams matchup / Coach -->
                                 <template x-if="!entry._isHeader">
                                     <td x-show="ecv('teams')" class="px-4 py-3 whitespace-nowrap">
-                                        <template x-if="entry.teams && entry.teams.length > 0">
+                                        <template x-if="filteredTeams(entry.teams).length > 0">
                                             <div class="flex items-center gap-1.5">
-                                                <template x-for="(team, ti) in entry.teams" :key="ti">
+                                                <template x-for="(team, ti) in filteredTeams(entry.teams)" :key="ti">
                                                     <div class="flex items-center gap-1">
                                                         <span x-show="ti > 0" class="text-xs text-gray-300 mx-0.5">vs</span>
                                                         <img x-show="team.logoUrl" :src="team.logoUrl" class="w-5 h-5 object-contain rounded" @error="$el.style.display='none'">
@@ -245,7 +257,7 @@
                                                 </template>
                                             </div>
                                         </template>
-                                        <span x-show="!entry.teams || entry.teams.length === 0" class="text-sm text-gray-300">--</span>
+                                        <span x-show="filteredTeams(entry.teams).length === 0" class="text-sm text-gray-300">--</span>
                                     </td>
                                 </template>
 
@@ -387,10 +399,10 @@ function eventsApp() {
             search: '',
             sport: '',
             eventType: '',
-            team: '',
-            venue: '',
-            subLocation: '',
-            status: '',
+            team: [],
+            venue: [],
+            subLocation: [],
+            status: [],
             startDate: '',
             endDate: '',
         },
@@ -400,9 +412,37 @@ function eventsApp() {
         ecv(colId) {
             if (this.colVis[colId]) return true;
             for (var fk in this._filterColMap) {
-                if (this._filterColMap[fk] === colId && this.filters[fk]) return true;
+                if (this._filterColMap[fk] === colId) {
+                    var v = this.filters[fk];
+                    if (Array.isArray(v) ? v.length > 0 : !!v) return true;
+                }
             }
             return false;
+        },
+
+        hasAnyFilter() {
+            return this.filters.sport || this.filters.eventType || this.filters.team.length || this.filters.venue.length || this.filters.subLocation.length || this.filters.status.length || this.filters.startDate || this.filters.endDate;
+        },
+
+        toggleFilter(filterKey, value) {
+            const arr = this.filters[filterKey];
+            const idx = arr.indexOf(value);
+            if (idx >= 0) arr.splice(idx, 1);
+            else arr.push(value);
+            this.applyClientFilters();
+            this.buildDisplayList();
+        },
+
+        filterLabel(arr, singular, plural) {
+            if (arr.length === 0) return 'All ' + plural;
+            if (arr.length === 1) return arr[0];
+            return arr.length + ' ' + plural;
+        },
+
+        filteredTeams(teams) {
+            if (!teams || !teams.length) return [];
+            if (!this.filters.team.length) return teams;
+            return teams.filter(t => this.filters.team.includes(t.name));
         },
 
         get visibleCount() {
@@ -467,17 +507,17 @@ function eventsApp() {
 
         applyClientFilters() {
             let list = this.allEvents;
-            if (this.filters.team) {
-                list = list.filter(e => (e.teams || []).some(t => t.name === this.filters.team));
+            if (this.filters.team.length > 0) {
+                list = list.filter(e => (e.teams || []).some(t => this.filters.team.includes(t.name)));
             }
-            if (this.filters.venue) {
-                list = list.filter(e => e.location?.name === this.filters.venue);
+            if (this.filters.venue.length > 0) {
+                list = list.filter(e => e.location?.name && this.filters.venue.includes(e.location.name));
             }
-            if (this.filters.subLocation) {
-                list = list.filter(e => e.location?.description === this.filters.subLocation);
+            if (this.filters.subLocation.length > 0) {
+                list = list.filter(e => e.location?.description && this.filters.subLocation.includes(e.location.description));
             }
-            if (this.filters.status) {
-                list = list.filter(e => e.status && e.status.toLowerCase() === this.filters.status.toLowerCase());
+            if (this.filters.status.length > 0) {
+                list = list.filter(e => e.status && this.filters.status.some(s => s.toLowerCase() === e.status.toLowerCase()));
             }
             this.filteredEvents = list;
         },
@@ -605,10 +645,10 @@ function eventsApp() {
                 search: '',
                 sport: '',
                 eventType: '',
-                team: '',
-                venue: '',
-                subLocation: '',
-                status: '',
+                team: [],
+                venue: [],
+                subLocation: [],
+                status: [],
                 startDate: '',
                 endDate: '',
             };

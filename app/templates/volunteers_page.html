@@ -33,39 +33,48 @@
                        class="pl-8 pr-3 py-1.5 border border-gray-200 rounded-md text-xs w-48 focus:ring-1 focus:ring-pines-500 focus:border-pines-500 placeholder-gray-400">
             </div>
             <!-- All filter pills (behind + Filter) -->
-            <template x-if="showMore || typeFilter || statusFilter">
+            <template x-if="showMore || typeFilter.length || statusFilter.length">
                 <div class="contents">
-                    <!-- Type pill -->
+                    <!-- Type pill (multi-select) -->
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="typeFilter ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
-                            <span x-text="typeFilter || 'All types'"></span>
+                                :class="typeFilter.length ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                            <span x-text="filterLabel(typeFilter, 'type', 'types')"></span>
                             <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
                         <div x-show="open" x-transition class="absolute z-20 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg py-1 max-h-48 overflow-y-auto">
-                            <div @click="typeFilter = ''; applyFilter(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs text-gray-500">All types</div>
                             <template x-for="t in availableTypes" :key="t">
-                                <div @click="typeFilter = t; applyFilter(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs" :class="typeFilter === t ? 'bg-pines-50 text-pines-700 font-medium' : ''" x-text="t"></div>
+                                <label class="flex items-center px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs">
+                                    <input type="checkbox" :checked="typeFilter.includes(t)"
+                                           @change="toggleFilter('typeFilter', t)"
+                                           class="rounded border-gray-300 text-pines-500 focus:ring-pines-500 mr-2 w-3.5 h-3.5">
+                                    <span x-text="t"></span>
+                                </label>
                             </template>
                         </div>
                     </div>
-                    <!-- Status pill -->
+                    <!-- Status pill (multi-select) -->
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="statusFilter ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
-                            <span x-text="statusFilter === 'sent' ? 'Sent' : statusFilter === 'needs' ? 'Needs Email' : 'All statuses'"></span>
+                                :class="statusFilter.length ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                            <span x-text="statusLabel()"></span>
                             <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
                         <div x-show="open" x-transition class="absolute z-20 mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
-                            <div @click="statusFilter = ''; applyFilter(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs text-gray-500">All statuses</div>
-                            <div @click="statusFilter = 'sent'; applyFilter(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs" :class="statusFilter === 'sent' ? 'bg-pines-50 text-pines-700 font-medium' : ''">Sent</div>
-                            <div @click="statusFilter = 'needs'; applyFilter(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs" :class="statusFilter === 'needs' ? 'bg-pines-50 text-pines-700 font-medium' : ''">Needs Email</div>
+                            <template x-for="st in [{val:'sent',label:'Sent'},{val:'needs',label:'Needs Email'}]" :key="st.val">
+                                <label class="flex items-center px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs">
+                                    <input type="checkbox" :checked="statusFilter.includes(st.val)"
+                                           @change="toggleFilter('statusFilter', st.val)"
+                                           class="rounded border-gray-300 text-pines-500 focus:ring-pines-500 mr-2 w-3.5 h-3.5">
+                                    <span x-text="st.label"></span>
+                                </label>
+                            </template>
                         </div>
                     </div>
                     <!-- Collapse filters -->
-                    <button x-show="showMore && !typeFilter && !statusFilter"
+                    <button x-show="showMore && !typeFilter.length && !statusFilter.length"
                             @click="showMore = false"
                             class="text-xs text-gray-400 hover:text-gray-600 px-1 py-1.5">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -73,15 +82,15 @@
                 </div>
             </template>
             <!-- + Filter toggle -->
-            <button x-show="!showMore && !typeFilter && !statusFilter"
+            <button x-show="!showMore && !typeFilter.length && !statusFilter.length"
                     @click="showMore = true"
                     class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border border-dashed border-gray-300 text-gray-400 hover:text-gray-600 hover:border-gray-400 transition-colors">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 Filter
             </button>
             <!-- Clear -->
-            <button x-show="search || typeFilter || statusFilter"
-                    @click="search = ''; typeFilter = ''; statusFilter = ''; applyFilter(); showMore = false" class="text-xs text-gray-400 hover:text-gray-600 px-1.5 py-1.5">
+            <button x-show="search || typeFilter.length || statusFilter.length"
+                    @click="clearFilters()" class="text-xs text-gray-400 hover:text-gray-600 px-1.5 py-1.5">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
             <!-- Spacer + actions -->
@@ -120,7 +129,7 @@
                                 <td x-show="ecv('email')" class="px-4 py-3 whitespace-nowrap"><div class="text-sm text-gray-900" x-text="vol.email"></div></td>
                                 <td x-show="ecv('registration_type')" class="px-4 py-3 whitespace-nowrap">
                                     <div class="flex flex-nowrap gap-1">
-                                        <template x-for="reg in vol.registrations" :key="reg.id">
+                                        <template x-for="reg in filteredRegistrations(vol.registrations)" :key="reg.id">
                                             <span class="inline-flex items-center px-2 py-0.5 text-xs rounded text-gray-700 bg-gray-100" x-text="reg.division"></span>
                                         </template>
                                     </div>
@@ -202,8 +211,8 @@
             all: [],
             filtered: [],
             search: '',
-            typeFilter: '',
-            statusFilter: '',
+            typeFilter: [],
+            statusFilter: [],
             availableTypes: [],
             colVis: {},
             _filterColMap: { typeFilter: 'registration_type', statusFilter: 'status' },
@@ -211,7 +220,10 @@
             ecv(colId) {
                 if (this.colVis[colId]) return true;
                 for (var fk in this._filterColMap) {
-                    if (this._filterColMap[fk] === colId && this[fk]) return true;
+                    if (this._filterColMap[fk] === colId) {
+                        var v = this[fk];
+                        if (Array.isArray(v) ? v.length > 0 : !!v) return true;
+                    }
                 }
                 return false;
             },
@@ -232,17 +244,55 @@
                 this.loading = false;
             },
 
+            toggleFilter(filterKey, value) {
+                const arr = this[filterKey];
+                const idx = arr.indexOf(value);
+                if (idx >= 0) arr.splice(idx, 1);
+                else arr.push(value);
+                this.applyFilter();
+            },
+
+            filterLabel(arr, singular, plural) {
+                if (arr.length === 0) return 'All ' + plural;
+                if (arr.length === 1) return arr[0];
+                return arr.length + ' ' + plural;
+            },
+
+            statusLabel() {
+                if (this.statusFilter.length === 0) return 'All statuses';
+                const map = { sent: 'Sent', needs: 'Needs Email' };
+                if (this.statusFilter.length === 1) return map[this.statusFilter[0]] || this.statusFilter[0];
+                return this.statusFilter.length + ' statuses';
+            },
+
+            filteredRegistrations(regs) {
+                if (!regs) return [];
+                if (!this.typeFilter.length) return regs;
+                return regs.filter(r => this.typeFilter.includes(r.division));
+            },
+
+            clearFilters() {
+                this.search = '';
+                this.typeFilter = [];
+                this.statusFilter = [];
+                this.applyFilter();
+            },
+
             applyFilter() {
                 this.filtered = this.all.filter(vol => {
                     if (this.search) {
                         const s = this.search.toLowerCase();
                         if (!vol.name.toLowerCase().includes(s) && !vol.email.toLowerCase().includes(s)) return false;
                     }
-                    if (this.typeFilter) {
-                        if (!vol.registrations.some(r => r.division === this.typeFilter)) return false;
+                    if (this.typeFilter.length > 0) {
+                        if (!vol.registrations.some(r => this.typeFilter.includes(r.division))) return false;
                     }
-                    if (this.statusFilter === 'sent' && !vol.emailSent) return false;
-                    if (this.statusFilter === 'needs' && vol.emailSent) return false;
+                    if (this.statusFilter.length > 0) {
+                        const matchesSent = vol.emailSent;
+                        const matchesNeeds = !vol.emailSent;
+                        const ok = this.statusFilter.some(s => (s === 'sent' && matchesSent) || (s === 'needs' && matchesNeeds));
+                        if (!ok) return false;
+                    }
                     return true;
                 });
             },
