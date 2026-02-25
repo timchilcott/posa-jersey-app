@@ -22,22 +22,10 @@
 </head>
 <body class="bg-gray-50" x-data="checkedOutApp()" x-init="init()" x-cloak>
 
-    <!-- Page header with breadcrumb -->
-    <div class="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200">
-        <div>
-            <div class="flex items-center text-sm text-gray-500 mb-0.5">
-                <a href="/inventory" class="hover:text-pines-600 transition-colors">Equipment</a>
-                <svg class="w-4 h-4 mx-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                <span class="text-gray-900 font-medium">Checked Out</span>
-            </div>
-            <h1 class="text-xl font-semibold text-gray-900">Checked Out Equipment</h1>
-        </div>
-    </div>
-
     <!-- Filter bar -->
     <div class="bg-white border-b border-gray-200" x-data="{ showMore: false }">
         <div class="flex items-center gap-2 flex-nowrap px-6 py-2.5">
-            <span class="text-xs text-gray-400 mr-1 shrink-0" x-text="filteredCount + ' items'"></span>
+            <span class="text-xs text-gray-600 mr-1 shrink-0" x-text="filteredCount + ' items'"></span>
             <!-- Search -->
             <div class="relative">
                 <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
