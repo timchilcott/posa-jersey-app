@@ -150,7 +150,7 @@
   function buildSidebarHTML() {
     var active = getActiveSection();
     var panelContent = buildPanelContent();
-    var hasPanel = active && active.children && active.children.length > 0;
+    var hasChildren = active && active.children && active.children.length > 0;
 
     var html = '' +
     '<aside id="posa-sidebar" class="hidden lg:flex bg-white h-screen flex-shrink-0 border-r border-gray-200" style="overflow:visible;z-index:20">' +
@@ -164,18 +164,18 @@
         '</nav>' +
       '</div>';
 
-    // Only show nav panel when active section has children
-    if (hasPanel) {
+    // Always show nav panel when a section is active
+    if (active) {
       html +=
       '<!-- Nav Panel -->' +
       '<div class="posa-nav-panel flex flex-col h-full">' +
         '<div class="flex items-center h-16 px-4 flex-shrink-0 border-b border-gray-100">' +
           '<span class="font-semibold text-sm text-gray-900">' + active.label + '</span>' +
-        '</div>' +
-        '<nav class="flex-1 px-3 py-3 overflow-y-auto">' +
-          panelContent +
-        '</nav>' +
-      '</div>';
+        '</div>';
+      if (hasChildren) {
+        html += '<nav class="flex-1 px-3 py-3 overflow-y-auto">' + panelContent + '</nav>';
+      }
+      html += '</div>';
     }
 
     html += '</aside>';
@@ -219,12 +219,15 @@
   // ── CSS ────────────────────────────────────────────────────────────
   function injectStyles() {
     var active = getActiveSection();
-    var hasPanel = active && active.children && active.children.length > 0;
+    var hasChildren = active && active.children && active.children.length > 0;
+    // Panel width: wider if has children (sub-nav links), narrower if title-only
+    var panelWidth = hasChildren ? '12.5rem' : '8rem';
+    var totalWidth = active ? ('calc(3.5rem + ' + panelWidth + ')') : '3.5rem';
     var style = document.createElement('style');
     style.textContent = '' +
-      '#posa-sidebar { width: ' + (hasPanel ? '16rem' : '3.5rem') + '; }' +
+      '#posa-sidebar { width: ' + totalWidth + '; }' +
       '#posa-sidebar .posa-rail { width: 3.5rem; flex-shrink: 0; overflow: visible; }' +
-      '#posa-sidebar .posa-nav-panel { width: 12.5rem; flex-shrink: 0; border-left: 1px solid #e5e7eb; }' +
+      '#posa-sidebar .posa-nav-panel { width: ' + panelWidth + '; flex-shrink: 0; border-left: 1px solid #e5e7eb; }' +
       /* Icon colors — use hex since Tailwind CDN can't resolve custom pines- classes in JS */
       '.posa-icon { color: #3C7939; }' +
       '.posa-icon:hover { color: #2f6130; }' +
@@ -243,7 +246,7 @@
       '}' +
       '.posa-rail-item:hover .posa-tooltip { opacity: 1; }' +
       /* Hide tooltips when panel is open (label is already visible) */
-      (hasPanel ? '.posa-rail-item .posa-tooltip { display: none; }' : '') +
+      (active ? '.posa-rail-item .posa-tooltip { display: none; }' : '') +
       /* Prevent FOUC */
       'body.sidebar-loading > *:not(script):not(style):not(link) { visibility: hidden; }' +
       'body.sidebar-ready > * { visibility: visible; }';
