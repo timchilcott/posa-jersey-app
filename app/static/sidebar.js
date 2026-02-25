@@ -209,7 +209,7 @@
     '<!-- Nav Panel -->' +
     '<div class="posa-nav-panel flex flex-col h-full">' +
       '<div class="flex items-center h-16 px-4 flex-shrink-0 border-b border-gray-100">' +
-        '<span class="font-semibold text-sm text-gray-900">' + (active ? active.label : '') + '</span>' +
+        '<span class="font-bold text-base text-gray-900">' + (active ? active.label : '') + '</span>' +
       '</div>' +
       '<nav class="flex-1 px-3 py-3 overflow-y-auto">' + panelContent + '</nav>' +
     '</div>';
@@ -222,9 +222,11 @@
   function buildPageHeading() {
     var title = getPageTitle();
     if (!title) return '';
+    var active = getActiveSection();
+    var iconHtml = active ? '<span class="text-pines-600 mr-2.5">' + active.icon + '</span>' : '';
     return '' +
     '<div class="bg-white border-b border-gray-200 px-6 py-4">' +
-      '<h1 class="text-lg font-bold text-gray-900">' + title + '</h1>' +
+      '<h1 class="flex items-center text-lg font-bold text-gray-900">' + iconHtml + title + '</h1>' +
     '</div>';
   }
 
