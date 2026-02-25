@@ -153,12 +153,12 @@
                     </thead>
                     <tbody>
                         <template x-for="item in displayList" :key="item._key">
-                            <tr :class="item._isHeader ? 'bg-gray-50' : rowClass(item)"
+                            <tr :class="item._isHeader ? 'bg-gray-100/70 border-t border-gray-200' : rowClass(item)"
                                 @click="!item._isHeader && openPanel(item)">
                                 <template x-if="item._isHeader">
-                                    <td colspan="5" class="px-4 py-2">
-                                        <span class="text-xs font-semibold text-gray-700" x-text="'Birth Year ' + item.birthYear"></span>
-                                        <span class="ml-1.5 text-xs text-gray-500" x-text="item._count + ' players'"></span>
+                                    <td colspan="5" class="px-4 py-2.5">
+                                        <span class="text-sm font-bold text-gray-900" x-text="'Birth Year ' + item.birthYear"></span>
+                                        <span class="ml-2 text-xs text-gray-500 font-normal" x-text="item._count + ' players'"></span>
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
