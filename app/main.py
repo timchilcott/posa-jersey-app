@@ -9,10 +9,12 @@ from sqlalchemy import func
 from jinja2 import Environment, FileSystemLoader
 from app.database import get_db, engine
 from app.models import Base, Player, Registration, EmailTemplate
+import app.models_members  # noqa: F401  — register Member/MemberGuardian tables
 from app.api_routes import router as admin_api_router
 from app.sync_routes import router as sync_router
 from app.inventory_routes import router as inventory_router
 from app.events_routes import router as events_router
+from app.members_routes import router as members_router
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="POSA Jersey Management")
@@ -26,6 +28,7 @@ app.include_router(admin_api_router)
 app.include_router(sync_router)
 app.include_router(inventory_router)
 app.include_router(events_router)
+app.include_router(members_router)
 
 _TEMPLATES_DIR = pathlib.Path(__file__).parent / "templates"
 
@@ -66,6 +69,10 @@ async def inventory_page():
 @app.get("/events", response_class=HTMLResponse)
 async def events_page():
     return HTMLResponse(_read_template("events_page.html"))
+
+@app.get("/members", response_class=HTMLResponse)
+async def members_page():
+    return HTMLResponse(_read_template("members_page.html"))
 
 @app.get("/sportsengine", response_class=HTMLResponse)
 async def sportsengine_page():
