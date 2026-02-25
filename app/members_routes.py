@@ -5,9 +5,10 @@ import logging
 import threading
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.database import get_db, SessionLocal
 from app.models_members import Member, MemberGuardian
+from app.models import Player, Registration
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +78,7 @@ def members_sync_status():
 
 @router.get("/api/members")
 def list_members(db: Session = Depends(get_db)):
-    """Return all members with their guardians for the directory page."""
+    """Return all members with their guardians and matched player data."""
     members = (
         db.query(Member)
         .order_by(Member.last_name, Member.first_name)
@@ -105,9 +106,27 @@ def list_members(db: Session = Depends(get_db)):
             "type": g.guardian_type,
         })
 
+    # Load all players with registrations for name matching
+    players = (
+        db.query(Player)
+        .options(joinedload(Player.registrations))
+        .all()
+    )
+
+    # Build lookup: lowercase full_name -> player
+    player_lookup = {}
+    for p in players:
+        key = (p.full_name or "").strip().lower()
+        if key:
+            player_lookup[key] = p
+
     result = []
     for m in members:
-        result.append({
+        # Match member to player by name (case-insensitive)
+        member_full = f"{m.first_name} {m.last_name}".strip().lower()
+        matched_player = player_lookup.get(member_full)
+
+        entry = {
             "id": m.id,
             "seProfileId": m.se_profile_id,
             "firstName": m.first_name,
@@ -131,6 +150,28 @@ def list_members(db: Session = Depends(get_db)):
             } if m.address1 or m.city else None,
             "memberships": m.memberships,
             "guardians": guardians_by_member.get(m.id, []),
-        })
+            "player": None,
+        }
+
+        if matched_player:
+            entry["player"] = {
+                "id": matched_player.id,
+                "jerseyNumber": matched_player.jersey_number,
+                "birthYear": matched_player.birth_year,
+                "parentEmail": matched_player.parent_email,
+                "locked": matched_player.locked,
+                "registrations": [
+                    {
+                        "id": r.id,
+                        "sport": r.sport,
+                        "division": r.division,
+                        "season": r.season,
+                        "program": r.program,
+                    }
+                    for r in matched_player.registrations
+                ],
+            }
+
+        result.append(entry)
 
     return {"members": result, "total": len(result)}
