@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Item - POSA Inventory</title>
+    <title>Add Item - POSA Equipment</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
     tailwind.config = {
@@ -26,7 +26,7 @@
     <div class="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200">
         <div>
             <div class="flex items-center text-sm text-gray-500 mb-0.5">
-                <a href="/inventory" class="hover:text-pines-600 transition-colors">Inventory</a>
+                <a href="/inventory" class="hover:text-pines-600 transition-colors">Equipment</a>
                 <svg class="w-4 h-4 mx-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                 <span class="text-gray-900 font-medium">Add Item</span>
             </div>
@@ -75,7 +75,7 @@
                                        :class="form.sports.includes(sp) ? 'bg-pines-50 border-pines-400 text-pines-700' : 'bg-white border-gray-300 text-gray-500 hover:border-gray-400'">
                                     <input type="checkbox" :value="sp" :checked="form.sports.includes(sp)"
                                            @change="toggleSport(sp)" class="sr-only">
-                                    <span x-text="sp"></span>
+                                    <span x-text="sportEmoji(sp) + ' ' + sp"></span>
                                 </label>
                             </template>
                         </div>
@@ -243,6 +243,11 @@
                 } catch (e) {
                     console.error('Failed to load suggestions:', e);
                 }
+            },
+
+            sportEmoji(sport) {
+                const map = { 'Soccer': '\u26bd', 'Basketball': '\ud83c\udfc0', 'Flag Football': '\ud83c\udfc8', 'Volleyball': '\ud83c\udfd0', 'Baseball': '\u26be', 'Softball': '\ud83e\udd4e', 'POSA': '\ud83c\udfdf\ufe0f' };
+                return map[sport] || '\ud83c\udfc3';
             },
 
             toggleSport(sp) {

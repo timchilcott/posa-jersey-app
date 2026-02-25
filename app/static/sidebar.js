@@ -36,8 +36,8 @@
       { label: 'Sync Registrations', href: '/sportsengine' },
     ]},
     { label: 'Volunteers', href: '/admin/volunteers', icon: ICONS.handshakeAngle, match: ['/admin/volunteers'] },
-    { label: 'Inventory', href: '/inventory', icon: ICONS.barcode, match: ['/inventory'], children: [
-      { label: 'Equipment', href: '/inventory' },
+    { label: 'Equipment', href: '/inventory', icon: ICONS.barcode, match: ['/inventory'], children: [
+      { label: 'All Equipment', href: '/inventory' },
       { label: 'Checked Out', href: '/inventory/checked-out' },
       { label: 'Add Item', href: '/inventory/add' },
     ]},
