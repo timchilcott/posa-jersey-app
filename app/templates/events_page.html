@@ -181,7 +181,7 @@
             <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pines-500"></div>
         </div>
 
-        <div x-show="!loading" class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div x-show="!loading">
             <!-- Empty state -->
             <div x-show="displayList.length === 0" class="text-center py-12">
                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -192,9 +192,17 @@
             </div>
 
             <div class="overflow-x-auto">
-                <table x-show="displayList.length > 0" class="min-w-full">
+                <table x-show="displayList.length > 0" class="min-w-full table-fixed">
+                    <colgroup>
+                        <col style="width: 14%"><!-- Time -->
+                        <col style="width: 10%"><!-- Type -->
+                        <col style="width: 24%"><!-- Teams -->
+                        <col style="width: 24%"><!-- Venue -->
+                        <col style="width: 18%"><!-- Location -->
+                        <col style="width: 10%"><!-- Status -->
+                    </colgroup>
                     <thead>
-                        <tr class="border-b border-gray-200">
+                        <tr class="border-b border-gray-100">
                             <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">Time</th>
                             <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">Type</th>
                             <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">Teams</th>
@@ -205,7 +213,7 @@
                     </thead>
                     <tbody>
                         <template x-for="entry in displayList" :key="entry._key">
-                            <tr :class="entry._isHeader ? 'bg-gray-50 border-t border-gray-200' : 'hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-200'"
+                            <tr :class="entry._isHeader ? 'bg-gray-100/50' : 'hover:bg-gray-50 cursor-pointer transition-colors'"
                                 @click="!entry._isHeader && openPanel(entry)">
 
                                 <!-- DATE HEADER ROW -->
@@ -248,16 +256,16 @@
 
                                 <!-- EVENT ROW: Venue (school/facility name) -->
                                 <template x-if="!entry._isHeader">
-                                    <td class="px-4 py-3 whitespace-nowrap">
-                                        <span x-show="entry.location" class="text-sm text-gray-900" x-text="entry.location?.name"></span>
+                                    <td class="px-4 py-3">
+                                        <span x-show="entry.location" class="text-sm text-gray-900 block truncate" x-text="entry.location?.name"></span>
                                         <span x-show="!entry.location" class="text-sm text-gray-300">--</span>
                                     </td>
                                 </template>
 
                                 <!-- EVENT ROW: Location (court/field) -->
                                 <template x-if="!entry._isHeader">
-                                    <td class="px-4 py-3 whitespace-nowrap">
-                                        <span x-show="entry.location && entry.location.description" class="text-sm text-gray-900" x-text="entry.location?.description"></span>
+                                    <td class="px-4 py-3">
+                                        <span x-show="entry.location && entry.location.description" class="text-sm text-gray-900 block truncate" x-text="entry.location?.description"></span>
                                         <span x-show="!entry.location || !entry.location.description" class="text-sm text-gray-300">--</span>
                                     </td>
                                 </template>
