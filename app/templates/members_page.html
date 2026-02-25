@@ -104,6 +104,7 @@
                     <thead class="bg-gray-50 sticky top-0 z-[5]">
                         <tr>
                             <th class="w-64 px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th class="w-16 px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jersey</th>
                             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
                             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
@@ -119,7 +120,7 @@
 
                                 <!-- Letter header row -->
                                 <template x-if="item._isHeader">
-                                    <td colspan="5" class="px-4 py-1.5">
+                                    <td colspan="6" class="px-4 py-1.5">
                                         <span class="text-xs font-bold text-pines-700" x-text="item._letter"></span>
                                         <span class="ml-2 text-xs text-pines-500" x-text="item._count + ' members'"></span>
                                     </td>
@@ -135,6 +136,16 @@
                                                 <div class="text-[10px] text-gray-400" x-show="item.dateOfBirth" x-text="formatDob(item.dateOfBirth)"></div>
                                             </div>
                                         </div>
+                                    </td>
+                                </template>
+                                <template x-if="!item._isHeader">
+                                    <td class="px-4 py-2 text-center">
+                                        <template x-if="item.player && item.player.jerseyNumber">
+                                            <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-pines-100 text-pines-700 text-xs font-bold" x-text="item.player.jerseyNumber"></span>
+                                        </template>
+                                        <template x-if="!item.player || !item.player.jerseyNumber">
+                                            <span class="text-[10px] text-gray-300">—</span>
+                                        </template>
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
@@ -227,6 +238,51 @@
                             </template>
                         </div>
                     </div>
+
+                    <!-- Jersey & Registrations Section -->
+                    <template x-if="selectedMember.player">
+                        <div class="px-4 py-3 border-b border-gray-100">
+                            <h3 class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Jersey & Registrations</h3>
+                            <!-- Jersey number -->
+                            <div class="flex items-center mb-3">
+                                <template x-if="selectedMember.player.jerseyNumber">
+                                    <div class="flex items-center">
+                                        <div class="flex items-center justify-center w-10 h-10 rounded-full bg-pines-100 text-pines-700 text-lg font-bold" x-text="selectedMember.player.jerseyNumber"></div>
+                                        <div class="ml-2.5">
+                                            <div class="text-xs font-medium text-gray-900">Jersey Number</div>
+                                            <div class="text-[10px] text-gray-500" x-text="selectedMember.player.locked ? 'Locked' : 'Unlocked'"
+                                                 :class="selectedMember.player.locked ? 'text-pines-600' : 'text-gray-400'"></div>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template x-if="!selectedMember.player.jerseyNumber">
+                                    <div class="flex items-center">
+                                        <div class="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 text-gray-400 text-xs">
+                                            <i class="fa-solid fa-shirt"></i>
+                                        </div>
+                                        <div class="ml-2.5 text-xs text-gray-400">No jersey assigned</div>
+                                    </div>
+                                </template>
+                            </div>
+                            <!-- Registrations -->
+                            <template x-if="selectedMember.player.registrations && selectedMember.player.registrations.length > 0">
+                                <div class="space-y-1.5">
+                                    <template x-for="r in selectedMember.player.registrations" :key="r.id">
+                                        <div class="flex items-center bg-gray-50 rounded-lg px-2.5 py-1.5">
+                                            <i class="fa-solid fa-futbol w-4 text-gray-400 text-[10px] text-center"></i>
+                                            <div class="ml-2 flex-1 min-w-0">
+                                                <div class="text-xs font-medium text-gray-900 truncate" x-text="r.sport"></div>
+                                                <div class="text-[10px] text-gray-500 truncate" x-text="r.division + ' · ' + r.season"></div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                            <template x-if="!selectedMember.player.registrations || selectedMember.player.registrations.length === 0">
+                                <div class="text-xs text-gray-400 italic">No registrations</div>
+                            </template>
+                        </div>
+                    </template>
 
                     <!-- Contact Section -->
                     <div class="px-4 py-3 border-b border-gray-100">
@@ -361,12 +417,13 @@
                         const name = (m.firstName + ' ' + m.lastName).toLowerCase();
                         const email = (m.email || '').toLowerCase();
                         const phone = (m.phone || '');
+                        const jersey = m.player && m.player.jerseyNumber ? String(m.player.jerseyNumber) : '';
                         const guardianMatch = (m.guardians || []).some(g =>
                             (g.firstName + ' ' + g.lastName).toLowerCase().includes(s) ||
                             (g.email || '').toLowerCase().includes(s) ||
                             (g.phone || '').includes(s)
                         );
-                        if (!name.includes(s) && !email.includes(s) && !phone.includes(s) && !guardianMatch) return false;
+                        if (!name.includes(s) && !email.includes(s) && !phone.includes(s) && !jersey.includes(s) && !guardianMatch) return false;
                     }
                     if (this.filters.type === 'child') {
                         if (!m.guardians || m.guardians.length === 0) return false;
