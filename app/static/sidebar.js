@@ -36,6 +36,7 @@
       { label: 'All Players', href: '/admin', childIcon: 'fa-solid fa-list' },
       { label: 'Add Player', href: '/admin/add', childIcon: 'fa-solid fa-plus' },
       { label: 'Sync Registrations', href: '/sportsengine', childIcon: 'fa-solid fa-arrows-rotate' },
+      { label: 'Email Templates', href: '/email-templates', childIcon: 'fa-regular fa-envelope' },
     ]},
     { label: 'Volunteers', href: '/admin/volunteers', icon: ICONS.handshakeAngle, match: ['/admin/volunteers'] },
     { label: 'Equipment', href: '/inventory', icon: ICONS.barcode, match: ['/inventory'], children: [
@@ -46,7 +47,6 @@
     { label: 'Members', href: '/members', icon: ICONS.users, match: ['/members'] },
     { label: 'Schedule', href: '/events', icon: ICONS.calendar, match: ['/events'] },
     { type: 'divider' },
-    { label: 'Email Templates', href: '/email-templates', icon: ICONS.envelope, match: ['/email-templates'] },
     { label: 'Settings', href: '/settings', icon: ICONS.gear, match: ['/settings'] },
   ];
 
@@ -84,6 +84,10 @@
     // Exact match for index pages (e.g., /inventory, /admin)
     if (child.href === '/inventory' || child.href === '/admin') {
       return currentPath === child.href;
+    }
+    // Exact match for cross-section children (e.g., /email-templates under Players)
+    if (child.href === '/email-templates' || child.href === '/sportsengine') {
+      return currentPath === child.href || currentPath.startsWith(child.href + '/');
     }
     return currentPath.startsWith(child.href);
   }
@@ -263,9 +267,24 @@
       '.posa-icon { color: #3C7939; }' +
       '.posa-icon:hover { color: #2f6130; }' +
       '.posa-icon-active { color: #2f6130; }' +
-      /* Tooltips — hidden by default since panel label is visible */
+      /* Tooltips — appear on hover over rail icons */
       '.posa-tooltip {' +
         'display: none;' +
+        'position: absolute;' +
+        'left: calc(100% + 8px);' +
+        'top: 50%;' +
+        'transform: translateY(-50%);' +
+        'background: #1f2937;' +
+        'color: #fff;' +
+        'font-size: 0.75rem;' +
+        'padding: 4px 8px;' +
+        'border-radius: 6px;' +
+        'white-space: nowrap;' +
+        'pointer-events: none;' +
+        'z-index: 50;' +
+      '}' +
+      '.posa-rail-item:hover .posa-tooltip {' +
+        'display: block;' +
       '}' +
       /* Prevent FOUC */
       'body.sidebar-loading > *:not(script):not(style):not(link) { visibility: hidden; }' +
