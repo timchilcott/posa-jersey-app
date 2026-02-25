@@ -157,8 +157,8 @@
                                 @click="!item._isHeader && openPanel(item)">
                                 <template x-if="item._isHeader">
                                     <td colspan="5" class="px-4 py-2">
-                                        <span class="text-xs font-semibold text-gray-500" x-text="'Birth Year ' + item.birthYear"></span>
-                                        <span class="ml-1.5 text-xs text-gray-400" x-text="item._count + ' players'"></span>
+                                        <span class="text-xs font-semibold text-gray-700" x-text="'Birth Year ' + item.birthYear"></span>
+                                        <span class="ml-1.5 text-xs text-gray-500" x-text="item._count + ' players'"></span>
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
@@ -168,11 +168,11 @@
                                 </template>
                                 <template x-if="!item._isHeader">
                                     <td class="px-4 py-3 text-center border-b border-gray-100 whitespace-nowrap">
-                                        <span class="text-sm text-gray-600" x-text="item.jersey || '-'"></span>
+                                        <span class="text-sm text-gray-900" x-text="item.jersey || '-'"></span>
                                     </td>
                                 </template>
                                 <template x-if="!item._isHeader">
-                                    <td class="px-4 py-3 border-b border-gray-100 whitespace-nowrap"><div class="text-sm text-gray-500" x-text="item.email"></div></td>
+                                    <td class="px-4 py-3 border-b border-gray-100 whitespace-nowrap"><div class="text-sm text-gray-900" x-text="item.email"></div></td>
                                 </template>
                                 <template x-if="!item._isHeader">
                                     <td class="px-4 py-3 border-b border-gray-100 whitespace-nowrap">
@@ -255,9 +255,9 @@
                                         <span x-text="sportEmoji(reg.sport)"></span>
                                         <span class="ml-1" x-text="reg.sport"></span>
                                     </span>
-                                    <span class="text-xs text-gray-500" x-text="reg.season"></span>
+                                    <span class="text-xs text-gray-700" x-text="reg.season"></span>
                                 </div>
-                                <span class="text-xs text-gray-400" x-text="reg.division"></span>
+                                <span class="text-xs text-gray-600" x-text="reg.division"></span>
                             </div>
                         </template>
                         <div x-show="!selectedPlayer.registrations || selectedPlayer.registrations.length === 0" class="text-sm text-gray-400 italic">No registrations</div>

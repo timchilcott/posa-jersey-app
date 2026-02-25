@@ -156,13 +156,13 @@
                             <!-- SPORT HEADER -->
                             <template x-if="entry._type === 'sportHeader'">
                                 <td :colspan="filters.divisions.length > 0 ? 8 : 7" class="px-4 py-2">
-                                    <span class="text-xs font-semibold text-gray-500" x-text="entry._sport"></span>
-                                    <span class="ml-1.5 text-xs text-gray-400" x-text="entry._count + ' items'"></span>
+                                    <span class="text-xs font-semibold text-gray-700" x-text="entry._sport"></span>
+                                    <span class="ml-1.5 text-xs text-gray-500" x-text="entry._count + ' items'"></span>
                                 </td>
                             </template>
                             <!-- ITEM ROW -->
                             <template x-if="entry._type === 'item'">
-                                <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" x-text="entry.category"></td>
+                                <td class="px-4 py-3 text-sm text-gray-900 whitespace-nowrap" x-text="entry.category"></td>
                             </template>
                             <template x-if="entry._type === 'item'">
                                 <td class="px-4 py-3 whitespace-nowrap">
@@ -170,7 +170,7 @@
                                 </td>
                             </template>
                             <template x-if="entry._type === 'item'">
-                                <td class="px-4 py-3 text-center text-sm text-gray-600 whitespace-nowrap" x-text="entry.quantityTotal"></td>
+                                <td class="px-4 py-3 text-center text-sm text-gray-900 whitespace-nowrap" x-text="entry.quantityTotal"></td>
                             </template>
                             <template x-if="entry._type === 'item'">
                                 <td class="px-4 py-3 text-center text-sm font-medium text-gray-900 whitespace-nowrap" x-text="entry.quantityAvailable"></td>
@@ -182,7 +182,7 @@
                                 <td x-show="filters.divisions.length > 0" class="px-4 py-3 whitespace-nowrap">
                                     <div class="flex flex-nowrap gap-1">
                                         <template x-for="div in parseDivisions(entry.division)" :key="div">
-                                            <span class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600 whitespace-nowrap" x-text="div"></span>
+                                            <span class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700 whitespace-nowrap" x-text="div"></span>
                                         </template>
                                     </div>
                                 </td>
@@ -202,7 +202,7 @@
                                 <td class="px-4 py-3 whitespace-nowrap">
                                     <div class="flex flex-nowrap gap-1">
                                         <template x-for="(lb, lbIdx) in parseLocations(entry.location)" :key="lbIdx">
-                                            <span class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600">
+                                            <span class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700">
                                                 <span x-text="lb.quantity"></span> @ <span x-text="lb.location"></span>
                                             </span>
                                         </template>

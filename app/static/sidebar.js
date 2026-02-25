@@ -74,7 +74,7 @@
       var active = isActive(item);
       var classes = active
         ? 'bg-gray-100 text-pines-600'
-        : 'text-gray-400 hover:bg-gray-50 hover:text-pines-500';
+        : 'text-pines-500 hover:bg-gray-50 hover:text-pines-600';
       return '<a href="' + item.href + '" class="posa-rail-item relative flex items-center justify-center w-10 h-10 rounded-lg transition-colors ' + classes + '">' +
         item.icon +
         '<span class="posa-tooltip">' + item.label + '</span>' +
@@ -105,7 +105,7 @@
         var childActive = isChildActive(child);
         var childClasses = childActive
           ? 'bg-gray-100 text-pines-600 font-semibold'
-          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900';
+          : 'text-gray-900 hover:bg-gray-50';
         html += '<a href="' + child.href + '" class="block px-3 py-2 rounded-lg text-sm transition-colors ' + childClasses + '">' + child.label + '</a>';
       });
       html += '</div>';
