@@ -46,8 +46,6 @@
     ]},
     { label: 'Members', href: '/members', icon: ICONS.users, match: ['/members'] },
     { label: 'Schedule', href: '/events', icon: ICONS.calendar, match: ['/events'] },
-    { type: 'divider' },
-    { label: 'Settings', href: '/settings', icon: ICONS.gear, match: ['/settings'] },
   ];
 
   // ── Page titles for the heading bar ───────────────────────────────
@@ -121,12 +119,10 @@
   // ── Build nav panel content (contextual for active section) ───────
   function buildPanelContent() {
     var active = getActiveSection();
-    if (!active) return '';
-
     var html = '';
 
     // If the active section has children, show them as sub-navigation
-    if (active.children && active.children.length > 0) {
+    if (active && active.children && active.children.length > 0) {
       html += '<div class="space-y-0.5">';
       active.children.forEach(function(child) {
         var childActive = isChildActive(child);
@@ -142,6 +138,21 @@
     }
 
     return html;
+  }
+
+  // ── Build settings link (always shown at bottom of nav panel) ────
+  function buildSettingsLink() {
+    var isSettingsActive = currentPath === '/settings';
+    var classes = isSettingsActive
+      ? 'bg-gray-100 text-pines-600 font-semibold'
+      : 'text-gray-900 hover:bg-gray-50';
+    return '' +
+      '<div class="px-3 py-3 border-t border-gray-100">' +
+        '<a href="/settings" class="flex items-center px-3 py-2 rounded-lg text-sm transition-colors ' + classes + '">' +
+          '<i class="fa-solid fa-gear text-xs w-4 text-center mr-2 opacity-60"></i>' +
+          'Settings' +
+        '</a>' +
+      '</div>';
   }
 
   // ── Build mobile nav items (icon + label, single column) ───────────
@@ -181,7 +192,6 @@
   function buildSidebarHTML() {
     var active = getActiveSection();
     var panelContent = buildPanelContent();
-    var hasChildren = active && active.children && active.children.length > 0;
 
     var html = '' +
     '<aside id="posa-sidebar" class="hidden lg:flex bg-white h-screen flex-shrink-0 border-r border-gray-200" style="overflow:visible;z-index:20">' +
@@ -201,11 +211,10 @@
     '<div class="posa-nav-panel flex flex-col h-full">' +
       '<div class="flex items-center h-16 px-4 flex-shrink-0 border-b border-gray-100">' +
         '<span class="font-semibold text-sm text-gray-900">' + (active ? active.label : '') + '</span>' +
-      '</div>';
-    if (hasChildren) {
-      html += '<nav class="flex-1 px-3 py-3 overflow-y-auto">' + panelContent + '</nav>';
-    }
-    html += '</div>';
+      '</div>' +
+      '<nav class="flex-1 px-3 py-3 overflow-y-auto">' + panelContent + '</nav>' +
+      buildSettingsLink() +
+    '</div>';
 
     html += '</aside>';
     return html;
@@ -250,6 +259,10 @@
         '</div>' +
         '<nav class="flex-1 px-2 py-4 space-y-1 overflow-y-auto">' +
           buildMobileNavItems() +
+          '<div class="border-t border-pines-400 my-3 mx-2"></div>' +
+          '<a href="/settings" class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ' +
+            (currentPath === '/settings' ? 'bg-pines-600 text-white' : 'text-pines-100 hover:bg-pines-400 hover:text-white') +
+          '" title="Settings">' + ICONS.gear + '<span class="ml-3">Settings</span></a>' +
         '</nav>' +
       '</aside>' +
     '</div>';
