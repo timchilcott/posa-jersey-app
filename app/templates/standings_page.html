@@ -125,11 +125,11 @@ function standingsApp() {
         gamesProcessed: 0,
 
         async init() {
-            // Load available sports from teams endpoint
+            // Load available sports from completed game events
             try {
-                const res = await fetch('/api/seasons/teams');
+                const res = await fetch('/api/seasons/standings/sports');
                 const data = await res.json();
-                this.availableSports = data.availableSports || [];
+                this.availableSports = data.sports || [];
                 // Auto-select if only one sport
                 if (this.availableSports.length === 1) {
                     this.selectedSport = this.availableSports[0];
