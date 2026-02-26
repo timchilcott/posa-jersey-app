@@ -1269,8 +1269,8 @@ def process_webhook(payload: dict, db: Session) -> dict:
     logger.info(f"WEBHOOK: Received — operation={operation} type={resource_type} id={resource_id}")
     logger.info(f"WEBHOOK: Full payload: {payload}")
 
-    # Always sync registrations, events, and members
-    results = {"registration_sync": None, "event_sync": None, "members_sync": None}
+    # Always sync registrations, events, members, and teams
+    results = {"registration_sync": None, "event_sync": None, "members_sync": None, "team_sync": None}
 
     try:
         reg_results = sync_all_registrations(db)
@@ -1293,6 +1293,13 @@ def process_webhook(payload: dict, db: Session) -> dict:
     except Exception as e:
         logger.error(f"WEBHOOK: Members sync failed: {e}", exc_info=True)
         results["members_sync"] = {"action": "error", "message": str(e)}
+
+    try:
+        team_results = sync_all_teams(db)
+        results["team_sync"] = {"action": "synced", "results": team_results}
+    except Exception as e:
+        logger.error(f"WEBHOOK: Team sync failed: {e}", exc_info=True)
+        results["team_sync"] = {"action": "error", "message": str(e)}
 
     return results
 
@@ -1428,6 +1435,189 @@ def get_team_data() -> tuple:
 
     logger.info(f"TEAMS: Found {len(logo_map)} logos, mapped {len(event_team_map)} events to teams")
     return logo_map, event_team_map
+
+
+# ---------------------------------------------------------------------
+# Season Management — Teams, Rosters, Staff
+# ---------------------------------------------------------------------
+
+SEASON_TEAMS_QUERY = """
+query GetSeasonTeams($orgId: Int!, $page: Int!, $perPage: Int!) {
+    teams(
+        organizationId: $orgId
+        page: $page
+        perPage: $perPage
+    ) {
+        pageInformation {
+            pages
+            count
+            page
+            perPage
+        }
+        results {
+            id
+            name
+            status
+            sport
+            rosterStatus
+            approved
+            brand {
+                logoUrl
+            }
+            program {
+                primaryName
+                secondaryName
+            }
+            players {
+                firstName
+                lastName
+                profileId
+                jerseyNumber
+                rosterStatus
+            }
+            staff {
+                firstName
+                lastName
+                profileId
+                rosterStatus
+                title
+            }
+        }
+    }
+}
+"""
+
+
+def sync_all_teams(db: Session) -> dict:
+    """
+    Sync teams, rosters, and staff from SportsEngine Season Management.
+    Fetches all pages of teams with roster/staff data, upserts to local DB.
+    """
+    from app.models_seasons import Team, TeamRoster, TeamStaff
+
+    results = {
+        "new_teams": 0,
+        "updated_teams": 0,
+        "roster_entries": 0,
+        "staff_entries": 0,
+        "total_fetched": 0,
+        "errors": [],
+    }
+
+    org_id = os.getenv("SPORTSENGINE_ORG_ID")
+    if not org_id:
+        raise ValueError("SPORTSENGINE_ORG_ID must be set")
+
+    page = 1
+    while True:
+        try:
+            data = graphql_query(SEASON_TEAMS_QUERY, {
+                "orgId": int(org_id),
+                "page": page,
+                "perPage": 100,
+            })
+        except Exception as e:
+            logger.error(f"TEAM SYNC: Failed to fetch page {page}: {e}")
+            results["errors"].append(str(e))
+            break
+
+        teams_data = data.get("teams", {})
+        page_info = teams_data.get("pageInformation", {})
+        teams_list = teams_data.get("results", [])
+
+        for team_data in teams_list:
+            try:
+                _upsert_team(team_data, db, results)
+            except Exception as e:
+                logger.error(f"TEAM SYNC: Error processing team {team_data.get('id')}: {e}")
+                results["errors"].append(str(e))
+
+        results["total_fetched"] += len(teams_list)
+        logger.info(f"TEAM SYNC: Page {page} — {len(teams_list)} teams")
+
+        if page >= page_info.get("pages", 1):
+            break
+        page += 1
+
+    db.commit()
+    logger.info(f"TEAM SYNC: Complete — {results}")
+    return results
+
+
+def _upsert_team(team_data: dict, db: Session, results: dict) -> None:
+    """Upsert a single team with its roster and staff."""
+    from app.models_seasons import Team, TeamRoster, TeamStaff
+
+    se_id = str(team_data.get("id"))
+    if not se_id:
+        return
+
+    brand = team_data.get("brand") or {}
+    program = team_data.get("program") or {}
+
+    existing = db.query(Team).filter(Team.se_team_id == se_id).first()
+    if existing:
+        existing.name = team_data.get("name") or existing.name
+        existing.status = team_data.get("status")
+        existing.sport = team_data.get("sport")
+        existing.roster_status = team_data.get("rosterStatus")
+        existing.approved = team_data.get("approved")
+        existing.logo_url = brand.get("logoUrl") or existing.logo_url
+        existing.season_name = program.get("primaryName") or existing.season_name
+        existing.division_name = program.get("secondaryName") or existing.division_name
+        existing.updated_at = datetime.utcnow()
+        team_id = existing.id
+        results["updated_teams"] += 1
+    else:
+        new_team = Team(
+            se_team_id=se_id,
+            name=team_data.get("name", "Unknown"),
+            status=team_data.get("status"),
+            sport=team_data.get("sport"),
+            roster_status=team_data.get("rosterStatus"),
+            approved=team_data.get("approved"),
+            logo_url=brand.get("logoUrl"),
+            season_name=program.get("primaryName"),
+            division_name=program.get("secondaryName"),
+        )
+        db.add(new_team)
+        db.flush()  # get the ID
+        team_id = new_team.id
+        results["new_teams"] += 1
+
+    # Replace roster entries (delete + re-insert)
+    db.query(TeamRoster).filter(TeamRoster.team_id == team_id).delete()
+    for player in (team_data.get("players") or []):
+        first = (player.get("firstName") or "").strip()
+        last = (player.get("lastName") or "").strip()
+        if not first and not last:
+            continue
+        db.add(TeamRoster(
+            team_id=team_id,
+            se_profile_id=player.get("profileId"),
+            first_name=first,
+            last_name=last,
+            jersey_number=player.get("jerseyNumber"),
+            roster_status=player.get("rosterStatus"),
+        ))
+        results["roster_entries"] += 1
+
+    # Replace staff entries
+    db.query(TeamStaff).filter(TeamStaff.team_id == team_id).delete()
+    for staff in (team_data.get("staff") or []):
+        first = (staff.get("firstName") or "").strip()
+        last = (staff.get("lastName") or "").strip()
+        if not first and not last:
+            continue
+        db.add(TeamStaff(
+            team_id=team_id,
+            se_profile_id=staff.get("profileId"),
+            first_name=first,
+            last_name=last,
+            title=staff.get("title"),
+            roster_status=staff.get("rosterStatus"),
+        ))
+        results["staff_entries"] += 1
 
 
 def get_events(page: int = 1, per_page: int = 100) -> dict:

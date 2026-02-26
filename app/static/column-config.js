@@ -75,6 +75,18 @@
         { id: 'guardians', label: 'Guardians', defaultOn: true },
       ]
     },
+    seasons: {
+      key: 'posa_columns_seasons',
+      columns: [
+        { id: 'team', label: 'Team', defaultOn: true },
+        { id: 'sport', label: 'Sport', defaultOn: true },
+        { id: 'season', label: 'Season', defaultOn: true },
+        { id: 'division', label: 'Division', defaultOn: true },
+        { id: 'players', label: 'Players', defaultOn: true },
+        { id: 'staff', label: 'Staff', defaultOn: true },
+        { id: 'status', label: 'Status', defaultOn: true },
+      ]
+    },
   };
 
   // Map URL paths to section keys
@@ -90,6 +102,8 @@
     '/inventory/checked-out': 'checked_out',
     '/members': 'members',
     '/events': 'events',
+    '/seasons': 'seasons',
+    '/seasons/settings': 'seasons',
   };
 
   POSA_COLUMNS.getSection = function(path) {

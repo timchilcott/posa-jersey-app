@@ -22,6 +22,7 @@
     handshakeAngle: '<i class="fa-solid fa-handshake-angle text-base"></i>',
     futbol: '<i class="fa-solid fa-futbol text-base"></i>',
     users: '<i class="fa-solid fa-users text-base"></i>',
+    trophy: '<i class="fa-solid fa-trophy text-base"></i>',
     calendar: '<i class="fa-regular fa-calendar-days text-base"></i>',
     arrowPath: '<i class="fa-solid fa-arrows-rotate text-base"></i>',
     envelope: '<i class="fa-regular fa-envelope text-base"></i>',
@@ -53,6 +54,11 @@
       { label: 'Directory', href: '/members', childIcon: 'fa-solid fa-address-book' },
       { label: 'Settings', href: '/members/settings', childIcon: 'fa-solid fa-gear' },
     ]},
+    { label: 'Seasons', href: '/seasons', icon: ICONS.trophy, match: ['/seasons'], children: [
+      { label: 'Teams & Rosters', href: '/seasons', childIcon: 'fa-solid fa-people-group' },
+      { label: 'Standings', href: '/seasons/standings', childIcon: 'fa-solid fa-ranking-star' },
+      { label: 'Settings', href: '/seasons/settings', childIcon: 'fa-solid fa-gear' },
+    ]},
     { label: 'Schedule', href: '/events', icon: ICONS.calendar, match: ['/events'], children: [
       { label: 'All Events', href: '/events', childIcon: 'fa-solid fa-list' },
       { label: 'Settings', href: '/events/settings', childIcon: 'fa-solid fa-gear' },
@@ -81,7 +87,7 @@
   function isChildActive(child) {
     // Exact match for index pages (e.g., /inventory, /admin, /admin/volunteers)
     if (child.href === '/inventory' || child.href === '/admin' || child.href === '/admin/volunteers' ||
-        child.href === '/members' || child.href === '/events') {
+        child.href === '/members' || child.href === '/events' || child.href === '/seasons') {
       return currentPath === child.href;
     }
     // Exact match for cross-section children (e.g., /email-templates under Players)

@@ -91,6 +91,35 @@ def _run_event_sync() -> None:
         db.close()
 
 
+def _run_team_sync() -> None:
+    """
+    Execute a SportsEngine team/roster sync inside its own DB session.
+    Called by APScheduler in a background thread.
+    """
+    from app.services.sportsengine import is_configured, sync_all_teams
+
+    if not is_configured():
+        logger.debug("Scheduled team sync skipped — SportsEngine not configured")
+        return
+
+    db = SessionLocal()
+    try:
+        logger.info("SCHEDULER: Starting periodic SportsEngine team sync")
+        results = sync_all_teams(db)
+        logger.info(
+            "SCHEDULER: Team sync complete — new=%d, updated=%d, roster=%d, staff=%d, errors=%d",
+            results["new_teams"],
+            results["updated_teams"],
+            results["roster_entries"],
+            results["staff_entries"],
+            len(results["errors"]),
+        )
+    except Exception:
+        logger.exception("SCHEDULER: Periodic team sync failed")
+    finally:
+        db.close()
+
+
 def start_scheduler() -> None:
     """Start the background polling scheduler."""
     global _scheduler
@@ -139,6 +168,25 @@ def start_scheduler() -> None:
         run_date=datetime.now() + timedelta(seconds=45),
         id="sportsengine_initial_event_sync",
         name="Initial SportsEngine event sync on boot",
+        replace_existing=True,
+    )
+
+    # Team/roster sync — same interval, offset by 60s on boot
+    _scheduler.add_job(
+        _run_team_sync,
+        trigger=IntervalTrigger(minutes=interval),
+        id="sportsengine_team_sync",
+        name="Periodic SportsEngine team sync",
+        replace_existing=True,
+        next_run_time=None,
+    )
+
+    _scheduler.add_job(
+        _run_team_sync,
+        trigger="date",
+        run_date=datetime.now() + timedelta(seconds=60),
+        id="sportsengine_initial_team_sync",
+        name="Initial SportsEngine team sync on boot",
         replace_existing=True,
     )
 
