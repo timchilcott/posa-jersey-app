@@ -1480,6 +1480,9 @@ query GetTeamDetail($orgId: Int!, $page: Int!, $perPage: Int!) {
         page: $page
         perPage: $perPage
     ) {
+        pageInformation {
+            pages
+        }
         results {
             id
             players {
@@ -1527,6 +1530,7 @@ def sync_all_teams(db: Session) -> dict:
         raise ValueError("SPORTSENGINE_ORG_ID must be set")
 
     # ── Pass 1: Fetch all teams (lightweight, no roster/staff) ──
+    # perPage=50 to stay safely under complexity limit (brand + program nested = ~2 per result)
     all_teams = []
     page = 1
     while True:
@@ -1534,11 +1538,11 @@ def sync_all_teams(db: Session) -> dict:
             data = graphql_query(SEASON_TEAMS_LIST_QUERY, {
                 "orgId": int(org_id),
                 "page": page,
-                "perPage": 100,
+                "perPage": 50,
             })
         except Exception as e:
-            logger.error(f"TEAM SYNC: Failed to fetch teams page {page}: {e}")
-            results["errors"].append(str(e))
+            logger.error(f"TEAM SYNC: Failed to fetch teams LIST page {page} (perPage=50): {e}")
+            results["errors"].append(f"List query p{page}: {e}")
             break
 
         teams_data = data.get("teams", {})
@@ -1554,9 +1558,9 @@ def sync_all_teams(db: Session) -> dict:
     results["total_fetched"] = len(all_teams)
     logger.info(f"TEAM SYNC: Fetched {len(all_teams)} teams, now fetching roster/staff...")
 
-    # ── Pass 2: Fetch roster/staff in small batches ──
-    # The detail query with players[] and staff[] nested is expensive.
-    # perPage=2 keeps complexity safely under 101.
+    # ── Pass 2: Fetch roster/staff one team at a time ──
+    # players[] and staff[] are nested list fields that multiply complexity.
+    # perPage=1 keeps it safely under the 101 limit.
     detail_map = {}  # se_team_id -> {players: [...], staff: [...]}
     page = 1
     while True:
@@ -1564,14 +1568,15 @@ def sync_all_teams(db: Session) -> dict:
             data = graphql_query(SEASON_TEAM_DETAIL_QUERY, {
                 "orgId": int(org_id),
                 "page": page,
-                "perPage": 2,
+                "perPage": 1,
             })
         except Exception as e:
-            logger.error(f"TEAM SYNC: Failed to fetch detail page {page}: {e}")
-            results["errors"].append(str(e))
+            logger.error(f"TEAM SYNC: Failed to fetch DETAIL page {page} (perPage=1): {e}")
+            results["errors"].append(f"Detail query p{page}: {e}")
             break
 
         teams_data = data.get("teams", {})
+        detail_page_info = teams_data.get("pageInformation", {})
         detail_list = teams_data.get("results", [])
 
         for detail in detail_list:
@@ -1582,8 +1587,8 @@ def sync_all_teams(db: Session) -> dict:
                     "staff": detail.get("staff") or [],
                 }
 
-        logger.info(f"TEAM SYNC: Detail page {page} — {len(detail_list)} teams")
-        if len(detail_list) < 2:
+        logger.info(f"TEAM SYNC: Detail page {page}/{detail_page_info.get('pages', '?')} — {len(detail_list)} teams")
+        if page >= detail_page_info.get("pages", 1):
             break
         page += 1
 
