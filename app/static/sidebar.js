@@ -33,28 +33,28 @@
   // ── Navigation items ─────────────────────────────────────────────
   const NAV_ITEMS = [
     { label: 'Players', href: '/admin', icon: ICONS.shirt, match: ['/admin'], children: [
-      { label: 'All Players', href: '/admin', childIcon: 'fa-solid fa-shirt' },
-      { label: 'Add Player', href: '/admin/add', childIcon: 'fa-solid fa-shirt' },
-      { label: 'Sync Registrations', href: '/sportsengine', childIcon: 'fa-solid fa-shirt' },
-      { label: 'Email Templates', href: '/email-templates', childIcon: 'fa-solid fa-shirt' },
+      { label: 'All Players', href: '/admin', childIcon: 'fa-solid fa-list' },
+      { label: 'Add Player', href: '/admin/add', childIcon: 'fa-solid fa-plus' },
+      { label: 'Sync Registrations', href: '/sportsengine', childIcon: 'fa-solid fa-arrows-rotate' },
+      { label: 'Email Templates', href: '/email-templates', childIcon: 'fa-regular fa-envelope' },
       { label: 'Settings', href: '/admin/settings', childIcon: 'fa-solid fa-gear' },
     ]},
     { label: 'Volunteers', href: '/admin/volunteers', icon: ICONS.handshakeAngle, match: ['/admin/volunteers'], children: [
-      { label: 'All Volunteers', href: '/admin/volunteers', childIcon: 'fa-solid fa-handshake-angle' },
+      { label: 'All Volunteers', href: '/admin/volunteers', childIcon: 'fa-solid fa-list' },
       { label: 'Settings', href: '/admin/volunteers/settings', childIcon: 'fa-solid fa-gear' },
     ]},
     { label: 'Equipment', href: '/inventory', icon: ICONS.futbol, match: ['/inventory'], children: [
-      { label: 'All Equipment', href: '/inventory', childIcon: 'fa-solid fa-futbol' },
-      { label: 'Checked Out', href: '/inventory/checked-out', childIcon: 'fa-solid fa-futbol' },
-      { label: 'Add Item', href: '/inventory/add', childIcon: 'fa-solid fa-futbol' },
+      { label: 'All Equipment', href: '/inventory', childIcon: 'fa-solid fa-list' },
+      { label: 'Checked Out', href: '/inventory/checked-out', childIcon: 'fa-solid fa-arrow-right-from-bracket' },
+      { label: 'Add Item', href: '/inventory/add', childIcon: 'fa-solid fa-plus' },
       { label: 'Settings', href: '/inventory/settings', childIcon: 'fa-solid fa-gear' },
     ]},
     { label: 'Members', href: '/members', icon: ICONS.users, match: ['/members'], children: [
-      { label: 'Directory', href: '/members', childIcon: 'fa-solid fa-users' },
+      { label: 'Directory', href: '/members', childIcon: 'fa-solid fa-address-book' },
       { label: 'Settings', href: '/members/settings', childIcon: 'fa-solid fa-gear' },
     ]},
     { label: 'Schedule', href: '/events', icon: ICONS.calendar, match: ['/events'], children: [
-      { label: 'All Events', href: '/events', childIcon: 'fa-regular fa-calendar-days' },
+      { label: 'All Events', href: '/events', childIcon: 'fa-solid fa-list' },
       { label: 'Settings', href: '/events/settings', childIcon: 'fa-solid fa-gear' },
     ]},
   ];
@@ -210,7 +210,15 @@
     var title = getPageTitle();
     if (!title) return '';
     var active = getActiveSection();
-    var iconHtml = active ? '<span class="text-pines-600 mr-2.5">' + active.icon + '</span>' : '';
+    var iconHtml = '';
+    if (active && active.children) {
+      for (var i = 0; i < active.children.length; i++) {
+        if (isChildActive(active.children[i]) && active.children[i].childIcon) {
+          iconHtml = '<span class="text-pines-600 mr-2.5"><i class="' + active.children[i].childIcon + ' text-base"></i></span>';
+          break;
+        }
+      }
+    }
     return '' +
     '<div class="bg-white border-b border-gray-200 px-6 py-4">' +
       '<h1 class="flex items-center text-lg font-bold text-gray-900">' + iconHtml + title + '</h1>' +
