@@ -249,6 +249,23 @@ def get_team_detail(team_id: int, db: Session = Depends(get_db)):
     }
 
 
+@router.get("/api/seasons/standings/sports")
+def get_standings_sports(db: Session = Depends(get_db)):
+    """Return sports that have completed games (for standings sport picker)."""
+    rows = (
+        db.query(Event.sport)
+        .filter(
+            func.lower(Event.event_type) == "game",
+            func.lower(Event.status) == "completed",
+            Event.sport.isnot(None),
+        )
+        .distinct()
+        .all()
+    )
+    sports = sorted([r[0] for r in rows if r[0]])
+    return {"sports": sports}
+
+
 @router.get("/api/seasons/standings")
 def get_standings(
     sport: str = Query(..., description="Sport to compute standings for"),
