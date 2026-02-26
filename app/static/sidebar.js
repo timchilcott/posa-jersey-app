@@ -49,8 +49,8 @@
       { label: 'Add Item', href: '/inventory/add', childIcon: 'fa-solid fa-plus' },
       { label: 'Settings', href: '/inventory/settings', childIcon: 'fa-solid fa-gear' },
     ]},
-    { label: 'Directory', href: '/members', icon: ICONS.users, match: ['/members'], children: [
-      { label: 'Directory', href: '/members', childIcon: 'fa-solid fa-list' },
+    { label: 'Members', href: '/members', icon: ICONS.users, match: ['/members'], children: [
+      { label: 'Directory', href: '/members', childIcon: 'fa-solid fa-address-book' },
       { label: 'Settings', href: '/members/settings', childIcon: 'fa-solid fa-gear' },
     ]},
     { label: 'Schedule', href: '/events', icon: ICONS.calendar, match: ['/events'], children: [
@@ -210,7 +210,15 @@
     var title = getPageTitle();
     if (!title) return '';
     var active = getActiveSection();
-    var iconHtml = active ? '<span class="text-pines-600 mr-2.5">' + active.icon + '</span>' : '';
+    var iconHtml = '';
+    if (active && active.children) {
+      for (var i = 0; i < active.children.length; i++) {
+        if (isChildActive(active.children[i]) && active.children[i].childIcon) {
+          iconHtml = '<span class="text-pines-600 mr-2.5"><i class="' + active.children[i].childIcon + ' text-base"></i></span>';
+          break;
+        }
+      }
+    }
     return '' +
     '<div class="bg-white border-b border-gray-200 px-6 py-4">' +
       '<h1 class="flex items-center text-lg font-bold text-gray-900">' + iconHtml + title + '</h1>' +
