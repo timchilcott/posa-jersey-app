@@ -33,28 +33,28 @@
   // ── Navigation items ─────────────────────────────────────────────
   const NAV_ITEMS = [
     { label: 'Players', href: '/admin', icon: ICONS.shirt, match: ['/admin'], children: [
-      { label: 'All Players', href: '/admin', childIcon: 'fa-solid fa-list' },
-      { label: 'Add Player', href: '/admin/add', childIcon: 'fa-solid fa-plus' },
-      { label: 'Sync Registrations', href: '/sportsengine', childIcon: 'fa-solid fa-arrows-rotate' },
-      { label: 'Email Templates', href: '/email-templates', childIcon: 'fa-regular fa-envelope' },
+      { label: 'All Players', href: '/admin', childIcon: 'fa-solid fa-shirt' },
+      { label: 'Add Player', href: '/admin/add', childIcon: 'fa-solid fa-shirt' },
+      { label: 'Sync Registrations', href: '/sportsengine', childIcon: 'fa-solid fa-shirt' },
+      { label: 'Email Templates', href: '/email-templates', childIcon: 'fa-solid fa-shirt' },
       { label: 'Settings', href: '/admin/settings', childIcon: 'fa-solid fa-gear' },
     ]},
     { label: 'Volunteers', href: '/admin/volunteers', icon: ICONS.handshakeAngle, match: ['/admin/volunteers'], children: [
-      { label: 'All Volunteers', href: '/admin/volunteers', childIcon: 'fa-solid fa-list' },
+      { label: 'All Volunteers', href: '/admin/volunteers', childIcon: 'fa-solid fa-handshake-angle' },
       { label: 'Settings', href: '/admin/volunteers/settings', childIcon: 'fa-solid fa-gear' },
     ]},
     { label: 'Equipment', href: '/inventory', icon: ICONS.futbol, match: ['/inventory'], children: [
-      { label: 'All Equipment', href: '/inventory', childIcon: 'fa-solid fa-list' },
-      { label: 'Checked Out', href: '/inventory/checked-out', childIcon: 'fa-solid fa-arrow-right-from-bracket' },
-      { label: 'Add Item', href: '/inventory/add', childIcon: 'fa-solid fa-plus' },
+      { label: 'All Equipment', href: '/inventory', childIcon: 'fa-solid fa-futbol' },
+      { label: 'Checked Out', href: '/inventory/checked-out', childIcon: 'fa-solid fa-futbol' },
+      { label: 'Add Item', href: '/inventory/add', childIcon: 'fa-solid fa-futbol' },
       { label: 'Settings', href: '/inventory/settings', childIcon: 'fa-solid fa-gear' },
     ]},
-    { label: 'Directory', href: '/members', icon: ICONS.users, match: ['/members'], children: [
-      { label: 'Directory', href: '/members', childIcon: 'fa-solid fa-list' },
+    { label: 'Members', href: '/members', icon: ICONS.users, match: ['/members'], children: [
+      { label: 'Directory', href: '/members', childIcon: 'fa-solid fa-users' },
       { label: 'Settings', href: '/members/settings', childIcon: 'fa-solid fa-gear' },
     ]},
     { label: 'Schedule', href: '/events', icon: ICONS.calendar, match: ['/events'], children: [
-      { label: 'All Events', href: '/events', childIcon: 'fa-solid fa-list' },
+      { label: 'All Events', href: '/events', childIcon: 'fa-regular fa-calendar-days' },
       { label: 'Settings', href: '/events/settings', childIcon: 'fa-solid fa-gear' },
     ]},
   ];
