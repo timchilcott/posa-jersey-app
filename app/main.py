@@ -10,11 +10,13 @@ from jinja2 import Environment, FileSystemLoader
 from app.database import get_db, engine
 from app.models import Base, Player, Registration, EmailTemplate
 import app.models_members  # noqa: F401  — register Member/MemberGuardian tables
+import app.models_seasons  # noqa: F401  — register Team/TeamRoster/TeamStaff tables
 from app.api_routes import router as admin_api_router
 from app.sync_routes import router as sync_router
 from app.inventory_routes import router as inventory_router
 from app.events_routes import router as events_router
 from app.members_routes import router as members_router
+from app.seasons_routes import router as seasons_router
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="POSA Jersey Management")
@@ -29,6 +31,7 @@ app.include_router(sync_router)
 app.include_router(inventory_router)
 app.include_router(events_router)
 app.include_router(members_router)
+app.include_router(seasons_router)
 
 _TEMPLATES_DIR = pathlib.Path(__file__).parent / "templates"
 
@@ -74,6 +77,14 @@ async def events_page():
 async def members_page():
     return HTMLResponse(_read_template("members_page.html"))
 
+@app.get("/seasons", response_class=HTMLResponse)
+async def seasons_page():
+    return HTMLResponse(_read_template("seasons_page.html"))
+
+@app.get("/seasons/standings", response_class=HTMLResponse)
+async def standings_page():
+    return HTMLResponse(_read_template("standings_page.html"))
+
 @app.get("/sportsengine", response_class=HTMLResponse)
 async def sportsengine_page():
     return HTMLResponse(_read_template("sportsengine.html"))
@@ -96,6 +107,10 @@ async def members_settings_page():
 
 @app.get("/events/settings", response_class=HTMLResponse)
 async def events_settings_page():
+    return HTMLResponse(_read_template("settings_page.html"))
+
+@app.get("/seasons/settings", response_class=HTMLResponse)
+async def seasons_settings_page():
     return HTMLResponse(_read_template("settings_page.html"))
 
 @app.get("/email-templates", response_class=HTMLResponse)

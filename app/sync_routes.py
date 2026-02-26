@@ -86,11 +86,30 @@ def _bg_sync_members():
         db.close()
 
 
+def _bg_sync_teams():
+    """Run full team sync in background with its own DB session."""
+    db = SessionLocal()
+    try:
+        from app.services.sportsengine import sync_all_teams
+        results = sync_all_teams(db)
+        logger.info(
+            f"BG team sync done: "
+            f"{results['new_teams']} new, {results['updated_teams']} updated, "
+            f"{results['roster_entries']} roster, {results['staff_entries']} staff, "
+            f"{len(results['errors'])} errors"
+        )
+    except Exception as e:
+        logger.error(f"BG team sync failed: {e}", exc_info=True)
+    finally:
+        db.close()
+
+
 def _bg_sync_all():
-    """Run registration + event + members sync in background."""
+    """Run registration + event + members + teams sync in background."""
     _bg_sync_registrations()
     _bg_sync_events()
     _bg_sync_members()
+    _bg_sync_teams()
 
 
 # ------------------------------------------------------------------
@@ -294,6 +313,24 @@ def sync_events(background_tasks: BackgroundTasks):
 
     background_tasks.add_task(_bg_sync_events)
     return {"status": "accepted", "message": "Event sync started in background"}
+
+
+# ------------------------------------------------------------------
+# Team sync endpoint
+# ------------------------------------------------------------------
+@router.post("/sync/teams")
+def sync_teams(background_tasks: BackgroundTasks):
+    """Pull teams/rosters from SportsEngine. Responds immediately; sync runs in background."""
+    from app.services.sportsengine import is_configured
+
+    if not is_configured():
+        return JSONResponse(
+            status_code=400,
+            content={"status": "error", "detail": "SportsEngine not configured"},
+        )
+
+    background_tasks.add_task(_bg_sync_teams)
+    return {"status": "accepted", "message": "Team sync started in background"}
 
 
 # ------------------------------------------------------------------

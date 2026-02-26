@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POSA Standings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    pines: { 50: '#f0f7f0', 100: '#d9edd9', 200: '#b3dbb3', 300: '#7fc07f', 400: '#5aa55a', 500: '#3C7939', 600: '#2f6130', 700: '#254d26', 800: '#1c3a1d', 900: '#142914' }
+                }
+            }
+        }
+    }
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>[x-cloak] { display: none !important; }</style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+</head>
+<body class="bg-gray-50" x-data="standingsApp()" x-init="init()" x-cloak>
+
+    <!-- Filter bar -->
+    <div class="bg-white border-b border-gray-200">
+        <div class="px-6 py-2.5 flex items-center gap-2 flex-wrap">
+            <span class="text-xs text-gray-600 mr-1" x-text="standings.length + ' teams'"></span>
+            <!-- Sport pill (single-select, required) -->
+            <div class="relative" x-data="{ open: false }">
+                <button @click="open = !open" @click.outside="open = false"
+                        class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
+                        :class="selectedSport ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
+                    <span x-text="selectedSport || 'Select sport'"></span>
+                    <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="open" x-transition class="absolute z-20 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+                    <template x-for="sp in availableSports" :key="sp">
+                        <div @click="selectedSport = sp; loadStandings(); open = false"
+                             class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs"
+                             :class="selectedSport === sp ? 'bg-pines-50 text-pines-700 font-medium' : ''"
+                             x-text="sp"></div>
+                    </template>
+                </div>
+            </div>
+            <span x-show="gamesProcessed > 0" class="text-xs text-gray-400" x-text="gamesProcessed + ' games processed'"></span>
+        </div>
+    </div>
+
+    <!-- Standings table -->
+    <main class="bg-white px-6 pt-4">
+        <!-- Loading -->
+        <div x-show="loading" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pines-500"></div>
+        </div>
+
+        <!-- Select sport prompt -->
+        <div x-show="!loading && !selectedSport" class="text-center py-16">
+            <div class="text-gray-400 text-5xl mb-3"><i class="fa-solid fa-ranking-star"></i></div>
+            <h3 class="text-lg font-medium text-gray-900 mb-1">Select a Sport</h3>
+            <p class="text-gray-500">Choose a sport above to view standings</p>
+        </div>
+
+        <!-- No standings data -->
+        <div x-show="!loading && selectedSport && standings.length === 0" class="text-center py-16">
+            <div class="text-gray-400 text-5xl mb-3"><i class="fa-solid fa-trophy"></i></div>
+            <h3 class="text-lg font-medium text-gray-900 mb-1">No standings data</h3>
+            <p class="text-gray-500">No completed games found for this sport</p>
+        </div>
+
+        <!-- Standings table -->
+        <div x-show="!loading && selectedSport && standings.length > 0" class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead>
+                    <tr class="border-b border-gray-200">
+                        <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap" style="width:5%">#</th>
+                        <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap" style="width:30%">Team</th>
+                        <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap" style="width:7%">GP</th>
+                        <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap" style="width:7%">W</th>
+                        <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap" style="width:7%">L</th>
+                        <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap" style="width:7%">T</th>
+                        <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap" style="width:7%">GF</th>
+                        <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap" style="width:7%">GA</th>
+                        <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap" style="width:7%">GD</th>
+                        <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap" style="width:8%">PTS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="row in standings" :key="row.team">
+                        <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                            <td class="px-4 py-3 text-center">
+                                <span class="text-sm font-bold" :class="row.rank <= 3 ? 'text-pines-600' : 'text-gray-500'" x-text="row.rank"></span>
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <div class="flex items-center gap-2">
+                                    <img x-show="row.logoUrl" :src="row.logoUrl" class="w-6 h-6 object-contain rounded" @error="$el.style.display='none'">
+                                    <span class="text-sm font-medium text-gray-900" x-text="row.team"></span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-center text-sm text-gray-600" x-text="row.gp"></td>
+                            <td class="px-4 py-3 text-center text-sm font-medium text-gray-900" x-text="row.w"></td>
+                            <td class="px-4 py-3 text-center text-sm text-gray-600" x-text="row.l"></td>
+                            <td class="px-4 py-3 text-center text-sm text-gray-600" x-text="row.t"></td>
+                            <td class="px-4 py-3 text-center text-sm text-gray-600" x-text="row.gf"></td>
+                            <td class="px-4 py-3 text-center text-sm text-gray-600" x-text="row.ga"></td>
+                            <td class="px-4 py-3 text-center text-sm" :class="row.gd > 0 ? 'text-green-600 font-medium' : row.gd < 0 ? 'text-red-500' : 'text-gray-500'" x-text="(row.gd > 0 ? '+' : '') + row.gd"></td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="text-sm font-bold text-gray-900" x-text="row.pts"></span>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+<script src="/static/column-config.js"></script>
+<script>
+function standingsApp() {
+    return {
+        loading: false,
+        selectedSport: '',
+        availableSports: [],
+        standings: [],
+        gamesProcessed: 0,
+
+        async init() {
+            // Load available sports from teams endpoint
+            try {
+                const res = await fetch('/api/seasons/teams');
+                const data = await res.json();
+                this.availableSports = data.availableSports || [];
+                // Auto-select if only one sport
+                if (this.availableSports.length === 1) {
+                    this.selectedSport = this.availableSports[0];
+                    await this.loadStandings();
+                }
+            } catch (e) {
+                console.error('Failed to load sports:', e);
+            }
+        },
+
+        async loadStandings() {
+            if (!this.selectedSport) {
+                this.standings = [];
+                this.gamesProcessed = 0;
+                return;
+            }
+            this.loading = true;
+            try {
+                const res = await fetch('/api/seasons/standings?sport=' + encodeURIComponent(this.selectedSport));
+                const data = await res.json();
+                this.standings = data.standings || [];
+                this.gamesProcessed = data.gamesProcessed || 0;
+            } catch (e) {
+                console.error('Failed to load standings:', e);
+                this.standings = [];
+            }
+            this.loading = false;
+        },
+    }
+}
+</script>
+<script src="/static/sidebar.js"></script>
+</body>
+</html>
