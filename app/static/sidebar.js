@@ -49,8 +49,8 @@
       { label: 'Add Item', href: '/inventory/add', childIcon: 'fa-solid fa-plus' },
       { label: 'Settings', href: '/inventory/settings', childIcon: 'fa-solid fa-gear' },
     ]},
-    { label: 'Members', href: '/members', icon: ICONS.users, match: ['/members'], children: [
-      { label: 'All Members', href: '/members', childIcon: 'fa-solid fa-list' },
+    { label: 'Directory', href: '/members', icon: ICONS.users, match: ['/members'], children: [
+      { label: 'Directory', href: '/members', childIcon: 'fa-solid fa-list' },
       { label: 'Settings', href: '/members/settings', childIcon: 'fa-solid fa-gear' },
     ]},
     { label: 'Schedule', href: '/events', icon: ICONS.calendar, match: ['/events'], children: [

@@ -39,7 +39,7 @@
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.sport ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                                :class="filters.sport ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
                             <span x-text="filters.sport || 'All sports'"></span>
                             <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
@@ -55,7 +55,7 @@
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.eventType ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                                :class="filters.eventType ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
                             <span x-text="filters.eventType ? typeLabel(filters.eventType) : 'All types'"></span>
                             <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
@@ -73,7 +73,7 @@
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.team.length ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                                :class="filters.team.length ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
                             <span x-text="filterLabel(filters.team, 'team', 'teams')"></span>
                             <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
@@ -92,7 +92,7 @@
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.venue.length ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                                :class="filters.venue.length ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
                             <span x-text="filterLabel(filters.venue, 'venue', 'venues')"></span>
                             <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
@@ -111,7 +111,7 @@
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.subLocation.length ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                                :class="filters.subLocation.length ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
                             <span x-text="filterLabel(filters.subLocation, 'location', 'locations')"></span>
                             <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
@@ -130,7 +130,7 @@
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.status.length ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                                :class="filters.status.length ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
                             <span x-text="filterLabel(filters.status, 'status', 'statuses')"></span>
                             <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
@@ -209,8 +209,8 @@
                     <thead>
                         <tr class="border-b border-gray-200">
                             <th x-show="ecv('time')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Time</th>
-                            <th x-show="ecv('type')" class="pl-6 pr-2 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Type</th>
-                            <th x-show="ecv('teams')" class="pl-6 pr-2 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Teams</th>
+                            <th x-show="ecv('type')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Type</th>
+                            <th x-show="ecv('teams')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Teams</th>
                             <th x-show="ecv('venue')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Venue</th>
                             <th x-show="ecv('location')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Location</th>
                             <th x-show="ecv('status')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Status</th>
@@ -236,7 +236,7 @@
 
                                 <!-- EVENT ROW: Type badge -->
                                 <template x-if="!entry._isHeader">
-                                    <td x-show="ecv('type')" class="pl-6 pr-2 py-3 whitespace-nowrap">
+                                    <td x-show="ecv('type')" class="px-4 py-3 whitespace-nowrap">
                                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
                                               :class="entry.eventType === 'game' ? 'bg-blue-50 text-blue-700' : entry.eventType === 'practice' ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600'"
                                               x-text="typeLabel(entry.eventType)"></span>
