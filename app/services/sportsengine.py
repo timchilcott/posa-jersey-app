@@ -1441,7 +1441,7 @@ def get_team_data() -> tuple:
 # Season Management — Teams, Rosters, Staff
 # ---------------------------------------------------------------------
 
-SEASON_TEAMS_QUERY = """
+SEASON_TEAMS_LIST_QUERY = """
 query GetSeasonTeams($orgId: Int!, $page: Int!, $perPage: Int!) {
     teams(
         organizationId: $orgId
@@ -1468,6 +1468,20 @@ query GetSeasonTeams($orgId: Int!, $page: Int!, $perPage: Int!) {
                 primaryName
                 secondaryName
             }
+        }
+    }
+}
+"""
+
+SEASON_TEAM_DETAIL_QUERY = """
+query GetTeamDetail($orgId: Int!, $page: Int!, $perPage: Int!) {
+    teams(
+        organizationId: $orgId
+        page: $page
+        perPage: $perPage
+    ) {
+        results {
+            id
             players {
                 firstName
                 lastName
@@ -1491,7 +1505,11 @@ query GetSeasonTeams($orgId: Int!, $page: Int!, $perPage: Int!) {
 def sync_all_teams(db: Session) -> dict:
     """
     Sync teams, rosters, and staff from SportsEngine Season Management.
-    Fetches all pages of teams with roster/staff data, upserts to local DB.
+
+    Two-pass approach to stay under SportsEngine's GraphQL complexity limit (101):
+      1. Fetch all teams (lightweight — no roster/staff) via SEASON_TEAMS_LIST_QUERY
+      2. Fetch roster/staff in small batches (perPage=2) via SEASON_TEAM_DETAIL_QUERY
+         and merge by team ID
     """
     from app.models_seasons import Team, TeamRoster, TeamStaff
 
@@ -1508,36 +1526,82 @@ def sync_all_teams(db: Session) -> dict:
     if not org_id:
         raise ValueError("SPORTSENGINE_ORG_ID must be set")
 
+    # ── Pass 1: Fetch all teams (lightweight, no roster/staff) ──
+    all_teams = []
     page = 1
     while True:
         try:
-            data = graphql_query(SEASON_TEAMS_QUERY, {
+            data = graphql_query(SEASON_TEAMS_LIST_QUERY, {
                 "orgId": int(org_id),
                 "page": page,
                 "perPage": 100,
             })
         except Exception as e:
-            logger.error(f"TEAM SYNC: Failed to fetch page {page}: {e}")
+            logger.error(f"TEAM SYNC: Failed to fetch teams page {page}: {e}")
             results["errors"].append(str(e))
             break
 
         teams_data = data.get("teams", {})
         page_info = teams_data.get("pageInformation", {})
         teams_list = teams_data.get("results", [])
+        all_teams.extend(teams_list)
 
-        for team_data in teams_list:
-            try:
-                _upsert_team(team_data, db, results)
-            except Exception as e:
-                logger.error(f"TEAM SYNC: Error processing team {team_data.get('id')}: {e}")
-                results["errors"].append(str(e))
-
-        results["total_fetched"] += len(teams_list)
-        logger.info(f"TEAM SYNC: Page {page} — {len(teams_list)} teams")
-
+        logger.info(f"TEAM SYNC: Teams page {page} — {len(teams_list)} teams")
         if page >= page_info.get("pages", 1):
             break
         page += 1
+
+    results["total_fetched"] = len(all_teams)
+    logger.info(f"TEAM SYNC: Fetched {len(all_teams)} teams, now fetching roster/staff...")
+
+    # ── Pass 2: Fetch roster/staff in small batches ──
+    # The detail query with players[] and staff[] nested is expensive.
+    # perPage=2 keeps complexity safely under 101.
+    detail_map = {}  # se_team_id -> {players: [...], staff: [...]}
+    page = 1
+    while True:
+        try:
+            data = graphql_query(SEASON_TEAM_DETAIL_QUERY, {
+                "orgId": int(org_id),
+                "page": page,
+                "perPage": 2,
+            })
+        except Exception as e:
+            logger.error(f"TEAM SYNC: Failed to fetch detail page {page}: {e}")
+            results["errors"].append(str(e))
+            break
+
+        teams_data = data.get("teams", {})
+        detail_list = teams_data.get("results", [])
+
+        for detail in detail_list:
+            tid = str(detail.get("id", ""))
+            if tid:
+                detail_map[tid] = {
+                    "players": detail.get("players") or [],
+                    "staff": detail.get("staff") or [],
+                }
+
+        logger.info(f"TEAM SYNC: Detail page {page} — {len(detail_list)} teams")
+        if len(detail_list) < 2:
+            break
+        page += 1
+
+    logger.info(f"TEAM SYNC: Fetched roster/staff for {len(detail_map)} teams")
+
+    # ── Merge and upsert ──
+    for team_data in all_teams:
+        se_id = str(team_data.get("id", ""))
+        # Merge roster/staff detail into team_data
+        detail = detail_map.get(se_id, {})
+        team_data["players"] = detail.get("players", [])
+        team_data["staff"] = detail.get("staff", [])
+
+        try:
+            _upsert_team(team_data, db, results)
+        except Exception as e:
+            logger.error(f"TEAM SYNC: Error processing team {se_id}: {e}")
+            results["errors"].append(str(e))
 
     db.commit()
     logger.info(f"TEAM SYNC: Complete — {results}")
