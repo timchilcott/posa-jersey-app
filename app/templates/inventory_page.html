@@ -18,7 +18,7 @@
     </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>[x-cloak] { display: none !important; }</style>
-    <script src="https://kit.fontawesome.com/423D987F-13A9-43DE-B9E1-9CFB99173AF3.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 </head>
 <body class="bg-gray-50" x-data="inventoryApp()" x-init="init()" x-cloak>
 
@@ -39,7 +39,7 @@
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.sport.length ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                                :class="filters.sport.length ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
                             <span x-text="filterLabel(filters.sport, 'sport', 'sports')"></span>
                             <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
@@ -58,7 +58,7 @@
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.category.length ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                                :class="filters.category.length ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
                             <span x-text="filterLabel(filters.category, 'category', 'categories')"></span>
                             <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
@@ -77,7 +77,7 @@
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.divisions.length ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                                :class="filters.divisions.length ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
                             <span x-text="filterLabel(filters.divisions, 'division', 'divisions')"></span>
                             <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
@@ -97,7 +97,7 @@
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.condition.length ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                                :class="filters.condition.length ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
                             <span x-text="filterLabel(filters.condition, 'condition', 'conditions')"></span>
                             <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
@@ -116,7 +116,7 @@
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.location.length ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                                :class="filters.location.length ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
                             <span x-text="filterLabel(filters.location, 'location', 'locations')"></span>
                             <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>

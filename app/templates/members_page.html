@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POSA Members</title>
+    <title>POSA Directory</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
     tailwind.config = {
@@ -18,7 +18,7 @@
     </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>[x-cloak] { display: none !important; }</style>
-    <script src="https://kit.fontawesome.com/423D987F-13A9-43DE-B9E1-9CFB99173AF3.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 </head>
 <body class="bg-gray-50" x-data="membersApp()" x-init="init()" x-cloak>
 
@@ -33,13 +33,13 @@
                        class="pl-8 pr-3 py-1.5 border border-gray-200 rounded-md text-xs w-44 focus:ring-1 focus:ring-pines-500 focus:border-pines-500 placeholder-gray-400">
             </div>
             <!-- All filter pills (behind + Filter) -->
-            <template x-if="showMore || filters.type.length || filters.city.length">
+            <template x-if="showMore || hasAnyFilter()">
                 <div class="contents">
                     <!-- Type pill (multi-select) -->
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.type.length ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                                :class="filters.type.length ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
                             <span x-text="typeLabel()"></span>
                             <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
@@ -54,11 +54,68 @@
                             </template>
                         </div>
                     </div>
+                    <!-- Sport pill (multi-select) -->
+                    <div class="relative" x-data="{ open: false }">
+                        <button @click="open = !open" @click.outside="open = false"
+                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
+                                :class="filters.sport.length ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
+                            <span x-text="filterLabel(filters.sport, 'sport', 'sports')"></span>
+                            <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <div x-show="open" x-transition class="absolute z-20 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg py-1 max-h-48 overflow-y-auto">
+                            <template x-for="sp in availableSports" :key="sp">
+                                <label class="flex items-center px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs">
+                                    <input type="checkbox" :checked="filters.sport.includes(sp)"
+                                           @change="toggleFilter('sport', sp)"
+                                           class="rounded border-gray-300 text-pines-500 focus:ring-pines-500 mr-2 w-3.5 h-3.5">
+                                    <span x-text="sp"></span>
+                                </label>
+                            </template>
+                        </div>
+                    </div>
+                    <!-- Season pill (multi-select) -->
+                    <div class="relative" x-data="{ open: false }" x-show="availableSeasons.length > 0">
+                        <button @click="open = !open" @click.outside="open = false"
+                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
+                                :class="filters.season.length ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
+                            <span x-text="filterLabel(filters.season, 'season', 'seasons')"></span>
+                            <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <div x-show="open" x-transition class="absolute z-20 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg py-1 max-h-48 overflow-y-auto">
+                            <template x-for="s in availableSeasons" :key="s">
+                                <label class="flex items-center px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs">
+                                    <input type="checkbox" :checked="filters.season.includes(s)"
+                                           @change="toggleFilter('season', s)"
+                                           class="rounded border-gray-300 text-pines-500 focus:ring-pines-500 mr-2 w-3.5 h-3.5">
+                                    <span x-text="s"></span>
+                                </label>
+                            </template>
+                        </div>
+                    </div>
+                    <!-- Gender pill (multi-select) -->
+                    <div class="relative" x-data="{ open: false }" x-show="availableGenders.length > 0">
+                        <button @click="open = !open" @click.outside="open = false"
+                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
+                                :class="filters.gender.length ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
+                            <span x-text="filterLabel(filters.gender, 'gender', 'genders')"></span>
+                            <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <div x-show="open" x-transition class="absolute z-20 mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg py-1 max-h-48 overflow-y-auto">
+                            <template x-for="g in availableGenders" :key="g">
+                                <label class="flex items-center px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs">
+                                    <input type="checkbox" :checked="filters.gender.includes(g)"
+                                           @change="toggleFilter('gender', g)"
+                                           class="rounded border-gray-300 text-pines-500 focus:ring-pines-500 mr-2 w-3.5 h-3.5">
+                                    <span x-text="g"></span>
+                                </label>
+                            </template>
+                        </div>
+                    </div>
                     <!-- City pill (multi-select) -->
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" @click.outside="open = false"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.city.length ? 'border-pines-200 bg-pines-50 text-pines-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'">
+                                :class="filters.city.length ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
                             <span x-text="filterLabel(filters.city, 'city', 'cities')"></span>
                             <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
@@ -73,8 +130,27 @@
                             </template>
                         </div>
                     </div>
+                    <!-- Grad Year pill (multi-select) -->
+                    <div class="relative" x-data="{ open: false }" x-show="availableGradYears.length > 0">
+                        <button @click="open = !open" @click.outside="open = false"
+                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
+                                :class="filters.gradYear.length ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
+                            <span x-text="filterLabel(filters.gradYear, 'grad year', 'grad years')"></span>
+                            <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <div x-show="open" x-transition class="absolute z-20 mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg py-1 max-h-48 overflow-y-auto">
+                            <template x-for="y in availableGradYears" :key="y">
+                                <label class="flex items-center px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs">
+                                    <input type="checkbox" :checked="filters.gradYear.map(String).includes(String(y))"
+                                           @change="toggleFilter('gradYear', y)"
+                                           class="rounded border-gray-300 text-pines-500 focus:ring-pines-500 mr-2 w-3.5 h-3.5">
+                                    <span x-text="y"></span>
+                                </label>
+                            </template>
+                        </div>
+                    </div>
                     <!-- Collapse filters -->
-                    <button x-show="showMore && !filters.type.length && !filters.city.length"
+                    <button x-show="showMore && !hasAnyFilter()"
                             @click="showMore = false"
                             class="text-xs text-gray-400 hover:text-gray-600 px-1 py-1.5">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -82,14 +158,14 @@
                 </div>
             </template>
             <!-- + Filter toggle -->
-            <button x-show="!showMore && !filters.type.length && !filters.city.length"
+            <button x-show="!showMore && !hasAnyFilter()"
                     @click="showMore = true"
                     class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border border-dashed border-gray-300 text-gray-400 hover:text-gray-600 hover:border-gray-400 transition-colors">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 Filter
             </button>
             <!-- Clear -->
-            <button x-show="filters.search || filters.type.length || filters.city.length"
+            <button x-show="filters.search || hasAnyFilter()"
                     @click="clearFilters(); showMore = false" class="text-xs text-gray-400 hover:text-gray-600 px-1.5 py-1.5">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
@@ -352,8 +428,12 @@
             filteredMembers: [],
             displayList: [],
             selectedMember: null,
-            filters: { search: '', type: [], city: [] },
+            filters: { search: '', type: [], sport: [], season: [], gender: [], city: [], gradYear: [] },
             availableCities: [],
+            availableSports: [],
+            availableSeasons: [],
+            availableGenders: [],
+            availableGradYears: [],
             colVis: {},
             _filterColMap: {},
 
@@ -389,19 +469,39 @@
                     const response = await fetch('/api/members');
                     const data = await response.json();
                     this.allMembers = data.members;
-                    this.buildCityOptions();
+                    this.buildFilterOptions();
                     this.applyFilters();
                 } catch (error) {
                     console.error('Failed to load members:', error);
                 }
             },
 
-            buildCityOptions() {
+            buildFilterOptions() {
                 const cities = new Set();
+                const sports = new Set();
+                const seasons = new Set();
+                const genders = new Set();
+                const gradYears = new Set();
                 this.allMembers.forEach(m => {
                     if (m.address && m.address.city) cities.add(m.address.city);
+                    if (m.gender) genders.add(m.gender);
+                    if (m.graduationYear) gradYears.add(m.graduationYear);
+                    if (m.player && m.player.registrations) {
+                        m.player.registrations.forEach(r => {
+                            if (r.sport && r.sport.toLowerCase() !== 'unknown') sports.add(r.sport);
+                            if (r.season && r.season.toLowerCase() !== 'unknown' && /[a-z]/i.test(r.season)) seasons.add(r.season);
+                        });
+                    }
                 });
                 this.availableCities = [...cities].sort();
+                this.availableSports = [...sports].sort();
+                this.availableSeasons = [...seasons].sort();
+                this.availableGenders = [...genders].sort();
+                this.availableGradYears = [...gradYears].sort((a, b) => b - a);
+            },
+
+            hasAnyFilter() {
+                return this.filters.type.length || this.filters.sport.length || this.filters.season.length || this.filters.gender.length || this.filters.city.length || this.filters.gradYear.length;
             },
 
             toggleFilter(filterKey, value) {
@@ -445,8 +545,24 @@
                         const ok = this.filters.type.some(t => (t === 'child' && isChild) || (t === 'adult' && !isChild));
                         if (!ok) return false;
                     }
+                    if (this.filters.sport.length > 0 || this.filters.season.length > 0) {
+                        const regs = m.player && m.player.registrations ? m.player.registrations : [];
+                        if (regs.length === 0) return false;
+                        const matchingReg = regs.some(r => {
+                            if (this.filters.sport.length > 0 && !this.filters.sport.includes(r.sport)) return false;
+                            if (this.filters.season.length > 0 && !this.filters.season.includes(r.season)) return false;
+                            return true;
+                        });
+                        if (!matchingReg) return false;
+                    }
+                    if (this.filters.gender.length > 0) {
+                        if (!m.gender || !this.filters.gender.includes(m.gender)) return false;
+                    }
                     if (this.filters.city.length > 0) {
                         if (!m.address || !this.filters.city.includes(m.address.city)) return false;
+                    }
+                    if (this.filters.gradYear.length > 0) {
+                        if (!m.graduationYear || !this.filters.gradYear.map(String).includes(String(m.graduationYear))) return false;
                     }
                     return true;
                 });
@@ -489,7 +605,7 @@
             },
 
             clearFilters() {
-                this.filters = { search: '', type: [], city: [] };
+                this.filters = { search: '', type: [], sport: [], season: [], gender: [], city: [], gradYear: [] };
                 this.applyFilters();
             },
 
