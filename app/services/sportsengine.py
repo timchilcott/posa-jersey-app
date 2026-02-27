@@ -25,7 +25,9 @@ FIX (Feb 19, 2026):
 
 import os
 import re
+import time
 import logging
+import threading
 import requests
 from datetime import datetime, timedelta
 from typing import Optional
@@ -51,6 +53,11 @@ _token_cache = {
     "access_token": None,
     "expires_at": None
 }
+
+# Lock to prevent concurrent syncs from doubling API load and
+# burning through SportsEngine's rate limit.
+_sync_lock = threading.Lock()
+_sync_running = False
 
 
 def is_configured() -> bool:
@@ -109,30 +116,80 @@ def get_access_token() -> str:
 # ---------------------------------------------------------------------
 # GraphQL Queries  (ORIGINAL queries — do NOT change)
 # ---------------------------------------------------------------------
-def graphql_query(query: str, variables: dict = None) -> dict:
-    """Execute a GraphQL query against the SportsEngine API."""
+def graphql_query(query: str, variables: dict = None, max_retries: int = 4) -> dict:
+    """
+    Execute a GraphQL query against the SportsEngine API.
+
+    Retries automatically on 429 (rate limit) responses with exponential
+    backoff: 5s → 10s → 20s → 40s.  This is critical because
+    SportsEngine's GraphQL API has aggressive per-minute rate limits and
+    we make many sequential detail queries during a full sync.
+    """
     token = get_access_token()
-    
-    response = requests.post(
-        SPORTSENGINE_GRAPHQL_URL,
-        json={"query": query, "variables": variables or {}},
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
-    )
-    
-    if response.status_code != 200:
+
+    for attempt in range(max_retries + 1):
+        response = requests.post(
+            SPORTSENGINE_GRAPHQL_URL,
+            json={"query": query, "variables": variables or {}},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json"
+            }
+        )
+
+        # ---- 429 Rate-limit: wait and retry ----
+        if response.status_code == 429:
+            if attempt < max_retries:
+                wait = 5 * (2 ** attempt)  # 5, 10, 20, 40 seconds
+                logger.warning(
+                    f"Rate limited (429), retry {attempt + 1}/{max_retries} "
+                    f"after {wait}s"
+                )
+                time.sleep(wait)
+                continue
+            else:
+                logger.error(
+                    f"Rate limited (429) — exhausted {max_retries} retries"
+                )
+                raise Exception(f"GraphQL query failed: 429 (rate limit after {max_retries} retries)")
+
+        # ---- Also handle 429 that comes back as 200 with error body ----
+        if response.status_code == 200:
+            result = response.json()
+            errors = result.get("errors", [])
+            is_rate_limit = any(
+                e.get("extensions", {}).get("code") == "TOO_MANY_REQUESTS"
+                for e in errors
+            )
+            if is_rate_limit:
+                if attempt < max_retries:
+                    wait = 5 * (2 ** attempt)
+                    logger.warning(
+                        f"Rate limited (TOO_MANY_REQUESTS in body), "
+                        f"retry {attempt + 1}/{max_retries} after {wait}s"
+                    )
+                    time.sleep(wait)
+                    continue
+                else:
+                    logger.error(
+                        f"Rate limited (TOO_MANY_REQUESTS) — exhausted "
+                        f"{max_retries} retries"
+                    )
+                    raise Exception(f"GraphQL query failed: 429 (rate limit after {max_retries} retries)")
+
+            # Non-rate-limit errors
+            if errors:
+                logger.error(f"GraphQL errors: {errors}")
+                raise Exception(f"GraphQL errors: {errors}")
+
+            return result.get("data", {})
+
+        # ---- Other HTTP errors ----
         logger.error(f"GraphQL query failed: {response.status_code} - {response.text}")
         raise Exception(f"GraphQL query failed: {response.status_code}")
-    
-    result = response.json()
-    
-    if "errors" in result:
-        logger.error(f"GraphQL errors: {result['errors']}")
-        raise Exception(f"GraphQL errors: {result['errors']}")
-    
-    return result.get("data", {})
+
+    # Should not reach here, but just in case
+    raise Exception("GraphQL query failed: unexpected retry loop exit")
 
 
 def get_all_registrations() -> list:
@@ -305,10 +362,10 @@ def get_registration_results(registration_id: str, cursor: str = None, known_nam
         
         fetched_count += 1
         
-        # Rate limit protection
+        # Rate limit protection — 3s between detail queries keeps us
+        # comfortably under SportsEngine's per-minute rate limit.
         if fetched_count > 1:
-            import time
-            time.sleep(1.5)
+            time.sleep(3)
         
         detail_query = """
         query GetProfileDetails($profileId: Int!, $orgId: Int!) {
@@ -1179,7 +1236,38 @@ def process_single_registration(
 
 
 def sync_all_registrations(db: Session) -> dict:
-    """Sync all active registration forms from SportsEngine."""
+    """Sync all active registration forms from SportsEngine.
+
+    Uses a lock to prevent concurrent syncs.  Two syncs running at the
+    same time double the API load and trigger 429 rate-limit errors that
+    cause detail queries to fail (new kids end up with no answers/division).
+    """
+    global _sync_running
+
+    # ---- Prevent concurrent syncs ----
+    if not _sync_lock.acquire(blocking=False):
+        logger.warning("SYNC: Another sync is already running — skipping this request")
+        print("SYNC: Another sync is already running — skipping", flush=True)
+        return {
+            "forms_processed": 0,
+            "new_players": 0,
+            "existing_players": 0,
+            "new_registrations": 0,
+            "updated_registrations": 0,
+            "skipped_parents": 0,
+            "errors": ["Skipped: another sync already in progress"]
+        }
+
+    _sync_running = True
+    try:
+        return _sync_all_registrations_locked(db)
+    finally:
+        _sync_running = False
+        _sync_lock.release()
+
+
+def _sync_all_registrations_locked(db: Session) -> dict:
+    """Inner sync logic, called while holding _sync_lock."""
     all_results = {
         "forms_processed": 0,
         "new_players": 0,
@@ -1189,7 +1277,7 @@ def sync_all_registrations(db: Session) -> dict:
         "skipped_parents": 0,
         "errors": []
     }
-    
+
     forms = get_all_registrations()
     print(f"SYNC: Found {len(forms)} total forms", flush=True)
     for f in forms:
