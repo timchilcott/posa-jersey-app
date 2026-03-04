@@ -323,7 +323,8 @@ def get_registration_results(registration_id: str, cursor: str = None, known_nam
     profiles_data = data.get("profiles", {})
     page_info = profiles_data.get("pageInformation", {})
     profiles = profiles_data.get("results", [])
-    print(f"SYNC: Found {len(profiles)} profiles for registration {registration_id} (page {page}, total pages: {page_info.get('pages', '?')})", flush=True)
+    total_count = page_info.get('count', '?')
+    print(f"SYNC: Found {len(profiles)} profiles for registration {registration_id} (page {page}, total pages: {page_info.get('pages', '?')}, total count: {total_count})", flush=True)
     
     # For each profile, get their registration answers
     # OPTIMIZATION: skip detail query for profiles already in our DB
@@ -1093,6 +1094,10 @@ def process_single_registration(
     # certainly a parent who got pulled in as a profile.
     # ------------------------------------------------------------------
     if _is_likely_adult(birth_year):
+        print(
+            f"SYNC: SKIPPING likely parent/adult: {player_name} "
+            f"(birth_year={birth_year}, division='{division}', sport='{sport}')", flush=True
+        )
         logger.info(
             f"SYNC: Skipping likely parent/adult: {player_name} "
             f"(birth_year={birth_year})"
@@ -1103,6 +1108,10 @@ def process_single_registration(
     if (birth_year is None
             and division == "Waiting Room"
             and sport == "Unknown"):
+        print(
+            f"SYNC: SKIPPING likely parent (no DOB, Waiting Room, Unknown sport): "
+            f"{player_name}", flush=True
+        )
         logger.info(
             f"SYNC: Skipping likely parent (no DOB, no division, unknown sport): "
             f"{player_name}"
