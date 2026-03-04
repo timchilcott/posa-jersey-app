@@ -13,4 +13,4 @@ uvicorn
 beautifulsoup4
 requests
 httpx
-apscheduler
+

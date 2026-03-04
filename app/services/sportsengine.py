@@ -25,6 +25,7 @@ FIX (Feb 19, 2026):
 
 import os
 import re
+import time
 import logging
 import requests
 from datetime import datetime, timedelta
@@ -109,30 +110,49 @@ def get_access_token() -> str:
 # ---------------------------------------------------------------------
 # GraphQL Queries  (ORIGINAL queries — do NOT change)
 # ---------------------------------------------------------------------
-def graphql_query(query: str, variables: dict = None) -> dict:
-    """Execute a GraphQL query against the SportsEngine API."""
+def graphql_query(query: str, variables: dict = None, max_retries: int = 5) -> dict:
+    """Execute a GraphQL query against the SportsEngine API with 429 retry."""
     token = get_access_token()
-    
-    response = requests.post(
-        SPORTSENGINE_GRAPHQL_URL,
-        json={"query": query, "variables": variables or {}},
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
-    )
-    
-    if response.status_code != 200:
-        logger.error(f"GraphQL query failed: {response.status_code} - {response.text}")
-        raise Exception(f"GraphQL query failed: {response.status_code}")
-    
-    result = response.json()
-    
-    if "errors" in result:
-        logger.error(f"GraphQL errors: {result['errors']}")
-        raise Exception(f"GraphQL errors: {result['errors']}")
-    
-    return result.get("data", {})
+
+    for attempt in range(max_retries + 1):
+        response = requests.post(
+            SPORTSENGINE_GRAPHQL_URL,
+            json={"query": query, "variables": variables or {}},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json"
+            }
+        )
+
+        if response.status_code == 429:
+            if attempt == max_retries:
+                logger.error(f"GraphQL rate limited (429) after {max_retries} retries")
+                raise Exception(f"GraphQL rate limited (429) after {max_retries} retries")
+
+            # Honor Retry-After header if provided, otherwise exponential backoff
+            retry_after = response.headers.get("Retry-After")
+            if retry_after:
+                wait_seconds = int(retry_after)
+            else:
+                wait_seconds = min(2 ** attempt * 2, 60)  # 2, 4, 8, 16, 32, cap 60
+
+            logger.warning(
+                f"Rate limited (429), retry {attempt + 1}/{max_retries} after {wait_seconds}s"
+            )
+            time.sleep(wait_seconds)
+            continue
+
+        if response.status_code != 200:
+            logger.error(f"GraphQL query failed: {response.status_code} - {response.text}")
+            raise Exception(f"GraphQL query failed: {response.status_code}")
+
+        result = response.json()
+
+        if "errors" in result:
+            logger.error(f"GraphQL errors: {result['errors']}")
+            raise Exception(f"GraphQL errors: {result['errors']}")
+
+        return result.get("data", {})
 
 
 def get_all_registrations() -> list:
@@ -1249,28 +1269,3 @@ def sync_all_registrations(db: Session) -> dict:
     return all_results
 
 
-def process_webhook(payload: dict, db: Session) -> dict:
-    """
-    Process a webhook notification from SportsEngine.
-
-    Always triggers a full sync on any incoming webhook POST, regardless
-    of payload structure.  SportsEngine's actual payload format varies
-    and filtering on specific field names (resourceType, resourceOperation)
-    caused missed syncs.  A full sync is cheap thanks to the incremental
-    known_names optimization.
-    """
-    # Log whatever we got for debugging
-    resource_type = payload.get("resourceType") or payload.get("type") or "unknown"
-    operation = payload.get("resourceOperation") or payload.get("operation") or payload.get("action") or "unknown"
-    resource_id = payload.get("resourceId") or payload.get("id") or "unknown"
-
-    logger.info(f"WEBHOOK: Received — operation={operation} type={resource_type} id={resource_id}")
-    logger.info(f"WEBHOOK: Full payload: {payload}")
-
-    # Always sync — don't filter on resource type or operation
-    try:
-        results = sync_all_registrations(db)
-        return {"action": "synced", "results": results}
-    except Exception as e:
-        logger.error(f"WEBHOOK: Sync failed: {e}", exc_info=True)
-        return {"action": "error", "message": str(e)}

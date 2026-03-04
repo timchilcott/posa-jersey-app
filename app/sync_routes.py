@@ -6,7 +6,7 @@ Add to main.py:
     app.include_router(sync_router)
 
 Routes:
-    POST /sync/pull              - Admin UI "Sync SportsEngine" button
+    POST /sync/pull              - Sync all registrations (admin UI button)
     POST /sync/pull/{id}         - Sync a single registration form
     POST /sportsengine/webhook   - Incoming webhook from SportsEngine
     GET  /sportsengine/status    - Connection status check
@@ -17,11 +17,11 @@ Routes:
 """
 import os
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, HTMLResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from app.database import get_db
+from app.database import get_db, SessionLocal
 from app.models import Player, Registration
 
 logger = logging.getLogger(__name__)
@@ -96,34 +96,70 @@ def sync_pull_one(registration_id: str, db: Session = Depends(get_db)):
 # ------------------------------------------------------------------
 # SportsEngine webhook (receives POST from SportsEngine servers)
 # ------------------------------------------------------------------
+def _bg_sync_webhook(payload: dict):
+    """Process a webhook by syncing only the relevant registration."""
+    db = SessionLocal()
+    try:
+        from app.services.sportsengine import (
+            is_configured, sync_registration, sync_all_registrations,
+        )
+
+        if not is_configured():
+            logger.warning("WEBHOOK: SportsEngine not configured, skipping")
+            return
+
+        # Try to extract a specific registration form ID from the payload
+        registration_id = (
+            payload.get("registrationId")
+            or payload.get("registration_id")
+            or payload.get("sourceId")
+            or payload.get("source_id")
+        )
+
+        if registration_id:
+            logger.info(f"WEBHOOK: Syncing single registration form {registration_id}")
+            results = sync_registration(str(registration_id), db)
+            logger.info(f"WEBHOOK: Single registration sync done: {results}")
+            return
+
+        # Fallback: sync all registrations only (NOT events/members/teams)
+        logger.info("WEBHOOK: No registration ID in payload, syncing all registrations")
+        results = sync_all_registrations(db)
+        logger.info(f"WEBHOOK: Registration sync done: {results}")
+
+    except Exception as e:
+        logger.error(f"WEBHOOK: Sync failed: {e}", exc_info=True)
+    finally:
+        db.close()
+
+
 @router.post("/sportsengine/webhook")
-async def sportsengine_webhook(request: Request, db: Session = Depends(get_db)):
+async def sportsengine_webhook(request: Request, background_tasks: BackgroundTasks):
     """
     Receive webhook notifications from SportsEngine.
     SportsEngine POSTs here when registrations are created/updated.
+    Responds immediately; sync runs in background.
     """
-    from app.services.sportsengine import is_configured, process_webhook
+    from app.services.sportsengine import is_configured
 
     try:
         payload = await request.json()
     except Exception:
         payload = {}
 
-    logger.info(f"SportsEngine webhook received: {payload}")
+    resource_type = payload.get("resourceType") or payload.get("type") or "unknown"
+    operation = payload.get("resourceOperation") or payload.get("operation") or payload.get("action") or "unknown"
+    resource_id = payload.get("resourceId") or payload.get("id") or "unknown"
+
+    logger.info(f"WEBHOOK: Received — operation={operation} type={resource_type} id={resource_id}")
+    logger.info(f"WEBHOOK: Full payload: {payload}")
 
     if not is_configured():
-        logger.warning("Webhook received but SportsEngine not configured")
+        logger.warning("WEBHOOK: SportsEngine not configured")
         return {"status": "ignored", "reason": "not configured"}
 
-    try:
-        result = process_webhook(payload, db)
-        return {"status": "ok", "result": result}
-    except Exception as e:
-        logger.error(f"Webhook processing error: {e}", exc_info=True)
-        return JSONResponse(
-            status_code=500,
-            content={"status": "error", "detail": str(e)},
-        )
+    background_tasks.add_task(_bg_sync_webhook, payload)
+    return {"status": "accepted", "message": "Webhook processing started"}
 
 
 # ------------------------------------------------------------------
