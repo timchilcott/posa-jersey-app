@@ -104,12 +104,41 @@ def _bg_sync_teams():
         db.close()
 
 
-def _bg_sync_all():
-    """Run registration + event + members + teams sync in background."""
-    _bg_sync_registrations()
-    _bg_sync_events()
-    _bg_sync_members()
-    _bg_sync_teams()
+def _bg_sync_webhook(payload: dict):
+    """Process a webhook by syncing only the relevant registration."""
+    db = SessionLocal()
+    try:
+        from app.services.sportsengine import (
+            is_configured, sync_registration, sync_all_registrations,
+        )
+
+        if not is_configured():
+            logger.warning("WEBHOOK: SportsEngine not configured, skipping")
+            return
+
+        # Try to extract a specific registration form ID from the payload
+        registration_id = (
+            payload.get("registrationId")
+            or payload.get("registration_id")
+            or payload.get("sourceId")
+            or payload.get("source_id")
+        )
+
+        if registration_id:
+            logger.info(f"WEBHOOK: Syncing single registration form {registration_id}")
+            results = sync_registration(str(registration_id), db)
+            logger.info(f"WEBHOOK: Single registration sync done: {results}")
+            return
+
+        # Fallback: sync all registrations only (NOT events/members/teams)
+        logger.info("WEBHOOK: No registration ID in payload, syncing all registrations")
+        results = sync_all_registrations(db)
+        logger.info(f"WEBHOOK: Registration sync done: {results}")
+
+    except Exception as e:
+        logger.error(f"WEBHOOK: Sync failed: {e}", exc_info=True)
+    finally:
+        db.close()
 
 
 # ------------------------------------------------------------------
@@ -185,9 +214,11 @@ async def sportsengine_webhook(request: Request, background_tasks: BackgroundTas
         logger.warning("Webhook received but SportsEngine not configured")
         return {"status": "ignored", "reason": "not configured"}
 
-    # Respond immediately, sync in background
-    background_tasks.add_task(_bg_sync_all)
-    return {"status": "accepted", "message": "Sync started in background"}
+    logger.info(f"WEBHOOK: Full payload: {payload}")
+
+    # Respond immediately, sync only relevant registration in background
+    background_tasks.add_task(_bg_sync_webhook, payload)
+    return {"status": "accepted", "message": "Webhook processing started"}
 
 
 # ------------------------------------------------------------------

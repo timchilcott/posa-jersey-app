@@ -1337,59 +1337,6 @@ def _sync_all_registrations_locked(db: Session) -> dict:
     return all_results
 
 
-def process_webhook(payload: dict, db: Session) -> dict:
-    """
-    Process a webhook notification from SportsEngine.
-
-    Always triggers a full sync on any incoming webhook POST, regardless
-    of payload structure.  SportsEngine's actual payload format varies
-    and filtering on specific field names (resourceType, resourceOperation)
-    caused missed syncs.  A full sync is cheap thanks to the incremental
-    known_names optimization.
-
-    Syncs: registrations, events, and members.
-    """
-    # Log whatever we got for debugging
-    resource_type = payload.get("resourceType") or payload.get("type") or "unknown"
-    operation = payload.get("resourceOperation") or payload.get("operation") or payload.get("action") or "unknown"
-    resource_id = payload.get("resourceId") or payload.get("id") or "unknown"
-
-    logger.info(f"WEBHOOK: Received — operation={operation} type={resource_type} id={resource_id}")
-    logger.info(f"WEBHOOK: Full payload: {payload}")
-
-    # Always sync registrations, events, members, and teams
-    results = {"registration_sync": None, "event_sync": None, "members_sync": None, "team_sync": None}
-
-    try:
-        reg_results = sync_all_registrations(db)
-        results["registration_sync"] = {"action": "synced", "results": reg_results}
-    except Exception as e:
-        logger.error(f"WEBHOOK: Registration sync failed: {e}", exc_info=True)
-        results["registration_sync"] = {"action": "error", "message": str(e)}
-
-    try:
-        event_results = sync_all_events(db)
-        results["event_sync"] = {"action": "synced", "results": event_results}
-    except Exception as e:
-        logger.error(f"WEBHOOK: Event sync failed: {e}", exc_info=True)
-        results["event_sync"] = {"action": "error", "message": str(e)}
-
-    try:
-        from app.services.members_sync import sync_members
-        member_results = sync_members(db)
-        results["members_sync"] = {"action": "synced", "results": member_results}
-    except Exception as e:
-        logger.error(f"WEBHOOK: Members sync failed: {e}", exc_info=True)
-        results["members_sync"] = {"action": "error", "message": str(e)}
-
-    try:
-        team_results = sync_all_teams(db)
-        results["team_sync"] = {"action": "synced", "results": team_results}
-    except Exception as e:
-        logger.error(f"WEBHOOK: Team sync failed: {e}", exc_info=True)
-        results["team_sync"] = {"action": "error", "message": str(e)}
-
-    return results
 
 
 # ---------------------------------------------------------------------
