@@ -721,3 +721,101 @@ def debug_sport_season_mismatches(db: Session = Depends(get_db)):
     return HTMLResponse(
         f"<html><body style='font-family: monospace; padding: 20px;'>{''.join(lines)}</body></html>"
     )
+
+
+# ------------------------------------------------------------------
+# Diagnostic: compare SportsEngine profiles vs DB players
+# ------------------------------------------------------------------
+@router.get("/api/debug/se-vs-db")
+def debug_se_vs_db(db: Session = Depends(get_db)):
+    """
+    Compare SportsEngine registration profiles to local DB players.
+    Shows who is in SE but missing from DB, and vice versa.
+    """
+    from app.services.sportsengine import (
+        is_configured, get_all_registrations, graphql_query,
+    )
+
+    if not is_configured():
+        return {"error": "SportsEngine not configured"}
+
+    org_id = os.getenv("SPORTSENGINE_ORG_ID")
+
+    # Get all active forms
+    forms = get_all_registrations()
+    active_forms = [f for f in forms if f.get("status") in [1, "1", True, "ACTIVE", "OPEN", "CLOSED"]]
+
+    se_profiles = {}  # name_lower -> {form, id, dob}
+
+    for form in active_forms:
+        reg_id = form["id"]
+        form_name = form["name"]
+        page = 1
+        while True:
+            query = """
+            query GetRegistrationProfiles($orgId: Int!, $regId: String!, $page: Int!) {
+                profiles(
+                    organizationId: $orgId
+                    filter: {
+                        key: REGISTRATION_SUBMITTED
+                        operator: EQUAL
+                        value: "true"
+                        source: REGISTRATIONS
+                        sourceId: $regId
+                    }
+                    page: $page
+                    perPage: 50
+                ) {
+                    pageInformation { pages count page }
+                    results { id firstName lastName dateOfBirth }
+                }
+            }
+            """
+            data = graphql_query(query, {"orgId": int(org_id), "regId": str(reg_id), "page": page})
+            profiles_data = data.get("profiles", {})
+            page_info = profiles_data.get("pageInformation", {})
+            profiles = profiles_data.get("results", [])
+
+            for p in profiles:
+                first = (p.get("firstName") or "").strip()
+                last = (p.get("lastName") or "").strip()
+                name = f"{first} {last}".strip()
+                se_profiles[name.lower()] = {
+                    "name": name,
+                    "form": form_name,
+                    "se_id": p.get("id"),
+                    "dob": p.get("dateOfBirth"),
+                }
+
+            if page < page_info.get("pages", 1):
+                page += 1
+            else:
+                break
+
+    # Get all DB players
+    db_players = {}
+    for player in db.query(Player).all():
+        db_players[player.full_name.lower()] = {
+            "name": player.full_name,
+            "id": player.id,
+            "birth_year": player.birth_year,
+        }
+
+    # Compare
+    in_se_not_db = []
+    for key, info in se_profiles.items():
+        if key not in db_players:
+            in_se_not_db.append(info)
+
+    in_db_not_se = []
+    for key, info in db_players.items():
+        if key not in se_profiles:
+            in_db_not_se.append(info)
+
+    return {
+        "se_total_profiles": len(se_profiles),
+        "db_total_players": len(db_players),
+        "in_se_not_db": sorted(in_se_not_db, key=lambda x: x["name"]),
+        "in_db_not_se": sorted(in_db_not_se, key=lambda x: x["name"]),
+        "forms_checked": [f["name"] for f in active_forms],
+    }
