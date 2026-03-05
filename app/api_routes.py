@@ -2,7 +2,7 @@
 New Admin API Routes for Drill-Down Interface
 """
 import re
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, extract, cast, Integer
@@ -337,6 +337,54 @@ def create_player(player_data: Dict[str, Any], db: Session = Depends(get_db)):
 
     db.commit()
     return {"id": player.id, "name": player.full_name}
+
+
+@router.post("/players/{player_id}/registrations")
+def add_registration_to_player(
+    player_id: int,
+    reg_data: dict = Body(...),
+    db: Session = Depends(get_db),
+):
+    """Add a registration to an existing player."""
+    player = db.query(Player).filter(Player.id == player_id).first()
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+
+    sport = (reg_data.get("sport") or "").strip()
+    season = (reg_data.get("season") or "").strip()
+    division = (reg_data.get("division") or "").strip()
+    if not sport or not season:
+        raise HTTPException(status_code=400, detail="sport and season are required")
+
+    # Check for duplicate registration
+    existing = db.query(Registration).filter(
+        Registration.player_id == player_id,
+        func.lower(Registration.sport) == sport.lower(),
+        Registration.season == season,
+    ).first()
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail=f"{player.full_name} already has a {sport}/{season} registration",
+        )
+
+    reg = Registration(
+        player_id=player.id,
+        program=reg_data.get("program", sport),
+        sport=sport,
+        division=division,
+        season=season,
+        confirmation_sent=reg_data.get("confirmation_sent", False),
+    )
+    db.add(reg)
+    db.commit()
+    return {
+        "id": reg.id,
+        "player": player.full_name,
+        "sport": sport,
+        "season": season,
+        "division": division,
+    }
 
 
 @router.get("/waiting-room")
