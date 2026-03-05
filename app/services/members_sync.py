@@ -86,11 +86,14 @@ query GetProfile($profileId: Int!, $orgId: Int!) {
 """
 
 
-def sync_members(db: Session) -> dict:
+def sync_members(db: Session, force: bool = False) -> dict:
     """
     Sync all member profiles from SportsEngine into the members table.
     Step 1: List all profile IDs page by page (SimpleProfile).
     Step 2: Fetch each profile individually for full data (Profile).
+
+    If force=True, re-fetch ALL profiles (not just new ones) so name
+    changes, membership updates, etc. are picked up.
     """
     import os
     from app.models_members import Member, MemberGuardian
@@ -111,11 +114,16 @@ def sync_members(db: Session) -> dict:
     }
 
     # Collect all known SE profile IDs for incremental sync
-    known_ids = set(
-        row[0] for row in db.query(Member.se_profile_id).all()
-    )
-    if known_ids:
-        print(f"MEMBERS SYNC: {len(known_ids)} profiles already in DB", flush=True)
+    # When force=True, skip nothing — re-fetch every profile
+    if force:
+        known_ids = set()
+        print("MEMBERS SYNC: FULL refresh — re-fetching all profiles", flush=True)
+    else:
+        known_ids = set(
+            row[0] for row in db.query(Member.se_profile_id).all()
+        )
+        if known_ids:
+            print(f"MEMBERS SYNC: {len(known_ids)} profiles already in DB", flush=True)
 
     page = 1
     total_pages = None
