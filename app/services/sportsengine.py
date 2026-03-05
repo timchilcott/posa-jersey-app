@@ -1180,17 +1180,25 @@ def process_single_registration(
                     order_date=order_date,
                     confirmation_sent=ever_confirmed
                 )
+                # Use a savepoint so IntegrityError only rolls back THIS
+                # registration insert, not the entire transaction.
+                nested = db.begin_nested()
                 db.add(new_reg)
-                db.flush()
-                results["new_registrations"] += 1
-                logger.info(f"SYNC: Added new {sport} registration for existing player: {player_name}")
-            except IntegrityError:
-                db.rollback()
-                logger.info(f"SYNC: Registration already existed for {player_name} ({sport}/{season})")
-                existing_reg = _find_existing_registration(db, player.id, sport, season)
-                if existing_reg and division != "Waiting Room":
-                    existing_reg.division = division
+                try:
+                    nested.commit()
+                except IntegrityError:
+                    nested.rollback()
+                    logger.info(f"SYNC: Registration already existed for {player_name} ({sport}/{season})")
+                    existing_reg = _find_existing_registration(db, player.id, sport, season)
+                    if existing_reg and division != "Waiting Room":
+                        existing_reg.division = division
                     results["updated_registrations"] += 1
+                else:
+                    results["new_registrations"] += 1
+                    logger.info(f"SYNC: Added new {sport} registration for existing player: {player_name}")
+            except Exception as e:
+                logger.error(f"SYNC: Failed to add registration for {player_name}: {e}", exc_info=True)
+                results["errors"].append(f"Registration for {player_name}: {str(e)}")
     
     else:
         # NEW PLAYER
