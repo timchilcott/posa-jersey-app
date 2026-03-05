@@ -23,13 +23,13 @@ _sync_status = {
 }
 
 
-def _run_sync_background():
+def _run_sync_background(force: bool = False):
     """Run members sync in a background thread with its own DB session."""
     global _sync_status
     db = SessionLocal()
     try:
         from app.services.members_sync import sync_members
-        results = sync_members(db)
+        results = sync_members(db, force=force)
         _sync_status["results"] = results
         _sync_status["error"] = None
     except Exception as e:
@@ -42,8 +42,10 @@ def _run_sync_background():
 
 
 @router.post("/api/members/sync")
-def members_sync():
-    """Kick off members sync in background thread. Returns immediately."""
+def members_sync(force: bool = False):
+    """Kick off members sync in background thread. Returns immediately.
+    Pass ?force=true to re-fetch all profiles (picks up name changes, etc.).
+    """
     from app.services.sportsengine import is_configured
 
     if not is_configured():
@@ -59,10 +61,10 @@ def members_sync():
     _sync_status["results"] = None
     _sync_status["error"] = None
 
-    thread = threading.Thread(target=_run_sync_background, daemon=True)
+    thread = threading.Thread(target=_run_sync_background, kwargs={"force": force}, daemon=True)
     thread.start()
 
-    return {"status": "started"}
+    return {"status": "started", "mode": "full" if force else "incremental"}
 
 
 @router.get("/api/members/sync-status")
