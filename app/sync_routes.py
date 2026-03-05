@@ -819,3 +819,98 @@ def debug_se_vs_db(db: Session = Depends(get_db)):
         "in_db_not_se": sorted(in_db_not_se, key=lambda x: x["name"]),
         "forms_checked": [f["name"] for f in active_forms],
     }
+
+
+# ------------------------------------------------------------------
+# Diagnostic: search SE profiles by last name
+# ------------------------------------------------------------------
+@router.get("/api/debug/se-search/{last_name}")
+def debug_se_search(last_name: str):
+    """
+    Search SportsEngine profiles by last name using different filter approaches.
+    """
+    from app.services.sportsengine import is_configured, graphql_query
+
+    if not is_configured():
+        return {"error": "SportsEngine not configured"}
+
+    org_id = os.getenv("SPORTSENGINE_ORG_ID")
+    results = {}
+
+    # Approach 1: Search profiles with LAST_NAME filter
+    try:
+        query = """
+        query SearchProfiles($orgId: Int!, $lastName: String!) {
+            profiles(
+                organizationId: $orgId
+                filter: {
+                    key: LAST_NAME
+                    operator: EQUAL
+                    value: $lastName
+                }
+                page: 1
+                perPage: 50
+            ) {
+                pageInformation { count }
+                results {
+                    id
+                    firstName
+                    lastName
+                    dateOfBirth
+                    email
+                }
+            }
+        }
+        """
+        data = graphql_query(query, {"orgId": int(org_id), "lastName": last_name})
+        profiles = data.get("profiles", {}).get("results", [])
+        results["last_name_filter"] = [
+            {
+                "id": p.get("id"),
+                "name": f"{p.get('firstName', '')} {p.get('lastName', '')}".strip(),
+                "dob": p.get("dateOfBirth"),
+                "email": p.get("email"),
+            }
+            for p in profiles
+        ]
+    except Exception as e:
+        results["last_name_filter_error"] = str(e)
+
+    # Approach 2: Get Clarissa Sumpter's profile details and registration results
+    try:
+        # clarissa sumpter SE id = 118644860
+        query2 = """
+        query GetProfileFull($profileId: Int!, $orgId: Int!) {
+            profile(id: $profileId, organizationId: $orgId) {
+                id
+                firstName
+                lastName
+                dateOfBirth
+                email
+                registrationResults(perPage: 100) {
+                    results {
+                        id
+                        registrationId
+                        registrationName
+                        created
+                        answers {
+                            name
+                            format
+                            ...on StringRegistrationResultAnswer {
+                                stringValue: value
+                            }
+                            ...on ArrayRegistrationResultAnswer {
+                                arrayValue: value
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        """
+        data2 = graphql_query(query2, {"profileId": 118644860, "orgId": int(org_id)})
+        results["clarissa_profile"] = data2.get("profile", {})
+    except Exception as e:
+        results["clarissa_profile_error"] = str(e)
+
+    return results
