@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POSA Equipment</title>
+    <title>POSA Equipment Inventory</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
     tailwind.config = {
@@ -18,380 +18,537 @@
     </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>[x-cloak] { display: none !important; }</style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 </head>
 <body class="bg-gray-50" x-data="inventoryApp()" x-init="init()" x-cloak>
 
-    <!-- Filters -->
-    <div class="bg-white border-b border-gray-200" x-data="{ showMore: false }">
-        <div class="px-6 py-2.5 flex items-center gap-2 flex-wrap">
-            <span class="text-xs text-gray-600 mr-1" x-text="filteredItems.length + ' items'"></span>
-            <!-- Search -->
-            <div class="relative">
-                <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <input type="search" x-model="filters.search" @input.debounce.300ms="applyFilters()" placeholder="Search..."
-                       class="pl-8 pr-3 py-1.5 border border-gray-200 rounded-md text-xs w-44 focus:ring-1 focus:ring-pines-500 focus:border-pines-500 placeholder-gray-400">
+    <!-- Header — matches jersey app -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <a href="/admin">
+                    <img src="https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg" alt="Pines" class="h-8">
+                </a>
+                <div class="flex items-center space-x-3">
+                    <a href="/admin" class="text-gray-600 hover:text-gray-900 text-sm font-medium">Players</a>
+                    <button @click="showCheckoutsView = false"
+                            class="text-sm font-medium"
+                            :class="!showCheckoutsView ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900'">Inventory</button>
+                    <span class="relative pr-3">
+                        <button @click="showCheckoutsView = true"
+                                class="text-sm font-medium"
+                                :class="showCheckoutsView ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900'">
+                            Checked Out
+                        </button>
+                        <span x-show="totalCheckedOut > 0" class="absolute -top-2 -right-0 bg-orange-500 text-white rounded-full w-4 h-4 flex items-center justify-center" style="font-size:10px" x-text="totalCheckedOut"></span>
+                    </span>
+                    <button @click="openBulkCheckout()" class="border border-pines-500 text-pines-600 hover:bg-pines-50 px-4 py-2 rounded-lg text-sm font-medium">Equipment Checkout</button>
+                    <button @click="openAddModal()" class="bg-pines-500 hover:bg-pines-600 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Add Item</button>
+                </div>
             </div>
-            <!-- All filter pills (behind + Filter) -->
-            <template x-if="showMore || filters.sport.length || filters.category.length || filters.divisions.length || filters.condition.length || filters.location.length">
-                <div class="contents">
-                    <!-- Sport pill -->
-                    <div class="relative" x-data="{ open: false }">
-                        <button @click="open = !open" @click.outside="open = false"
-                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.sport.length ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
-                            <span x-text="filterLabel(filters.sport, 'sport', 'sports')"></span>
-                            <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+    </header>
+
+    <!-- ==================== INVENTORY VIEW ==================== -->
+    <div x-show="!showCheckoutsView">
+        <!-- Filters — EXACT match to admin filter bar -->
+        <div class="bg-white border-b border-gray-200">
+            <div class="max-w-7xl mx-auto px-4 py-4">
+                <div class="flex flex-wrap gap-3 items-end">
+                    <div class="flex-1 min-w-64">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Search</label>
+                        <input type="search" x-model="filters.search" @input.debounce.300ms="applyFilters()" placeholder="Name, location, or notes..."
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent">
+                    </div>
+                    <div class="w-36 relative" x-data="{ open: false }">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Sport</label>
+                        <button type="button" @click="open = !open" @click.outside="open = false"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-left bg-white flex items-center justify-between">
+                            <span x-text="filters.sport || 'All'" :class="filters.sport ? 'text-gray-900' : 'text-gray-500'" class="truncate"></span>
+                            <svg class="w-4 h-4 text-gray-400 flex-shrink-0 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
-                        <div x-show="open" x-transition class="absolute z-20 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg py-1 max-h-48 overflow-y-auto">
+                        <div x-show="open" x-transition class="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                            <div @click="filters.sport = ''; applyFilters(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-sm text-gray-500">All</div>
                             <template x-for="sp in ['Basketball','Soccer','Flag Football','Volleyball','POSA']" :key="sp">
-                                <label class="flex items-center px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs">
-                                    <input type="checkbox" :checked="filters.sport.includes(sp)"
-                                           @change="toggleFilter('sport', sp)"
-                                           class="rounded border-gray-300 text-pines-500 focus:ring-pines-500 mr-2 w-3.5 h-3.5">
-                                    <span x-text="sp"></span>
-                                </label>
+                                <div @click="filters.sport = sp; applyFilters(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-sm" :class="filters.sport === sp ? 'bg-pines-50 text-pines-700 font-medium' : ''" x-text="sp"></div>
                             </template>
                         </div>
                     </div>
-                    <!-- Category pill -->
-                    <div class="relative" x-data="{ open: false }">
-                        <button @click="open = !open" @click.outside="open = false"
-                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.category.length ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
-                            <span x-text="filterLabel(filters.category, 'category', 'categories')"></span>
-                            <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    <div class="w-36 relative" x-data="{ open: false }">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Category</label>
+                        <button type="button" @click="open = !open" @click.outside="open = false"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-left bg-white flex items-center justify-between">
+                            <span x-text="filters.category || 'All'" :class="filters.category ? 'text-gray-900' : 'text-gray-500'" class="truncate"></span>
+                            <svg class="w-4 h-4 text-gray-400 flex-shrink-0 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
-                        <div x-show="open" x-transition class="absolute z-20 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg py-1 max-h-48 overflow-y-auto">
+                        <div x-show="open" x-transition class="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                            <div @click="filters.category = ''; applyFilters(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-sm text-gray-500">All</div>
                             <template x-for="cat in uniqueCategories" :key="cat">
-                                <label class="flex items-center px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs">
-                                    <input type="checkbox" :checked="filters.category.includes(cat)"
-                                           @change="toggleFilter('category', cat)"
-                                           class="rounded border-gray-300 text-pines-500 focus:ring-pines-500 mr-2 w-3.5 h-3.5">
-                                    <span x-text="cat"></span>
-                                </label>
+                                <div @click="filters.category = cat; applyFilters(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-sm" :class="filters.category === cat ? 'bg-pines-50 text-pines-700 font-medium' : ''" x-text="cat"></div>
                             </template>
                         </div>
                     </div>
-                    <!-- Division pill -->
-                    <div class="relative" x-data="{ open: false }">
-                        <button @click="open = !open" @click.outside="open = false"
-                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.divisions.length ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
-                            <span x-text="filterLabel(filters.divisions, 'division', 'divisions')"></span>
-                            <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    <div class="w-44 relative" x-data="{ divOpen: false }">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Division</label>
+                        <button type="button" @click="divOpen = !divOpen" @click.outside="divOpen = false"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-left bg-white flex items-center justify-between">
+                            <span x-text="filters.divisions.length ? filters.divisions.join(', ') : 'All'" :class="filters.divisions.length ? 'text-gray-900' : 'text-gray-500'" class="truncate"></span>
+                            <svg class="w-4 h-4 text-gray-400 flex-shrink-0 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
-                        <div x-show="open" x-transition class="absolute z-20 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 max-h-48 overflow-y-auto">
+                        <div x-show="divOpen" x-transition class="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                             <template x-for="div in uniqueDivisions" :key="div">
-                                <label class="flex items-center px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs">
-                                    <input type="checkbox" :checked="filters.divisions.includes(div)"
-                                           @change="toggleFilter('divisions', div)"
-                                           class="rounded border-gray-300 text-pines-500 focus:ring-pines-500 mr-2 w-3.5 h-3.5">
+                                <label class="flex items-center px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-sm">
+                                    <input type="checkbox" :value="div" :checked="filters.divisions.includes(div)"
+                                           @change="toggleDivisionFilter(div)"
+                                           class="rounded border-gray-300 text-pines-500 focus:ring-pines-500 mr-2">
                                     <span x-text="div"></span>
                                 </label>
                             </template>
                             <div x-show="uniqueDivisions.length === 0" class="px-3 py-2 text-xs text-gray-400">No divisions</div>
                         </div>
                     </div>
-                    <!-- Condition pill -->
-                    <div class="relative" x-data="{ open: false }">
-                        <button @click="open = !open" @click.outside="open = false"
-                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.condition.length ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
-                            <span x-text="filterLabel(filters.condition, 'condition', 'conditions')"></span>
-                            <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    <div class="w-32 relative" x-data="{ open: false }">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Condition</label>
+                        <button type="button" @click="open = !open" @click.outside="open = false"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-left bg-white flex items-center justify-between">
+                            <span x-text="filters.condition || 'All'" :class="filters.condition ? 'text-gray-900' : 'text-gray-500'" class="truncate"></span>
+                            <svg class="w-4 h-4 text-gray-400 flex-shrink-0 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
-                        <div x-show="open" x-transition class="absolute z-20 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+                        <div x-show="open" x-transition class="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                            <div @click="filters.condition = ''; applyFilters(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-sm text-gray-500">All</div>
                             <template x-for="cond in ['New','Good','Fair','Poor','Replace']" :key="cond">
-                                <label class="flex items-center px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs">
-                                    <input type="checkbox" :checked="filters.condition.includes(cond)"
-                                           @change="toggleFilter('condition', cond)"
-                                           class="rounded border-gray-300 text-pines-500 focus:ring-pines-500 mr-2 w-3.5 h-3.5">
-                                    <span x-text="cond"></span>
-                                </label>
+                                <div @click="filters.condition = cond; applyFilters(); open = false" class="px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-sm" :class="filters.condition === cond ? 'bg-pines-50 text-pines-700 font-medium' : ''" x-text="cond"></div>
                             </template>
                         </div>
                     </div>
-                    <!-- Location pill -->
-                    <div class="relative" x-data="{ open: false }">
-                        <button @click="open = !open" @click.outside="open = false"
-                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors"
-                                :class="filters.location.length ? 'border-pines-200 bg-pines-50 text-gray-900' : 'border-gray-200 text-gray-900 hover:bg-gray-50'">
-                            <span x-text="filterLabel(filters.location, 'location', 'locations')"></span>
-                            <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                        </button>
-                        <div x-show="open" x-transition class="absolute z-20 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 max-h-48 overflow-y-auto">
-                            <template x-for="loc in uniqueLocations" :key="loc">
-                                <label class="flex items-center px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-xs">
-                                    <input type="checkbox" :checked="filters.location.includes(loc)"
-                                           @change="toggleFilter('location', loc)"
-                                           class="rounded border-gray-300 text-pines-500 focus:ring-pines-500 mr-2 w-3.5 h-3.5">
-                                    <span x-text="loc"></span>
-                                </label>
-                            </template>
-                        </div>
-                    </div>
-                    <!-- Collapse filters -->
-                    <button x-show="showMore && !filters.sport.length && !filters.category.length && !filters.divisions.length && !filters.condition.length && !filters.location.length"
-                            @click="showMore = false"
-                            class="text-xs text-gray-900 hover:text-gray-900 px-1 py-1.5">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
+                    <button @click="clearFilters()" class="px-4 py-2 text-gray-600 hover:text-gray-900 text-sm font-medium">Clear</button>
                 </div>
-            </template>
-            <!-- + Filter toggle -->
-            <button x-show="!showMore && !filters.sport.length && !filters.category.length && !filters.divisions.length && !filters.condition.length && !filters.location.length"
-                    @click="showMore = true"
-                    class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border border-dashed border-gray-300 text-gray-900 hover:text-gray-900 hover:border-gray-400 transition-colors">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                Filter
-            </button>
-            <!-- Clear -->
-            <button x-show="filters.search || filters.sport.length || filters.category.length || filters.divisions.length || filters.condition.length || filters.location.length"
-                    @click="clearFilters(); showMore = false" class="text-xs text-gray-900 hover:text-gray-900 px-1.5 py-1.5">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-            <!-- Spacer + actions -->
-            <div class="ml-auto flex items-center gap-2">
-                <button @click="openBulkCheckout()" class="text-gray-500 hover:text-gray-700 px-2.5 py-1.5 rounded-md text-xs font-medium border border-gray-200 hover:bg-gray-50">Checkout</button>
-                <a href="/inventory/add" class="bg-pines-500 hover:bg-pines-600 text-white px-2.5 py-1.5 rounded-md text-xs font-medium">+ Add</a>
+                <div class="mt-3 text-sm text-gray-600">
+                    Showing <span class="font-medium" x-text="filteredItems.length"></span> of <span x-text="items.length"></span> items
+                </div>
             </div>
+        </div>
+
+        <!-- Items table — EXACT match to admin table structure -->
+        <main class="max-w-7xl mx-auto px-4 py-6">
+            <div x-show="loading" class="text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pines-500"></div>
+            </div>
+
+            <div x-show="!loading" class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table x-show="displayList.length > 0" class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                                <th class="w-16 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                <th class="w-20 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Available</th>
+                                <th class="w-28 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Checked Out</th>
+                                <th x-show="filters.divisions.length > 0" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Division</th>
+                                <th class="min-w-[180px] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Condition</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider max-w-[200px]">Location</th>
+                                <th class="w-20 px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <template x-for="entry in displayList" :key="entry._key">
+                                <tr :class="entry._type === 'sportHeader' ? 'bg-pines-50 border-t-2 border-pines-200' : entry._type === 'item' ? 'bg-white hover:bg-gray-50' : 'bg-white hover:bg-gray-50'">
+                                <!-- SPORT HEADER -->
+                                <template x-if="entry._type === 'sportHeader'">
+                                    <td :colspan="filters.divisions.length > 0 ? 9 : 8" class="px-3 py-2">
+                                        <span class="text-sm font-bold text-pines-700" x-text="entry._sport"></span>
+                                        <span class="ml-2 text-xs text-pines-500" x-text="entry._count + ' items'"></span>
+                                    </td>
+                                </template>
+                                <!-- ITEM ROW -->
+                                <template x-if="entry._type === 'item'">
+                                    <td class="px-3 py-2 text-sm text-gray-500" x-text="entry.category"></td>
+                                </template>
+                                <template x-if="entry._type === 'item'">
+                                    <td class="px-3 py-2">
+                                        <span class="text-sm font-medium text-gray-900" x-text="entry.name"></span>
+                                    </td>
+                                </template>
+                                <template x-if="entry._type === 'item'">
+                                    <td class="px-3 py-2 text-sm text-gray-900" x-text="entry.quantityTotal"></td>
+                                </template>
+                                <template x-if="entry._type === 'item'">
+                                    <td class="px-3 py-2 text-sm font-semibold text-pines-600" x-text="entry.quantityAvailable"></td>
+                                </template>
+                                <template x-if="entry._type === 'item'">
+                                    <td class="px-3 py-2 text-sm" :class="entry.checkedOut > 0 ? 'text-orange-600 font-semibold' : 'text-gray-400'" x-text="entry.checkedOut"></td>
+                                </template>
+                                <template x-if="entry._type === 'item'">
+                                    <td x-show="filters.divisions.length > 0" class="px-3 py-2">
+                                        <div class="flex flex-nowrap gap-1">
+                                            <template x-for="div in parseDivisions(entry.division)" :key="div">
+                                                <span class="text-xs px-1.5 py-0.5 rounded bg-pines-50 text-pines-700 whitespace-nowrap" x-text="div"></span>
+                                            </template>
+                                        </div>
+                                    </td>
+                                </template>
+                                <template x-if="entry._type === 'item'">
+                                    <td class="px-3 py-2">
+                                        <div class="flex flex-nowrap gap-1">
+                                            <template x-for="(cb, cbIdx) in itemConditions(entry)" :key="cbIdx">
+                                                <span class="text-xs px-2 py-0.5 rounded font-medium whitespace-nowrap" :class="conditionColor(cb.condition)">
+                                                    <span x-text="cb.quantity"></span> <span x-text="cb.condition"></span>
+                                                </span>
+                                            </template>
+                                        </div>
+                                    </td>
+                                </template>
+                                <template x-if="entry._type === 'item'">
+                                    <td class="px-3 py-2">
+                                        <div class="flex flex-wrap gap-1">
+                                            <template x-for="(lb, lbIdx) in parseLocations(entry.location)" :key="lbIdx">
+                                                <span class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700">
+                                                    <span x-text="lb.quantity"></span> @ <span x-text="lb.location"></span>
+                                                </span>
+                                            </template>
+                                        </div>
+                                    </td>
+                                </template>
+                                <template x-if="entry._type === 'item'">
+                                    <td class="px-3 py-2 text-right">
+                                        <div class="flex items-center justify-end space-x-1">
+                                            <button @click="openCheckoutModal(entry)" class="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-pines-600" title="Check out" :disabled="entry.quantityAvailable <= 0">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                                            </button>
+                                            <button @click="editItem(entry)" class="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-pines-600" title="Edit">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                            </button>
+                                            <button @click="deleteItem(entry)" class="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-red-500" title="Delete">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </template>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+                <div x-show="displayList.length === 0 && !loading" class="text-center py-12">
+                    <div class="text-gray-400 text-5xl mb-3">🔍</div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-1">No items found</h3>
+                    <p class="text-gray-500">Try adjusting your filters</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ==================== CHECKED OUT VIEW ==================== -->
+    <div x-show="showCheckoutsView">
+        <div class="max-w-7xl mx-auto px-4 pt-6">
+            <div class="text-sm text-gray-500" x-text="totalCheckedOut + ' ' + (totalCheckedOut !== 1 ? 'people have' : 'person has') + ' equipment checked out'"></div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 pt-6 pb-8">
+            <div x-show="checkoutPeople.length === 0" class="text-center py-12">
+                <p class="text-gray-500">No equipment currently checked out</p>
+            </div>
+
+            <table x-show="checkoutPeople.length > 0" class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                        <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Checked Out</th>
+                        <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white">
+                    <template x-for="row in checkoutDisplayList" :key="row._key">
+                        <tr :class="{
+                                'bg-pines-50': row._isHeader,
+                                'hover:bg-gray-50 cursor-pointer': !row._isHeader,
+                                'bg-pines-50 ring-1 ring-pines-300': !row._isHeader && showReturnPanel && selectedCheckout?.id === row.id
+                            }"
+                            @click="!row._isHeader && openReturnPanel(row)">
+                            <!-- Person header row -->
+                            <template x-if="row._isHeader">
+                                <td colspan="5" class="px-3 py-2">
+                                    <span class="text-sm font-bold text-pines-700" x-text="row._personName"></span>
+                                    <span class="ml-2 text-xs text-pines-500" x-text="row._totalItems + ' unit' + (row._totalItems !== 1 ? 's' : '')"></span>
+                                </td>
+                            </template>
+                            <template x-if="row._isHeader">
+                                <td class="px-3 py-2 text-right">
+                                    <button @click="returnAllForPerson(row._personName)"
+                                            class="text-xs px-2 py-1 bg-pines-100 text-pines-700 rounded hover:bg-pines-200 font-medium">
+                                        Return All
+                                    </button>
+                                </td>
+                            </template>
+                            <!-- Item rows -->
+                            <template x-if="!row._isHeader">
+                                <td class="px-3 py-3">
+                                    <span class="text-sm font-medium text-gray-900" x-text="row.itemName"></span>
+                                </td>
+                            </template>
+                            <template x-if="!row._isHeader">
+                                <td class="px-3 py-3 text-sm text-gray-500" x-text="row.itemCategory"></td>
+                            </template>
+                            <template x-if="!row._isHeader">
+                                <td class="px-3 py-3 text-center text-sm font-medium" x-text="row.quantity"></td>
+                            </template>
+                            <template x-if="!row._isHeader">
+                                <td class="px-3 py-3 text-xs text-gray-400 italic" x-text="row.notes || '-'"></td>
+                            </template>
+                            <template x-if="!row._isHeader">
+                                <td class="px-3 py-3 text-sm text-gray-500" x-text="formatDate(row.checkedOutAt)"></td>
+                            </template>
+                            <template x-if="!row._isHeader">
+                                <td class="px-3 py-3 text-right">
+                                    <button @click.stop="openReturnPanel(row)"
+                                            class="p-1 rounded hover:bg-gray-100 text-pines-500" title="Return">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    </button>
+                                </td>
+                            </template>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <!-- Items table -->
-    <main class="bg-white px-6 pt-4">
-        <div x-show="loading" class="text-center py-12">
-            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pines-500"></div>
+    <!-- ==================== RETURN PANEL (RIGHT SIDEBAR) ==================== -->
+    <!-- Backdrop -->
+    <div x-show="showReturnPanel"
+         x-transition:enter="transition-opacity ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition-opacity ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @mousedown="showReturnPanel = false"
+         class="fixed inset-0 bg-black bg-opacity-25 z-40"></div>
+
+    <!-- Sliding panel -->
+    <div x-show="showReturnPanel"
+         x-transition:enter="transition ease-out duration-300 transform"
+         x-transition:enter-start="translate-x-full"
+         x-transition:enter-end="translate-x-0"
+         x-transition:leave="transition ease-in duration-200 transform"
+         x-transition:leave-start="translate-x-0"
+         x-transition:leave-end="translate-x-full"
+         class="fixed top-0 right-0 w-96 h-full bg-white border-l border-gray-200 shadow-xl z-50 flex flex-col"
+         @keydown.escape.window="showReturnPanel = false">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-bold text-gray-900">Return Equipment</h3>
+            <button @click="showReturnPanel = false"
+                    class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
         </div>
 
-        <div x-show="!loading">
-            <div class="overflow-x-auto">
-                <table x-show="filteredItems.length > 0" class="min-w-full">
-                    <thead>
-                        <tr class="border-b border-gray-200">
-                            <th x-show="ecv('sport')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Sport</th>
-                            <th x-show="ecv('category')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Category</th>
-                            <th x-show="ecv('item')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Item</th>
-                            <th x-show="ecv('total')" class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Total</th>
-                            <th x-show="ecv('avail')" class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Avail</th>
-                            <th x-show="ecv('out')" class="px-4 py-2.5 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Out</th>
-                            <th x-show="ecv('division')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Division</th>
-                            <th x-show="ecv('condition')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Condition</th>
-                            <th x-show="ecv('location')" class="px-4 py-2.5 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider whitespace-nowrap">Location</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <template x-for="entry in displayList" :key="entry._key">
-                            <tr class="hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100"
-                                @click="openPanel(entry)">
-                            <td x-show="ecv('sport')" class="px-4 py-3 whitespace-nowrap">
-                                <span class="text-sm text-gray-900" x-text="filteredSportDisplay(entry.sport)"></span>
-                            </td>
-                            <td x-show="ecv('category')" class="px-4 py-3 text-sm text-gray-900 whitespace-nowrap" x-text="entry.category"></td>
-                            <td x-show="ecv('item')" class="px-4 py-3 whitespace-nowrap">
-                                <span class="text-sm text-gray-900" x-text="entry.name"></span>
-                            </td>
-                            <td x-show="ecv('total')" class="px-4 py-3 text-center text-sm text-gray-900 whitespace-nowrap" x-text="entry.quantityTotal"></td>
-                            <td x-show="ecv('avail')" class="px-4 py-3 text-center text-sm font-medium text-gray-900 whitespace-nowrap" x-text="entry.quantityAvailable"></td>
-                            <td x-show="ecv('out')" class="px-4 py-3 text-center text-sm whitespace-nowrap" :class="entry.checkedOut > 0 ? 'text-orange-600 font-medium' : 'text-gray-300'" x-text="entry.checkedOut"></td>
-                            <td x-show="ecv('division')" class="px-4 py-3 whitespace-nowrap">
-                                <div class="flex flex-nowrap gap-1">
-                                    <template x-for="div in filteredDivisions(entry.division)" :key="div">
-                                        <span class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700 whitespace-nowrap" x-text="div"></span>
-                                    </template>
-                                </div>
-                            </td>
-                            <td x-show="ecv('condition')" class="px-4 py-3 whitespace-nowrap">
-                                <div class="flex flex-nowrap gap-1">
-                                    <template x-for="(cb, cbIdx) in filteredConditions(entry)" :key="cbIdx">
-                                        <span class="text-xs px-2 py-0.5 rounded whitespace-nowrap" :class="conditionColor(cb.condition)">
-                                            <span x-text="cb.quantity"></span> <span x-text="cb.condition"></span>
-                                        </span>
-                                    </template>
-                                </div>
-                            </td>
-                            <td x-show="ecv('location')" class="px-4 py-3 whitespace-nowrap">
-                                <div class="flex flex-nowrap gap-1">
-                                    <template x-for="(lb, lbIdx) in filteredLocations(entry.location)" :key="lbIdx">
-                                        <span class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700">
-                                            <span x-text="lb.quantity"></span> @ <span x-text="lb.location"></span>
-                                        </span>
-                                    </template>
-                                </div>
-                            </td>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
-            </div>
-            <div x-show="filteredItems.length === 0 && !loading" class="text-center py-12">
-                <div class="text-gray-400 text-5xl mb-3">&#128270;</div>
-                <h3 class="text-lg font-medium text-gray-900 mb-1">No items found</h3>
-                <p class="text-gray-500">Try adjusting your filters</p>
-            </div>
-        </div>
-    </main>
-
-    <!-- Detail Side Panel -->
-    <div x-show="panelOpen" x-cloak class="fixed inset-0 z-30" @click.self="closePanel()">
-        <div x-show="panelOpen"
-             x-transition:enter="transition ease-out duration-300"
-             x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
-             x-transition:leave="transition ease-in duration-200"
-             x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full"
-             class="absolute top-0 right-0 h-full w-full sm:w-[28rem] bg-white border-l border-gray-200 shadow-lg flex flex-col">
-            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
-                <h2 class="text-lg font-semibold text-gray-900 truncate" x-text="selectedItem?.name || 'Item Details'"></h2>
-                <button @click="closePanel()" class="p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-            <template x-if="selectedItem">
-            <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-                <!-- Name -->
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Name</label>
-                    <input type="text" x-model="selectedItem.name"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm">
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-5" x-show="selectedCheckout">
+            <!-- Item info -->
+            <div class="bg-gray-50 rounded-lg p-4 mb-5">
+                <div class="text-sm font-bold text-gray-900" x-text="selectedCheckout?.itemName"></div>
+                <div class="text-xs text-gray-500 mt-1" x-text="selectedCheckout?.itemCategory"></div>
+                <div class="flex items-center gap-4 mt-3">
+                    <div>
+                        <div class="text-xs text-gray-500">Checked out to</div>
+                        <div class="text-sm font-medium text-pines-700" x-text="selectedCheckout?._personName"></div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500">Date</div>
+                        <div class="text-sm text-gray-700" x-text="formatDate(selectedCheckout?.checkedOutAt)"></div>
+                    </div>
                 </div>
-                <!-- Category -->
+                <template x-if="selectedCheckout?.notes">
+                    <div class="mt-2">
+                        <div class="text-xs text-gray-500">Notes</div>
+                        <div class="text-sm text-gray-600 italic" x-text="selectedCheckout?.notes"></div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Quantity selector -->
+            <div class="mb-5">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Quantity to return
+                    <span class="text-gray-400 font-normal" x-text="'(max ' + (selectedCheckout?.quantity || 0) + ')'"></span>
+                </label>
+                <div class="flex items-center gap-3">
+                    <button @click="returnQty = Math.max(1, returnQty - 1)"
+                            :disabled="returnQty <= 1"
+                            class="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed text-lg font-bold">
+                        -
+                    </button>
+                    <input type="number" x-model.number="returnQty"
+                           min="1" :max="selectedCheckout?.quantity || 1"
+                           class="w-20 text-center px-3 py-2 border border-gray-300 rounded-lg text-lg font-bold focus:ring-2 focus:ring-pines-500 focus:border-pines-500">
+                    <button @click="returnQty = Math.min((selectedCheckout?.quantity || 1), returnQty + 1)"
+                            :disabled="returnQty >= (selectedCheckout?.quantity || 1)"
+                            class="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed text-lg font-bold">
+                        +
+                    </button>
+                </div>
+                <!-- Quick-set buttons -->
+                <div class="flex gap-2 mt-3" x-show="(selectedCheckout?.quantity || 0) > 1">
+                    <button @click="returnQty = selectedCheckout?.quantity"
+                            class="px-3 py-1 text-xs rounded-full border"
+                            :class="returnQty === selectedCheckout?.quantity ? 'bg-pines-100 border-pines-400 text-pines-700' : 'border-gray-300 text-gray-500 hover:border-gray-400'">
+                        Return All
+                    </button>
+                    <button @click="returnQty = 1"
+                            class="px-3 py-1 text-xs rounded-full border"
+                            :class="returnQty === 1 ? 'bg-pines-100 border-pines-400 text-pines-700' : 'border-gray-300 text-gray-500 hover:border-gray-400'">
+                        Return 1
+                    </button>
+                </div>
+            </div>
+
+            <!-- Partial return preview -->
+            <div class="bg-pines-50 rounded-lg p-4 mb-5" x-show="selectedCheckout && returnQty < selectedCheckout.quantity">
+                <div class="text-xs font-medium text-pines-700 mb-1">After this return:</div>
+                <div class="text-sm text-pines-800">
+                    <span x-text="selectedCheckout?.quantity - returnQty"></span>
+                    <span x-text="(selectedCheckout?.quantity - returnQty) === 1 ? ' unit' : ' units'"></span>
+                    will remain checked out to
+                    <span class="font-medium" x-text="selectedCheckout?._personName"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-5 py-4 border-t border-gray-200 bg-gray-50">
+            <button @click="submitReturn()"
+                    :disabled="returnLoading || !returnQty || returnQty < 1"
+                    class="w-full py-2.5 bg-pines-500 text-white rounded-lg hover:bg-pines-600 text-sm font-medium disabled:opacity-50 transition-colors">
+                <span x-show="!returnLoading" x-text="'Return ' + returnQty + (returnQty === 1 ? ' unit' : ' units')"></span>
+                <span x-show="returnLoading">Returning...</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== ADD/EDIT ITEM MODAL ==================== -->
+    <div x-show="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showModal = false">
+        <div class="bg-white rounded-lg p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <h3 class="text-lg font-bold mb-4" x-text="editingId ? 'Edit Item' : 'Add New Item'"></h3>
+            <div class="mb-3">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Name *</label>
+                <input type="text" x-model="form.name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm" placeholder="e.g. Size 5 Soccer Balls">
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-3">
                 <div>
-                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Category</label>
-                    <input type="text" x-model="selectedItem.category" list="panel-cat-suggestions"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm">
-                    <datalist id="panel-cat-suggestions">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Category *</label>
+                    <input type="text" x-model="form.category" list="category-suggestions"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm"
+                           placeholder="e.g. Balls, Goals, Jerseys...">
+                    <datalist id="category-suggestions">
                         <template x-for="cat in uniqueCategories" :key="cat">
                             <option :value="cat"></option>
                         </template>
                     </datalist>
                 </div>
-                <!-- Sport -->
                 <div>
-                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Sport</label>
-                    <div class="flex flex-wrap gap-2">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Sport</label>
+                    <div class="flex flex-wrap gap-2 mt-1">
                         <template x-for="sp in ['Basketball','Soccer','Flag Football','Volleyball','POSA']" :key="sp">
                             <label class="inline-flex items-center px-2.5 py-1.5 rounded-lg border text-xs font-medium cursor-pointer"
-                                   :class="panelSports.includes(sp) ? 'bg-pines-50 border-pines-400 text-pines-700' : 'bg-white border-gray-300 text-gray-500 hover:border-gray-400'">
-                                <input type="checkbox" :value="sp" :checked="panelSports.includes(sp)"
-                                       @change="togglePanelSport(sp)" class="sr-only">
-                                <span x-text="sportEmoji(sp) + ' ' + sp"></span>
+                                   :class="form.sports.includes(sp) ? 'bg-pines-50 border-pines-400 text-pines-700' : 'bg-white border-gray-300 text-gray-500 hover:border-gray-400'">
+                                <input type="checkbox" :value="sp" :checked="form.sports.includes(sp)"
+                                       @change="toggleFormSport(sp)" class="sr-only">
+                                <span x-text="sp"></span>
                             </label>
                         </template>
                     </div>
                 </div>
-                <!-- Divisions -->
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Divisions</label>
-                    <div class="flex flex-wrap gap-1 mb-2" x-show="panelDivisions.length > 0">
-                        <template x-for="(div, idx) in panelDivisions" :key="idx">
-                            <span class="inline-flex items-center px-2.5 py-1 text-xs font-medium bg-pines-50 text-pines-700 rounded-full">
-                                <span x-text="div"></span>
-                                <button type="button" @click="panelDivisions.splice(idx, 1)" class="ml-1 text-pines-400 hover:text-pines-700">&times;</button>
-                            </span>
-                        </template>
-                    </div>
-                    <input type="text" x-model="panelDivisionInput"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 focus:border-transparent text-sm"
-                           placeholder="Type divisions separated by commas..."
-                           @keydown.enter.prevent="addPanelDivisions()"
-                           @blur="addPanelDivisions()">
-                </div>
-                <!-- Quantities -->
-                <div class="grid grid-cols-3 gap-3">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Total</label>
-                        <input type="number" x-model.number="selectedItem.quantityTotal" min="0"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Available</label>
-                        <input type="number" x-model.number="selectedItem.quantityAvailable" min="0"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Min Alert</label>
-                        <input type="number" x-model.number="selectedItem.minQuantity" min="0"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                    </div>
-                </div>
-                <!-- Location Breakdown -->
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Location Breakdown</label>
-                    <div class="space-y-2">
-                        <template x-for="(lb, idx) in panelLocations" :key="idx">
-                            <div class="flex items-center gap-2">
-                                <input type="number" x-model.number="lb.quantity" min="0"
-                                       class="w-16 px-2 py-1.5 border border-gray-300 rounded-lg text-sm text-center">
-                                <input type="text" x-model="lb.location"
-                                       class="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm"
-                                       placeholder="e.g. Shed A">
-                                <button type="button" @click="panelLocations.splice(idx, 1)"
-                                        class="p-1 text-red-400 hover:text-red-600">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                </button>
-                            </div>
-                        </template>
-                    </div>
-                    <button type="button" @click="panelLocations.push({location: '', quantity: 0})"
-                            class="mt-2 text-xs text-pines-600 hover:text-pines-800 font-medium">+ Add location</button>
-                </div>
-                <!-- Condition Breakdown -->
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Condition Breakdown</label>
-                    <div class="space-y-2">
-                        <template x-for="(cb, idx) in panelConditions" :key="idx">
-                            <div class="flex items-center gap-2">
-                                <input type="number" x-model.number="cb.quantity" min="0"
-                                       class="w-16 px-2 py-1.5 border border-gray-300 rounded-lg text-sm text-center">
-                                <select x-model="cb.condition"
-                                        class="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm">
-                                    <option value="New">New</option>
-                                    <option value="Good">Good</option>
-                                    <option value="Fair">Fair</option>
-                                    <option value="Poor">Poor</option>
-                                    <option value="Replace">Replace</option>
-                                </select>
-                                <button type="button" @click="panelConditions.splice(idx, 1)"
-                                        class="p-1 text-red-400 hover:text-red-600">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                </button>
-                            </div>
-                        </template>
-                    </div>
-                    <button type="button" @click="panelConditions.push({condition: 'Good', quantity: 0})"
-                            class="mt-2 text-xs text-pines-600 hover:text-pines-800 font-medium">+ Add condition split</button>
-                </div>
-                <!-- Cost -->
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Cost per Unit ($)</label>
-                    <input type="number" x-model="selectedItem.costPerUnit" step="0.01" min="0"
-                           class="w-40 px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                </div>
-                <!-- Notes -->
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Notes</label>
-                    <textarea x-model="selectedItem.notes" rows="2"
-                              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></textarea>
-                </div>
             </div>
-            </template>
-            <template x-if="selectedItem">
-            <div class="border-t border-gray-200 px-6 py-4 flex-shrink-0 space-y-2">
-                <div class="flex gap-3">
-                    <button @click="savePanel()" class="flex-1 px-4 py-2 bg-pines-500 text-white rounded-lg hover:bg-pines-600 text-sm font-medium">Save Changes</button>
-                    <button @click="openCheckoutModal(selectedItem)" :disabled="selectedItem.quantityAvailable <= 0"
-                            class="px-4 py-2 border border-pines-500 text-pines-600 rounded-lg hover:bg-pines-50 text-sm font-medium disabled:opacity-50">
-                        Quick Checkout
-                    </button>
+            <div class="mb-3">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Divisions</label>
+                <div class="flex flex-wrap gap-1 mb-2" x-show="form.divisions.length > 0">
+                    <template x-for="(div, idx) in form.divisions" :key="idx">
+                        <span class="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-pines-50 text-pines-700 rounded">
+                            <span x-text="div"></span>
+                            <button type="button" @click="form.divisions.splice(idx, 1)" class="ml-1 text-pines-400 hover:text-pines-700">&times;</button>
+                        </span>
+                    </template>
                 </div>
-                <button @click="deleteItem(selectedItem)" class="w-full px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 text-sm font-medium">Delete Item</button>
+                <input type="text" x-model="divisionInput" list="division-suggestions"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pines-500 text-sm"
+                       placeholder="Type divisions separated by commas..."
+                       @keydown.enter.prevent="addDivisionsFromInput()"
+                       @blur="addDivisionsFromInput()">
+                <datalist id="division-suggestions">
+                    <template x-for="div in uniqueDivisions" :key="div">
+                        <option :value="div"></option>
+                    </template>
+                </datalist>
             </div>
-            </template>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <div><label class="block text-xs font-medium text-gray-700 mb-1">Total Qty</label><input type="number" x-model.number="form.quantity_total" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+                <div><label class="block text-xs font-medium text-gray-700 mb-1">Available</label><input type="number" x-model.number="form.quantity_available" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+            </div>
+            <div class="mb-3">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Min Alert</label>
+                <input type="number" x-model.number="form.min_quantity" min="0" class="w-32 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            </div>
+
+            <!-- Location breakdown -->
+            <div class="mb-3">
+                <label class="block text-xs font-medium text-gray-700 mb-2">Location Breakdown</label>
+                <div class="space-y-2">
+                    <template x-for="(lb, idx) in form.locations" :key="idx">
+                        <div class="flex items-center gap-2">
+                            <input type="number" x-model.number="lb.quantity" min="0" class="w-20 px-2 py-1.5 border border-gray-300 rounded-lg text-sm text-center">
+                            <input type="text" x-model="lb.location" list="location-suggestions"
+                                   class="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm"
+                                   placeholder="e.g. Shed A, Gym B...">
+                            <button type="button" @click="form.locations.splice(idx, 1)" class="text-red-400 hover:text-red-600 text-sm font-bold px-1">✕</button>
+                        </div>
+                    </template>
+                </div>
+                <button type="button" @click="form.locations.push({location: '', quantity: 0})" class="mt-2 text-xs text-pines-600 hover:text-pines-800 font-medium">+ Add location</button>
+                <datalist id="location-suggestions">
+                    <template x-for="loc in uniqueLocations" :key="loc">
+                        <option :value="loc"></option>
+                    </template>
+                </datalist>
+            </div>
+
+            <!-- Condition breakdown -->
+            <div class="mb-3">
+                <label class="block text-xs font-medium text-gray-700 mb-2">Condition Breakdown</label>
+                <div class="space-y-2">
+                    <template x-for="(cb, idx) in form.conditions" :key="idx">
+                        <div class="flex items-center gap-2">
+                            <input type="number" x-model.number="cb.quantity" min="0" class="w-20 px-2 py-1.5 border border-gray-300 rounded-lg text-sm text-center">
+                            <select x-model="cb.condition" class="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm">
+                                <option value="New">New</option>
+                                <option value="Good">Good</option>
+                                <option value="Fair">Fair</option>
+                                <option value="Poor">Poor</option>
+                                <option value="Replace">Replace</option>
+                            </select>
+                            <button @click="form.conditions.splice(idx, 1)" class="text-red-400 hover:text-red-600 text-sm font-bold px-1">✕</button>
+                        </div>
+                    </template>
+                </div>
+                <button @click="form.conditions.push({condition: 'Good', quantity: 0})" class="mt-2 text-xs text-pines-600 hover:text-pines-800 font-medium">+ Add condition split</button>
+            </div>
+            <div class="mb-3"><label class="block text-xs font-medium text-gray-700 mb-1">Cost per Unit ($)</label><input type="number" x-model="form.cost_per_unit" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+            <div class="mb-4"><label class="block text-xs font-medium text-gray-700 mb-1">Notes</label><textarea x-model="form.notes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></textarea></div>
+            <div class="flex justify-end space-x-3">
+                <button @click="showModal = false" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">Cancel</button>
+                <button @click="saveItem()" class="px-4 py-2 bg-pines-500 text-white rounded-lg hover:bg-pines-600 text-sm">Save</button>
+            </div>
         </div>
     </div>
 
-    <!-- Single Checkout Modal -->
+    <!-- ==================== SINGLE CHECKOUT MODAL ==================== -->
     <div x-show="showCheckoutModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showCheckoutModal = false">
         <div class="bg-white rounded-lg p-6 max-w-md w-full">
             <h3 class="text-lg font-bold mb-1">Check Out Equipment</h3>
@@ -415,7 +572,7 @@
         </div>
     </div>
 
-    <!-- Equipment Checkout (Bulk) Modal -->
+    <!-- ==================== EQUIPMENT CHECKOUT MODAL ==================== -->
     <div x-show="showBulkModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showBulkModal = false">
         <div class="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <h3 class="text-lg font-bold mb-4">Equipment Checkout</h3>
@@ -432,9 +589,9 @@
                         <div class="flex items-center justify-between bg-pines-50 rounded-lg px-3 py-2">
                             <div class="flex items-center space-x-2">
                                 <span class="text-sm font-medium" x-text="bi._name"></span>
-                                <span class="text-xs text-gray-500" x-text="'x' + bi.quantity"></span>
+                                <span class="text-xs text-gray-500" x-text="'×' + bi.quantity"></span>
                             </div>
-                            <button @click="bulkForm.items.splice(idx, 1)" class="text-red-400 hover:text-red-600 text-sm font-bold">&times;</button>
+                            <button @click="bulkForm.items.splice(idx, 1)" class="text-red-400 hover:text-red-600 text-sm font-bold">✕</button>
                         </div>
                     </template>
                 </div>
@@ -466,20 +623,15 @@
         </div>
     </div>
 
-    <script src="/static/column-config.js"></script>
     <script>
     function inventoryApp() {
         return {
             loading: true,
-            panelOpen: false,
-            selectedItem: null,
-            panelSports: [],
-            panelDivisions: [],
-            panelDivisionInput: '',
-            panelLocations: [],
-            panelConditions: [],
+            showModal: false,
             showCheckoutModal: false,
             showBulkModal: false,
+            showCheckoutsView: false,
+            editingId: null,
             items: [],
             filteredItems: [],
             displayList: [],
@@ -487,31 +639,25 @@
             uniqueCategories: [],
             uniqueDivisions: [],
             uniqueLocations: [],
-            filters: { search: '', category: [], sport: [], divisions: [], condition: [], location: [], lowStock: false },
+            summary: {},
+            checkoutPeople: [],
+            checkoutDisplayList: [],
+            totalCheckedOut: 0,
+            filters: { search: '', category: '', sport: '', divisions: [], condition: '', lowStock: false },
+            form: { name: '', category: '', sports: [], divisions: [], quantity_total: 0, quantity_available: 0, conditions: [{condition: 'New', quantity: 0}], locations: [{location: '', quantity: 0}], notes: '', min_quantity: 0, cost_per_unit: null },
+            divisionInput: '',
             checkoutItem: null,
             checkoutForm: { person_name: '', quantity: 1, notes: '' },
             bulkForm: { person_name: '', items: [] },
             bulkAddItemId: '',
             bulkAddQty: 1,
-            colVis: {},
-            _filterColMap: { sport: 'sport', category: 'category', condition: 'condition', location: 'location' },
-
-            ecv(colId) {
-                if (this.colVis[colId]) return true;
-                // Division special case: show when divisions filter is active
-                if (colId === 'division' && this.filters.divisions && this.filters.divisions.length > 0) return true;
-                for (var fk in this._filterColMap) {
-                    if (this._filterColMap[fk] === colId) {
-                        var v = this.filters[fk];
-                        if (Array.isArray(v) ? v.length > 0 : !!v) return true;
-                    }
-                }
-                return false;
-            },
+            showReturnPanel: false,
+            selectedCheckout: null,
+            returnQty: 1,
+            returnLoading: false,
 
             async init() {
-                this.colVis = window.POSA_COLUMNS.load('inventory');
-                await Promise.all([this.loadItems(), this.loadCategories()]);
+                await Promise.all([this.loadItems(), this.loadCategories(), this.loadCheckoutPeople()]);
                 this.loading = false;
             },
 
@@ -529,145 +675,143 @@
             async loadCategories() {
                 try { const res = await fetch('/api/inventory/categories'); const data = await res.json(); this.categories = data.categories; } catch (e) { console.error(e); }
             },
+            async loadCheckoutPeople() {
+                try {
+                    const res = await fetch('/api/inventory/checkouts/by-person');
+                    const data = await res.json();
+                    this.checkoutPeople = data.people;
+                    this.totalCheckedOut = this.checkoutPeople.length;
+                    this.checkoutDisplayList = [];
+                    this.checkoutPeople.forEach(person => {
+                        this.checkoutDisplayList.push({ _isHeader: true, _key: 'h-' + person.personName, _personName: person.personName, _totalItems: person.totalItems });
+                        person.items.forEach(co => {
+                            this.checkoutDisplayList.push({ ...co, _isHeader: false, _key: 'co-' + co.id, _personName: person.personName });
+                        });
+                    });
+                } catch (e) { console.error(e); }
+            },
+            async refresh() {
+                await Promise.all([this.loadItems(), this.loadCheckoutPeople()]);
+            },
 
             applyFilters() {
                 this.filteredItems = this.items.filter(item => {
                     if (this.filters.search) { const s = this.filters.search.toLowerCase(); const locNames = this.parseLocations(item.location).map(lb => lb.location.toLowerCase()).join(' '); if (!item.name.toLowerCase().includes(s) && !locNames.includes(s) && !(item.notes||'').toLowerCase().includes(s)) return false; }
-                    if (this.filters.category.length > 0 && !this.filters.category.includes(item.category)) return false;
-                    if (this.filters.sport.length > 0) { const itemSports = (item.sport||'').split(',').map(s => s.trim()); if (!this.filters.sport.some(f => itemSports.includes(f))) return false; }
+                    if (this.filters.category && item.category !== this.filters.category) return false;
+                    if (this.filters.sport) { const itemSports = (item.sport||'').split(',').map(s => s.trim()); if (!itemSports.includes(this.filters.sport)) return false; }
                     if (this.filters.divisions.length > 0) { const itemDivs = (item.division||'').split(',').map(d => d.trim()); if (!this.filters.divisions.some(fd => itemDivs.includes(fd))) return false; }
-                    if (this.filters.condition.length > 0) {
+                    if (this.filters.condition) {
                         const conds = this.itemConditions(item);
-                        if (!conds.some(c => this.filters.condition.includes(c.condition))) return false;
+                        if (!conds.some(c => c.condition === this.filters.condition)) return false;
                     }
-                    if (this.filters.location.length > 0) { const locs = this.parseLocations(item.location).map(lb => lb.location); if (!this.filters.location.some(f => locs.includes(f))) return false; }
                     if (this.filters.lowStock && !item.lowStock) return false;
                     return true;
                 });
                 this.buildDisplayList();
             },
             buildDisplayList() {
+                const sportOrder = ['Soccer','Basketball','Flag Football','Volleyball','POSA'];
+                const sportGroups = {};
                 const sorted = [...this.filteredItems].sort((a, b) => a.name.localeCompare(b.name));
-                this.displayList = sorted.map(item => {
-                    return { ...item, _key: 'item-' + item.id };
+                sorted.forEach(item => {
+                    const sports = (item.sport||'').split(',').map(s => s.trim()).filter(Boolean);
+                    let group;
+                    if (sports.length === 0) group = 'General';
+                    else if (sports.length > 1) group = 'All Sports';
+                    else group = sports[0];
+                    if (!sportGroups[group]) sportGroups[group] = [];
+                    sportGroups[group].push(item);
                 });
-            },
-            sportEmoji(sport) {
-                const map = { 'Soccer': '\u26bd', 'Basketball': '\ud83c\udfc0', 'Flag Football': '\ud83c\udfc8', 'Volleyball': '\ud83c\udfd0', 'Baseball': '\u26be', 'Softball': '\ud83e\udd4e', 'POSA': '\ud83c\udfdf\ufe0f' };
-                return map[sport] || '\ud83c\udfc3';
-            },
-            sportDisplay(sportStr) {
-                const sports = (sportStr || '').split(',').map(s => s.trim()).filter(Boolean);
-                if (sports.length === 0) return '--';
-                return sports.map(s => this.sportEmoji(s)).join(' ');
-            },
-            clearFilters() { this.filters = { search: '', category: [], sport: [], divisions: [], condition: [], location: [], lowStock: false }; this.applyFilters(); },
-
-            // ── Side Panel ─────────────────────────────
-            openPanel(item) {
-                this.selectedItem = { ...item };
-                this.panelSports = (item.sport || '').split(',').map(s => s.trim()).filter(Boolean);
-                this.panelDivisions = (item.division || '').split(',').map(d => d.trim()).filter(Boolean);
-                this.panelDivisionInput = '';
-                this.panelConditions = (item.conditions && item.conditions.length > 0)
-                    ? item.conditions.map(c => ({ ...c }))
-                    : [{ condition: item.condition || 'Good', quantity: item.quantityTotal }];
-                this.panelLocations = this.parseLocations(item.location);
-                if (this.panelLocations.length === 0) this.panelLocations.push({ location: '', quantity: 0 });
-                this.panelOpen = true;
-            },
-            closePanel() {
-                this.panelOpen = false;
-                this.selectedItem = null;
-            },
-            togglePanelSport(sp) {
-                const idx = this.panelSports.indexOf(sp);
-                if (idx >= 0) this.panelSports.splice(idx, 1);
-                else this.panelSports.push(sp);
-            },
-            addPanelDivisions() {
-                const parts = this.panelDivisionInput.split(',').map(d => d.trim()).filter(Boolean);
-                parts.forEach(val => {
-                    if (!this.panelDivisions.includes(val)) this.panelDivisions.push(val);
+                const sortedSports = Object.keys(sportGroups).sort((a, b) => {
+                    if (a === 'All Sports') return -1;
+                    if (b === 'All Sports') return 1;
+                    if (a === 'General') return 1;
+                    if (b === 'General') return -1;
+                    const ai = sportOrder.indexOf(a);
+                    const bi = sportOrder.indexOf(b);
+                    if (ai >= 0 && bi >= 0) return ai - bi;
+                    if (ai >= 0) return -1;
+                    if (bi >= 0) return 1;
+                    return a.localeCompare(b);
                 });
-                this.panelDivisionInput = '';
-            },
-            async savePanel() {
-                if (!this.selectedItem.name || !this.selectedItem.category) { alert('Name and category are required'); return; }
-                const locStr = this.panelLocations.filter(lb => lb.location.trim()).map(lb => lb.location.trim() + ':' + (lb.quantity || 0)).join(', ');
-                const payload = {
-                    name: this.selectedItem.name,
-                    category: this.selectedItem.category,
-                    sport: this.panelSports.join(', '),
-                    division: this.panelDivisions.join(', '),
-                    quantity_total: this.selectedItem.quantityTotal,
-                    quantity_available: this.selectedItem.quantityAvailable,
-                    min_quantity: this.selectedItem.minQuantity || 0,
-                    cost_per_unit: this.selectedItem.costPerUnit,
-                    notes: this.selectedItem.notes || '',
-                    location: locStr,
-                    conditions: this.panelConditions
-                };
-                try {
-                    await fetch(`/api/inventory/items/${this.selectedItem.id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                this.displayList = [];
+                sortedSports.forEach(sport => {
+                    const items = sportGroups[sport];
+                    this.displayList.push({ _type: 'sportHeader', _key: 'sport-' + sport, _sport: sport, _count: items.length });
+                    items.forEach(item => {
+                        this.displayList.push({ ...item, _type: 'item', _key: 'item-' + item.id });
                     });
-                    this.closePanel();
-                    await this.loadItems();
-                } catch (e) { alert('Failed to save'); }
+                });
+            },
+            hasActiveFilters() { return this.filters.search || this.filters.category || this.filters.sport || this.filters.divisions.length > 0 || this.filters.condition || this.filters.lowStock; },
+            clearFilters() { this.filters = { search: '', category: '', sport: '', divisions: [], condition: '', lowStock: false }; this.applyFilters(); },
+
+            openAddModal() { this.editingId = null; this.divisionInput = ''; this.form = { name: '', category: '', sports: [], divisions: [], quantity_total: 0, quantity_available: 0, conditions: [{condition: 'New', quantity: 0}], locations: [{location: '', quantity: 0}], notes: '', min_quantity: 0, cost_per_unit: null }; this.showModal = true; },
+            editItem(item) {
+                this.editingId = item.id;
+                const conds = (item.conditions && item.conditions.length > 0)
+                    ? item.conditions.map(c => ({...c}))
+                    : [{condition: item.condition || 'Good', quantity: item.quantityTotal}];
+                const divs = (item.division||'').split(',').map(d => d.trim()).filter(Boolean);
+                this.divisionInput = '';
+                const sports = (item.sport||'').split(',').map(s => s.trim()).filter(Boolean);
+                const locs = this.parseLocations(item.location);
+                if (locs.length === 0) locs.push({location: '', quantity: 0});
+                this.form = { name: item.name, category: item.category, sports: sports, divisions: divs, quantity_total: item.quantityTotal, quantity_available: item.quantityAvailable, conditions: conds, locations: locs, notes: item.notes||'', min_quantity: item.minQuantity||0, cost_per_unit: item.costPerUnit };
+                this.showModal = true;
+            },
+            async saveItem() {
+                if (!this.form.name || !this.form.category) { alert('Name and category are required'); return; }
+                const locStr = this.form.locations.filter(lb => lb.location.trim()).map(lb => lb.location.trim() + ':' + (lb.quantity || 0)).join(', ');
+                const payload = { ...this.form, division: this.form.divisions.join(', '), sport: this.form.sports.join(', '), location: locStr };
+                delete payload.divisions;
+                delete payload.sports;
+                delete payload.locations;
+                const url = this.editingId ? `/api/inventory/items/${this.editingId}` : '/api/inventory/items';
+                try { await fetch(url, { method: this.editingId ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) }); this.showModal = false; await this.refresh(); } catch(e) { alert('Failed to save'); }
             },
             async deleteItem(item) {
                 if (!confirm(`Delete "${item.name}"?`)) return;
-                try {
-                    await fetch(`/api/inventory/items/${item.id}`, { method: 'DELETE' });
-                    this.closePanel();
-                    await this.loadItems();
-                } catch (e) { alert('Failed to delete'); }
+                try { await fetch(`/api/inventory/items/${item.id}`, {method:'DELETE'}); await this.refresh(); } catch(e) { alert('Failed'); }
             },
 
-            // ── Single Checkout ────────────────────────
             openCheckoutModal(item) {
                 if (item.quantityAvailable <= 0) return;
                 this.checkoutItem = item;
                 this.checkoutForm = { person_name: '', quantity: 1, notes: '' };
                 this.showCheckoutModal = true;
-                this.$nextTick(() => { if (this.$refs.checkoutName) this.$refs.checkoutName.focus(); });
+                this.$nextTick(() => { if(this.$refs.checkoutName) this.$refs.checkoutName.focus(); });
             },
             async submitCheckout() {
                 if (!this.checkoutForm.person_name.trim()) { alert('Please enter a name.'); return; }
                 try {
-                    const res = await fetch(`/api/inventory/items/${this.checkoutItem.id}/checkout`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.checkoutForm) });
+                    const res = await fetch(`/api/inventory/items/${this.checkoutItem.id}/checkout`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(this.checkoutForm) });
                     if (!res.ok) {
                         let msg = 'Checkout failed (status ' + res.status + ')';
-                        try { const err = await res.json(); msg = err.detail || msg; } catch (_) {}
+                        try { const err = await res.json(); msg = err.detail || msg; } catch(_) {}
                         alert(msg); return;
                     }
-                    this.showCheckoutModal = false;
-                    this.closePanel();
-                    await this.loadItems();
-                } catch (e) { console.error('Checkout error:', e); alert('Checkout failed: ' + e.message); }
+                    this.showCheckoutModal = false; await this.refresh();
+                } catch(e) { console.error('Checkout error:', e); alert('Checkout failed: ' + e.message); }
             },
 
-            // ── Bulk Checkout ──────────────────────────
             get availableForBulk() {
                 const bulkMap = {};
-                this.bulkForm.items.forEach(bi => { bulkMap[bi.item_id] = (bulkMap[bi.item_id] || 0) + bi.quantity; });
-                return this.items.filter(i => (i.quantityAvailable - (bulkMap[i.id] || 0)) > 0);
+                this.bulkForm.items.forEach(bi => { bulkMap[bi.item_id] = (bulkMap[bi.item_id]||0) + bi.quantity; });
+                return this.items.filter(i => (i.quantityAvailable - (bulkMap[i.id]||0)) > 0);
             },
             openBulkCheckout() {
                 this.bulkForm = { person_name: '', items: [] };
                 this.bulkAddItemId = '';
                 this.bulkAddQty = 1;
                 this.showBulkModal = true;
-                this.$nextTick(() => { if (this.$refs.bulkPersonName) this.$refs.bulkPersonName.focus(); });
+                this.$nextTick(() => { if(this.$refs.bulkPersonName) this.$refs.bulkPersonName.focus(); });
             },
             addToBulk() {
                 if (!this.bulkAddItemId) return;
                 const item = this.items.find(i => i.id == this.bulkAddItemId);
                 if (!item) return;
-                const alreadyAdded = this.bulkForm.items.filter(bi => bi.item_id == item.id).reduce((s, bi) => s + bi.quantity, 0);
+                const alreadyAdded = this.bulkForm.items.filter(bi => bi.item_id == item.id).reduce((s,bi) => s+bi.quantity, 0);
                 const maxAvail = item.quantityAvailable - alreadyAdded;
                 const qty = Math.min(Math.max(this.bulkAddQty || 1, 1), maxAvail);
                 if (qty <= 0) { alert('No more available'); return; }
@@ -680,18 +824,60 @@
                 if (this.bulkForm.items.length === 0) { alert('Add at least one item.'); return; }
                 try {
                     const payload = { person_name: this.bulkForm.person_name, items: this.bulkForm.items.map(bi => ({ item_id: bi.item_id, quantity: bi.quantity })) };
-                    const res = await fetch('/api/inventory/checkout-bulk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    const res = await fetch('/api/inventory/checkout-bulk', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
                     if (!res.ok) {
                         let msg = 'Checkout failed (status ' + res.status + ')';
-                        try { const err = await res.json(); msg = err.detail || msg; } catch (_) {}
+                        try { const err = await res.json(); msg = err.detail || msg; } catch(_) {}
                         alert(msg); return;
                     }
-                    this.showBulkModal = false;
-                    await this.loadItems();
-                } catch (e) { console.error('Bulk checkout error:', e); alert('Checkout failed: ' + e.message); }
+                    this.showBulkModal = false; await this.refresh();
+                } catch(e) { console.error('Bulk checkout error:', e); alert('Checkout failed: ' + e.message); }
             },
 
-            // ── Helpers ────────────────────────────────
+            openReturnPanel(row) {
+                this.selectedCheckout = row;
+                this.returnQty = row.quantity;
+                this.returnLoading = false;
+                this.showReturnPanel = true;
+            },
+            async submitReturn() {
+                if (!this.selectedCheckout || this.returnQty < 1) return;
+                this.returnLoading = true;
+                try {
+                    const res = await fetch(`/api/inventory/items/${this.selectedCheckout.itemId}/return`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ record_id: this.selectedCheckout.id, quantity: this.returnQty }),
+                    });
+                    if (!res.ok) { const err = await res.json(); alert(err.detail || 'Failed to return'); this.returnLoading = false; return; }
+                    this.showReturnPanel = false;
+                    await this.refresh();
+                } catch (e) { alert('Failed to return'); this.returnLoading = false; }
+            },
+            async returnAllForPerson(personName) {
+                if (!confirm(`Return ALL items from ${personName}?`)) return;
+                try {
+                    const res = await fetch('/api/inventory/return-person', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({person_name: personName}) });
+                    if (!res.ok) { const err = await res.json(); alert(err.detail||'Failed'); return; }
+                    await this.refresh();
+                } catch(e) { alert('Failed'); }
+            },
+
+            getCategoryEmoji(catName) { const cat = this.categories.find(c => c.name === catName); return cat ? cat.emoji : '📦'; },
+            toggleFormSport(sp) {
+                const idx = this.form.sports.indexOf(sp);
+                if (idx >= 0) { this.form.sports.splice(idx, 1); }
+                else { this.form.sports.push(sp); }
+            },
+            addDivisionsFromInput() {
+                const parts = this.divisionInput.split(',').map(d => d.trim()).filter(Boolean);
+                parts.forEach(val => {
+                    if (!this.form.divisions.includes(val)) {
+                        this.form.divisions.push(val);
+                    }
+                });
+                this.divisionInput = '';
+            },
             parseLocations(locStr) {
                 if (!locStr) return [];
                 return locStr.split(',').map(part => {
@@ -705,38 +891,11 @@
                     return { location: part, quantity: 0 };
                 }).filter(lb => lb.location);
             },
-            toggleFilter(filterKey, value) {
-                const arr = this.filters[filterKey];
-                const idx = arr.indexOf(value);
-                if (idx >= 0) arr.splice(idx, 1);
-                else arr.push(value);
+            toggleDivisionFilter(div) {
+                const idx = this.filters.divisions.indexOf(div);
+                if (idx >= 0) { this.filters.divisions.splice(idx, 1); }
+                else { this.filters.divisions.push(div); }
                 this.applyFilters();
-            },
-            filterLabel(arr, singular, plural) {
-                if (arr.length === 0) return 'All ' + plural;
-                if (arr.length === 1) return arr[0];
-                return arr.length + ' ' + plural;
-            },
-            filteredSportDisplay(sportStr) {
-                const sports = (sportStr || '').split(',').map(s => s.trim()).filter(Boolean);
-                const filtered = this.filters.sport.length > 0 ? sports.filter(s => this.filters.sport.includes(s)) : sports;
-                if (filtered.length === 0) return '--';
-                return filtered.map(s => this.sportEmoji(s)).join(' ');
-            },
-            filteredDivisions(divStr) {
-                const divs = this.parseDivisions(divStr);
-                if (this.filters.divisions.length === 0) return divs;
-                return divs.filter(d => this.filters.divisions.includes(d));
-            },
-            filteredConditions(item) {
-                const conds = this.itemConditions(item);
-                if (this.filters.condition.length === 0) return conds;
-                return conds.filter(c => this.filters.condition.includes(c.condition));
-            },
-            filteredLocations(locStr) {
-                const locs = this.parseLocations(locStr);
-                if (this.filters.location.length === 0) return locs;
-                return locs.filter(lb => this.filters.location.includes(lb.location));
             },
             parseDivisions(divStr) {
                 if (!divStr) return [];
@@ -749,18 +908,33 @@
                 if (item.quantityTotal > 0) return [{ condition: 'Good', quantity: item.quantityTotal }];
                 return [];
             },
-            conditionColor(c) {
-                return {
-                    'New': 'bg-blue-100 text-blue-700',
-                    'Good': 'bg-green-100 text-green-700',
-                    'Fair': 'bg-yellow-100 text-yellow-700',
-                    'Poor': 'bg-orange-100 text-orange-700',
-                    'Replace': 'bg-red-100 text-red-700'
-                }[c] || 'bg-gray-100 text-gray-600';
-            }
+            inventoryRows(item) {
+                const rows = [{ _type: 'item', _key: 'hdr-' + item.id }];
+                const sorted = (item.checkouts || []).slice().sort((a, b) => a.personName.localeCompare(b.personName));
+                sorted.forEach(co => {
+                    rows.push({ ...co, _type: 'checkout', _key: 'co-' + co.id });
+                });
+                return rows;
+            },
+            conditionColor(c) { return {'New':'bg-blue-100 text-blue-700','Good':'bg-green-100 text-green-700','Fair':'bg-yellow-100 text-yellow-700','Poor':'bg-orange-100 text-orange-700','Replace':'bg-red-100 text-red-700'}[c] || 'bg-gray-100 text-gray-600'; },
+            formatDate(iso) {
+                if(!iso) return '';
+                const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
+                const now = new Date();
+                const pad = (n) => String(n);
+                const toDateStr = (dt) => dt.getFullYear() + '-' + pad(dt.getMonth()) + '-' + pad(dt.getDate());
+                const todayStr = toDateStr(now);
+                const dateStr = toDateStr(d);
+                const yesterday = new Date(now);
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = toDateStr(yesterday);
+                const time = d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+                if (dateStr === todayStr) return 'Today, ' + time;
+                if (dateStr === yesterdayStr) return 'Yesterday, ' + time;
+                return d.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ', ' + time;
+            },
         }
     }
     </script>
-    <script src="/static/sidebar.js"></script>
 </body>
 </html>
