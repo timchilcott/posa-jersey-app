@@ -372,8 +372,27 @@ async def return_item(item_id: int, request: Request, db: Session = Depends(get_
         ).first()
         if not record:
             raise HTTPException(404, "Active checkout record not found")
-        qty = record.quantity
-        record.returned_at = datetime.utcnow()
+
+        return_qty = data.get("quantity")
+        if return_qty is not None:
+            return_qty = int(return_qty)
+            if return_qty < 1:
+                raise HTTPException(400, "Return quantity must be at least 1")
+            if return_qty > record.quantity:
+                raise HTTPException(
+                    400,
+                    f"Cannot return {return_qty}; only {record.quantity} checked out",
+                )
+            if return_qty == record.quantity:
+                record.returned_at = datetime.utcnow()
+            else:
+                # Partial return — reduce record qty, keep it active
+                record.quantity -= return_qty
+            qty = return_qty
+        else:
+            # No quantity specified — full return (backward-compatible)
+            qty = record.quantity
+            record.returned_at = datetime.utcnow()
     else:
         # Fallback: return by quantity (legacy)
         qty = int(data.get("quantity", 1))
