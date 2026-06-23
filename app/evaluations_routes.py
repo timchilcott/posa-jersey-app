@@ -1,4 +1,5 @@
 """Routes for tryout/player evaluations and development-plan exports."""
+from datetime import datetime
 from io import BytesIO
 from typing import Any, Dict, List, Optional
 import re
@@ -97,11 +98,15 @@ def _rows_for_player(session_id: int, player_name: str, db: Session) -> List[Dic
         db.query(PlayerEvaluation)
         .filter(PlayerEvaluation.session_id == session_id)
         .filter(func.lower(PlayerEvaluation.player_name) == player_name.lower())
+        .order_by(PlayerEvaluation.updated_at.desc(), PlayerEvaluation.created_at.desc())
         .all()
     )
     rows: List[Dict[str, Any]] = []
     for evaluation in evaluations:
         row: Dict[str, Any] = {
+            "evaluationId": evaluation.id,
+            "evaluatorName": evaluation.evaluator_name,
+            "Evaluator Name": evaluation.evaluator_name,
             "playerId": evaluation.player_id,
             "playerName": evaluation.player_name,
             "ageGroup": evaluation.age_group or _age_group_from_birth_year(evaluation.birth_year),
@@ -110,6 +115,7 @@ def _rows_for_player(session_id: int, player_name: str, db: Session) -> List[Dic
             "Biggest Strength": evaluation.biggest_strength,
             "Biggest Growth Area": evaluation.biggest_growth_area,
             "Notes": evaluation.notes,
+            "updatedAt": evaluation.updated_at.isoformat() if evaluation.updated_at else None,
         }
         for score in evaluation.scores:
             row[score.category] = score.score
@@ -384,21 +390,46 @@ async def save_evaluation(session_id: int, request: Request, db: Session = Depen
 
     player_id = data.get("player_id") or data.get("playerId")
     player = db.query(Player).filter(Player.id == player_id).first() if player_id else None
+    saved_player_name = player.full_name if player else player_name
 
-    evaluation = PlayerEvaluation(
-        session_id=session.id,
-        player_id=player.id if player else None,
-        player_name=player.full_name if player else player_name,
-        birth_year=player.birth_year if player else data.get("birth_year") or data.get("birthYear"),
-        age_group=data.get("age_group") or data.get("ageGroup"),
-        primary_position=data.get("primary_position") or data.get("primaryPosition"),
-        evaluator_name=evaluator_name,
-        future_potential=data.get("future_potential") or data.get("futurePotential"),
-        biggest_strength=data.get("biggest_strength") or data.get("biggestStrength"),
-        biggest_growth_area=data.get("biggest_growth_area") or data.get("biggestGrowthArea"),
-        notes=data.get("notes"),
+    existing_evaluations = (
+        db.query(PlayerEvaluation)
+        .filter(PlayerEvaluation.session_id == session.id)
+        .filter(func.lower(PlayerEvaluation.player_name) == saved_player_name.lower())
+        .filter(func.lower(PlayerEvaluation.evaluator_name) == evaluator_name.lower())
+        .order_by(PlayerEvaluation.updated_at.desc(), PlayerEvaluation.created_at.desc())
+        .all()
     )
-    db.add(evaluation)
+
+    created = not existing_evaluations
+    if existing_evaluations:
+        evaluation = existing_evaluations[0]
+        for duplicate in existing_evaluations[1:]:
+            db.query(EvaluationScore).filter(EvaluationScore.evaluation_id == duplicate.id).delete()
+            db.delete(duplicate)
+    else:
+        evaluation = PlayerEvaluation(
+            session_id=session.id,
+            player_id=player.id if player else None,
+            player_name=saved_player_name,
+            evaluator_name=evaluator_name,
+        )
+        db.add(evaluation)
+        db.flush()
+
+    evaluation.player_id = player.id if player else None
+    evaluation.player_name = saved_player_name
+    evaluation.birth_year = player.birth_year if player else data.get("birth_year") or data.get("birthYear")
+    evaluation.age_group = data.get("age_group") or data.get("ageGroup")
+    evaluation.primary_position = data.get("primary_position") or data.get("primaryPosition")
+    evaluation.evaluator_name = evaluator_name
+    evaluation.future_potential = data.get("future_potential") or data.get("futurePotential")
+    evaluation.biggest_strength = data.get("biggest_strength") or data.get("biggestStrength")
+    evaluation.biggest_growth_area = data.get("biggest_growth_area") or data.get("biggestGrowthArea")
+    evaluation.notes = data.get("notes")
+    evaluation.updated_at = datetime.utcnow()
+
+    db.query(EvaluationScore).filter(EvaluationScore.evaluation_id == evaluation.id).delete()
     db.flush()
 
     scores_saved = 0
@@ -422,13 +453,14 @@ async def save_evaluation(session_id: int, request: Request, db: Session = Depen
     total_for_player = (
         db.query(func.count(PlayerEvaluation.id))
         .filter(PlayerEvaluation.session_id == session.id)
-        .filter(func.lower(PlayerEvaluation.player_name) == (player.full_name if player else player_name).lower())
+        .filter(func.lower(PlayerEvaluation.player_name) == saved_player_name.lower())
         .scalar()
         or 0
     )
     return {
         "status": "success",
         "evaluationId": evaluation.id,
+        "created": created,
         "scoresSaved": scores_saved,
         "evaluatorName": evaluator_name,
         "totalEvaluationsForPlayer": total_for_player,
@@ -450,7 +482,7 @@ def player_prompt(session_id: int, player_name: str, db: Session = Depends(get_d
     if not rows:
         raise HTTPException(status_code=404, detail="No evaluations found for player")
     summary = summarize_rows(rows)
-    return {"summary": summary, "prompt": build_ai_prompt(summary)}
+    return {"summary": summary, "evaluations": rows, "prompt": build_ai_prompt(summary)}
 
 
 @router.get("/sessions/{session_id}/players/{player_name}/pdf")
