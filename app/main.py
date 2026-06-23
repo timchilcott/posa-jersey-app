@@ -11,12 +11,14 @@ from app.database import get_db, engine
 from app.models import Base, Player, Registration, EmailTemplate
 import app.models_members  # noqa: F401  — register Member/MemberGuardian tables
 import app.models_seasons  # noqa: F401  — register Team/TeamRoster/TeamStaff tables
+import app.models_evaluations  # noqa: F401  — register Evaluation tables
 from app.api_routes import router as admin_api_router
 from app.sync_routes import router as sync_router
 from app.inventory_routes import router as inventory_router
 from app.events_routes import router as events_router
 from app.members_routes import router as members_router
 from app.seasons_routes import router as seasons_router
+from app.evaluations_routes import router as evaluations_router
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="POSA Jersey Management")
@@ -32,6 +34,7 @@ app.include_router(inventory_router)
 app.include_router(events_router)
 app.include_router(members_router)
 app.include_router(seasons_router)
+app.include_router(evaluations_router)
 
 _TEMPLATES_DIR = pathlib.Path(__file__).parent / "templates"
 
@@ -84,6 +87,10 @@ async def seasons_page():
 @app.get("/seasons/standings", response_class=HTMLResponse)
 async def standings_page():
     return HTMLResponse(_read_template("standings_page.html"))
+
+@app.get("/evaluations", response_class=HTMLResponse)
+async def evaluations_page():
+    return HTMLResponse(_read_template("evaluations_page.html"))
 
 @app.get("/sportsengine", response_class=HTMLResponse)
 async def sportsengine_page():
