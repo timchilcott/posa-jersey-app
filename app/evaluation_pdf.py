@@ -33,6 +33,15 @@ def _score_text(value: Any) -> str:
         return str(value)
 
 
+def _evaluator_display(names: list[str]) -> str:
+    cleaned = [name for name in names if name and name.strip().lower() != "evaluator"]
+    if not cleaned:
+        return "Not specified"
+    if len(cleaned) <= 3:
+        return ", ".join(cleaned)
+    return f"{len(cleaned)} evaluators"
+
+
 def _find_logo_path() -> str | None:
     static_dir = Path(__file__).resolve().parent / "static"
     for filename in (
@@ -96,6 +105,21 @@ def _guidance_for_category(category: str, development_library: Mapping[str, Mapp
     if practice and at_home:
         return f"{_safe(practice)}<br/><font color='{TEXT_MUTED}'>At home: {_safe(at_home)}</font>"
     return _safe(practice or at_home or "Keep training this area with focused, game-like repetitions.")
+
+
+def _section_bar(title: str, styles):
+    from reportlab.lib import colors
+    from reportlab.platypus import Paragraph, Table, TableStyle
+
+    table = Table([[Paragraph(_safe(title), styles["SectionText"])]], colWidths=[REPORT_WIDTH], hAlign="LEFT")
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(PINES_GREEN)),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+    ]))
+    return table
 
 
 def _section_development_table(
@@ -192,16 +216,14 @@ def player_development_pdf_response(
             textColor=colors.HexColor(PINES_GREEN),
             alignment=TA_CENTER,
         ),
-        "Section": ParagraphStyle(
-            "PinesSection",
+        "SectionText": ParagraphStyle(
+            "PinesSectionText",
             parent=base["Heading2"],
             fontName="Helvetica-Bold",
             fontSize=11,
             leading=14,
             textColor=colors.white,
-            backColor=colors.HexColor(PINES_GREEN),
-            borderPadding=(5, 8, 5, 8),
-            spaceBefore=10,
+            spaceBefore=0,
             spaceAfter=0,
         ),
         "Body": ParagraphStyle(
@@ -285,7 +307,7 @@ def player_development_pdf_response(
     player_name = summary.get("playerName", "")
     player_info = [summary.get("ageGroup", ""), summary.get("position", "")]
     player_info = " | ".join([str(item) for item in player_info if item])
-    evaluator_names = ", ".join(summary.get("evaluatorNames", [])) or "Not specified"
+    evaluator_names = _evaluator_display(summary.get("evaluatorNames", []))
     scores = summary.get("categoryScores", {})
     section_averages = summary.get("sectionAverages", {})
 
@@ -294,24 +316,20 @@ def player_development_pdf_response(
             Paragraph("Player", styles["CalloutLabel"]),
             Paragraph("Age / Position", styles["CalloutLabel"]),
             Paragraph("Weighted Score", styles["CalloutLabel"]),
+            Paragraph("Evaluators", styles["CalloutLabel"]),
         ],
         [
             Paragraph(_safe(player_name), styles["CalloutValue"]),
             Paragraph(_safe(player_info or "-"), styles["CalloutValue"]),
             Paragraph(_safe(_score_text(summary.get("weightedScore"))), styles["CalloutValue"]),
-        ],
-        [
-            Paragraph("Evaluators", styles["CalloutLabel"]),
-            Paragraph(_safe(evaluator_names), styles["Body"]),
-            Paragraph("", styles["Body"]),
+            Paragraph(_safe(evaluator_names), styles["CalloutValue"]),
         ],
     ]
-    overview = Table(overview_data, colWidths=[220, 190, 114], hAlign="LEFT")
+    overview = Table(overview_data, colWidths=[195, 145, 95, 89], hAlign="LEFT")
     overview.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(PINES_LIGHT)),
         ("BOX", (0, 0), (-1, -1), 0.75, colors.HexColor(PINES_BORDER)),
         ("INNERGRID", (0, 0), (-1, -1), 0.35, colors.HexColor(PINES_BORDER)),
-        ("SPAN", (1, 2), (2, 2)),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("LEFTPADDING", (0, 0), (-1, -1), 8),
         ("RIGHTPADDING", (0, 0), (-1, -1), 8),
@@ -319,16 +337,19 @@ def player_development_pdf_response(
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
     ]))
     story.append(overview)
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 14))
 
     for section, section_categories in categories.items():
         section_title = section
         if section in section_averages:
             section_title = f"{section} - Avg {_score_text(section_averages[section])}"
-        story.append(Paragraph(_safe(section_title), styles["Section"]))
+        story.append(_section_bar(section_title, styles))
+        story.append(Spacer(1, 2))
         story.append(_section_development_table(section_categories, scores, development_library, styles))
+        story.append(Spacer(1, 8))
 
-    story.append(Paragraph("Key Strengths", styles["Section"]))
+    story.append(_section_bar("Key Strengths", styles))
+    story.append(Spacer(1, 4))
     strengths = summary.get("topStrengths", []) or []
     if strengths:
         for category, score in strengths:
@@ -336,7 +357,8 @@ def player_development_pdf_response(
     else:
         story.append(Paragraph("No strengths entered yet.", styles["Body"]))
 
-    story.append(Paragraph("Key Things to Work On", styles["Section"]))
+    story.append(_section_bar("Key Things to Work On", styles))
+    story.append(Spacer(1, 4))
     priorities = summary.get("developmentPriorities", []) or []
     if priorities:
         for index, (category, score) in enumerate(priorities[:5], start=1):
@@ -352,7 +374,8 @@ def player_development_pdf_response(
     else:
         story.append(Paragraph("No development priorities available yet.", styles["Body"]))
 
-    story.append(Paragraph("Evaluator Notes", styles["Section"]))
+    story.append(_section_bar("Evaluator Notes", styles))
+    story.append(Spacer(1, 4))
     notes = summary.get("notes", []) or []
     if notes:
         for note in notes:
