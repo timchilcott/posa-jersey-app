@@ -377,11 +377,9 @@ async def save_evaluation(session_id: int, request: Request, db: Session = Depen
 
     data = await request.json()
     player_name = (data.get("player_name") or data.get("playerName") or "").strip()
-    evaluator_name = (data.get("evaluator_name") or data.get("evaluatorName") or "").strip()
+    evaluator_name = (data.get("evaluator_name") or data.get("evaluatorName") or "Evaluator").strip() or "Evaluator"
     if not player_name:
         raise HTTPException(status_code=400, detail="player_name is required")
-    if not evaluator_name:
-        raise HTTPException(status_code=400, detail="evaluator_name is required")
 
     player_id = data.get("player_id") or data.get("playerId")
     player = db.query(Player).filter(Player.id == player_id).first() if player_id else None
@@ -402,6 +400,7 @@ async def save_evaluation(session_id: int, request: Request, db: Session = Depen
     db.add(evaluation)
     db.flush()
 
+    scores_saved = 0
     scores = data.get("scores") or {}
     for category in all_category_names():
         value = scores.get(category)
@@ -416,9 +415,24 @@ async def save_evaluation(session_id: int, request: Request, db: Session = Depen
         if score_value < 1 or score_value > 5:
             raise HTTPException(status_code=400, detail=f"Score for {category} must be between 1 and 5")
         db.add(EvaluationScore(evaluation_id=evaluation.id, category=category, score=score_value))
+        scores_saved += 1
 
     db.commit()
-    return {"status": "success", "evaluationId": evaluation.id}
+    total_for_player = (
+        db.query(func.count(PlayerEvaluation.id))
+        .filter(PlayerEvaluation.session_id == session.id)
+        .filter(func.lower(PlayerEvaluation.player_name) == (player.full_name if player else player_name).lower())
+        .scalar()
+        or 0
+    )
+    return {
+        "status": "success",
+        "evaluationId": evaluation.id,
+        "scoresSaved": scores_saved,
+        "evaluatorName": evaluator_name,
+        "totalEvaluationsForPlayer": total_for_player,
+        "session": _serialize_session(session, db),
+    }
 
 
 @router.get("/sessions/{session_id}/summary")
