@@ -32,6 +32,15 @@ def _score_text(value: Any) -> str:
         return str(value)
 
 
+def _score_float(value: Any) -> float | None:
+    try:
+        if value in (None, ""):
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _find_logo_path() -> str | None:
     static_dir = Path(__file__).resolve().parent / "static"
     for filename in (
@@ -53,7 +62,6 @@ def _find_logo_path() -> str | None:
 
 def _logo_flowable(width: float, height: float):
     """Return the app's Pines logo as a ReportLab flowable when available."""
-    from reportlab.lib.units import inch
     from reportlab.platypus import Image
 
     logo_path = _find_logo_path()
@@ -87,6 +95,17 @@ def _logo_flowable(width: float, height: float):
     drawing.scale(scale, scale)
     scaled.add(drawing)
     return scaled
+
+
+def _lowest_scored_category(categories: list[str], scores: Mapping[str, Any]) -> tuple[str, float] | None:
+    scored = []
+    for category in categories:
+        score = _score_float(scores.get(category))
+        if score is not None:
+            scored.append((category, score))
+    if not scored:
+        return None
+    return sorted(scored, key=lambda item: item[1])[0]
 
 
 def _score_table(section: str, categories: list[str], scores: Mapping[str, Any], styles):
@@ -196,6 +215,16 @@ def player_development_pdf_response(
             spaceBefore=10,
             spaceAfter=7,
         ),
+        "Subhead": ParagraphStyle(
+            "PinesSubhead",
+            parent=base["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=9,
+            leading=12,
+            textColor=colors.HexColor(PINES_GREEN),
+            spaceBefore=5,
+            spaceAfter=2,
+        ),
         "Body": ParagraphStyle(
             "PinesBody",
             parent=base["BodyText"],
@@ -294,10 +323,20 @@ def player_development_pdf_response(
         section_title = section
         if section in section_averages:
             section_title = f"{section} - Avg {_score_text(section_averages[section])}"
-        story.append(KeepTogether([
+        section_items = [
             Paragraph(_safe(section_title), styles["Section"]),
             _score_table(section, section_categories, scores, styles),
-        ]))
+        ]
+        focus = _lowest_scored_category(section_categories, scores)
+        if focus:
+            focus_category, focus_score = focus
+            library = development_library.get(focus_category, {})
+            section_items.extend([
+                Paragraph(f"Development Focus: {_safe(focus_category)} ({_score_text(focus_score)})", styles["Subhead"]),
+                Paragraph(f"<b>Practice focus:</b> {_safe(library.get('practice_focus', ''))}", styles["Body"]),
+                Paragraph(f"<b>At-home development:</b> {_safe(library.get('at_home_development', ''))}", styles["Body"]),
+            ])
+        story.append(KeepTogether(section_items))
 
     story.append(Paragraph("Key Strengths", styles["Section"]))
     strengths = summary.get("topStrengths", []) or []
@@ -307,7 +346,7 @@ def player_development_pdf_response(
     else:
         story.append(Paragraph("No strengths entered yet.", styles["Body"]))
 
-    story.append(Paragraph("Top Development Priorities", styles["Section"]))
+    story.append(Paragraph("Overall Top Development Priorities", styles["Section"]))
     priorities = summary.get("developmentPriorities", []) or []
     if priorities:
         for category, score in priorities:
