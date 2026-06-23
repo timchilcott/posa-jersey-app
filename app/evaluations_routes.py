@@ -17,6 +17,7 @@ from app.evaluation_library import (
     build_ai_prompt,
     summarize_rows,
 )
+from app.evaluation_pdf import player_development_pdf_response
 from app.models import Player
 from app.models_evaluations import (
     EvaluationScore,
@@ -454,34 +455,21 @@ def player_prompt(session_id: int, player_name: str, db: Session = Depends(get_d
 
 @router.get("/sessions/{session_id}/players/{player_name}/pdf")
 def player_pdf(session_id: int, player_name: str, db: Session = Depends(get_db)):
+    session = db.query(EvaluationSession).filter(EvaluationSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Evaluation session not found")
+
     rows = _rows_for_player(session_id, player_name, db)
     if not rows:
         raise HTTPException(status_code=404, detail="No evaluations found for player")
     summary = summarize_rows(rows)
-    lines = [
-        f"Player: {summary.get('playerName', player_name)}",
-        f"Age Group: {summary.get('ageGroup', '')}",
-        f"Primary Position(s): {summary.get('position', '')}",
-        "",
-        "Player Snapshot:",
-        f"Weighted development score: {summary.get('weightedScore', '')}",
-        "",
-        "Key Strengths:",
-    ]
-    for category, score in summary.get("topStrengths", []):
-        lines.append(f"{category}: {score}")
-    lines.extend(["", "Top Development Priorities:"])
-    for category, score in summary.get("developmentPriorities", []):
-        library = DEVELOPMENT_LIBRARY.get(category, {})
-        lines.extend([
-            f"{category}: {score}",
-            f"What Improvement Looks Like: {library.get('what_improvement_looks_like', '')}",
-            f"Practice Focus: {library.get('practice_focus', '')}",
-            f"At-Home Development: {library.get('at_home_development', '')}",
-            "",
-        ])
-    lines.extend(["Evaluator Notes:", "; ".join(summary.get("notes", [])) or "No notes entered."])
-    return _pdf_response(f"{summary.get('playerName', player_name)} Development Plan", lines)
+    return player_development_pdf_response(
+        session_name=session.name,
+        registration_name=session.sportsengine_registration_name,
+        summary=summary,
+        categories=CATEGORIES,
+        development_library=DEVELOPMENT_LIBRARY,
+    )
 
 
 @router.get("/sessions/{session_id}/pdf")
