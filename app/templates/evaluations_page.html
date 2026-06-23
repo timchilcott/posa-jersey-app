@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POSA Evaluations</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { pines: { 50:'#f0f7f0',100:'#d9edd9',200:'#b3dbb3',300:'#7fc07f',400:'#5aa55a',500:'#3C7939',600:'#2f6130',700:'#254d26',800:'#1c3a1d',900:'#142914' } } } } }
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <style>[x-cloak]{display:none!important}</style>
+</head>
+<body class="bg-gray-50" x-data="evaluationsApp()" x-init="init()" x-cloak>
+  <div class="p-6 space-y-6">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-gray-900">Player Evaluations</h2>
+          <p class="text-sm text-gray-600 mt-1">Create a tryout session from one selected SportsEngine registration, score players, generate IDP prompts, and export PDFs.</p>
+        </div>
+        <button @click="loadAll()" class="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50"><i class="fa-solid fa-arrows-rotate mr-1"></i>Refresh</button>
+      </div>
+    </div>
+
+    <div x-show="error" class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800" x-text="error"></div>
+    <div x-show="message" class="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800" x-text="message"></div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4">
+        <div>
+          <h3 class="font-semibold text-gray-900">Create Evaluation Session</h3>
+          <p class="text-xs text-gray-500 mt-1">This syncs only the selected SportsEngine registration.</p>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Session Name</label>
+          <input x-model="newSession.name" type="text" placeholder="2026 Pines Tryouts" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-pines-500 focus:ring-1 focus:ring-pines-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">SportsEngine Registration</label>
+          <div class="flex gap-2">
+            <select x-model="newSession.registrationId" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-pines-500 focus:ring-1 focus:ring-pines-500">
+              <option value="">Select registration...</option>
+              <template x-for="reg in registrations" :key="reg.id">
+                <option :value="reg.id" x-text="reg.name"></option>
+              </template>
+            </select>
+            <button @click="loadRegistrations()" class="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50" title="Load registrations"><i class="fa-solid fa-download"></i></button>
+          </div>
+        </div>
+        <button @click="createSession()" :disabled="creating || !newSession.registrationId" class="w-full px-4 py-2 rounded-lg text-sm font-semibold text-white" :class="creating || !newSession.registrationId ? 'bg-gray-300 cursor-not-allowed' : 'bg-pines-600 hover:bg-pines-700'">
+          <span x-text="creating ? 'Creating and syncing...' : 'Create Session'"></span>
+        </button>
+      </section>
+
+      <section class="xl:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-gray-900">Sessions</h3>
+          <span class="text-xs text-gray-500" x-text="sessions.length + ' sessions'"></span>
+        </div>
+        <div x-show="loading" class="py-8 text-sm text-gray-500">Loading...</div>
+        <div x-show="!loading && sessions.length === 0" class="py-8 text-sm text-gray-500">No evaluation sessions yet.</div>
+        <div class="divide-y divide-gray-100">
+          <template x-for="session in sessions" :key="session.id">
+            <div class="py-3 flex items-center justify-between gap-4">
+              <button @click="selectSession(session)" class="flex-1 text-left">
+                <div class="font-medium text-gray-900" x-text="session.name"></div>
+                <div class="text-xs text-gray-500 mt-0.5">
+                  <span x-text="session.sportsengineRegistrationName"></span>
+                  <span> • </span><span x-text="session.playerCount + ' players'"></span>
+                  <span> • </span><span x-text="session.evaluationCount + ' evaluations'"></span>
+                </div>
+              </button>
+              <div class="flex gap-2">
+                <a :href="'/api/evaluations/sessions/' + session.id + '/pdf'" class="px-3 py-1.5 text-xs rounded-lg border border-gray-200 hover:bg-gray-50"><i class="fa-regular fa-file-pdf mr-1"></i>Summary PDF</a>
+                <button @click="selectSession(session)" class="px-3 py-1.5 text-xs rounded-lg bg-pines-600 text-white hover:bg-pines-700">Open</button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </section>
+    </div>
+
+    <section x-show="selectedSession" class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-5">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h3 class="font-semibold text-gray-900" x-text="selectedSession ? selectedSession.name : ''"></h3>
+          <p class="text-xs text-gray-500 mt-1" x-text="selectedSession ? selectedSession.sportsengineRegistrationName : ''"></p>
+        </div>
+        <button @click="selectedSession = null" class="text-gray-400 hover:text-gray-700"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="border border-gray-200 rounded-xl p-4">
+          <h4 class="font-semibold text-sm text-gray-900 mb-3">Players</h4>
+          <div x-show="players.length === 0" class="text-sm text-gray-500">No players found for this selected registration yet.</div>
+          <div class="space-y-1 max-h-[32rem] overflow-y-auto">
+            <template x-for="player in players" :key="player.playerId">
+              <button @click="selectPlayer(player)" class="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-gray-50" :class="selectedPlayer && selectedPlayer.playerId === player.playerId ? 'bg-pines-50 text-pines-800 font-semibold' : 'text-gray-800'">
+                <span x-text="player.playerName"></span>
+                <span class="text-xs text-gray-500" x-text="player.division ? ' • ' + player.division : ''"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <div class="lg:col-span-2 border border-gray-200 rounded-xl p-4" x-show="selectedPlayer">
+          <div class="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <h4 class="font-semibold text-gray-900" x-text="selectedPlayer ? selectedPlayer.playerName : ''"></h4>
+              <p class="text-xs text-gray-500" x-text="selectedPlayer ? [selectedPlayer.ageGroup, selectedPlayer.division].filter(Boolean).join(' • ') : ''"></p>
+            </div>
+            <a x-show="selectedPlayer" :href="'/api/evaluations/sessions/' + selectedSession.id + '/players/' + encodeURIComponent(selectedPlayer.playerName) + '/pdf'" class="px-3 py-1.5 text-xs rounded-lg border border-gray-200 hover:bg-gray-50"><i class="fa-regular fa-file-pdf mr-1"></i>Player PDF</a>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">Evaluator Name</label>
+              <input x-model="evaluation.evaluatorName" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">Primary Position</label>
+              <input x-model="evaluation.primaryPosition" placeholder="Forward, Midfield, Defense, GK" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+            </div>
+          </div>
+
+          <template x-for="(cats, section) in categories" :key="section">
+            <div class="mb-5">
+              <h5 class="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2" x-text="section"></h5>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <template x-for="cat in cats" :key="cat">
+                  <label class="flex items-center justify-between gap-3 px-3 py-2 border border-gray-100 rounded-lg">
+                    <span class="text-sm text-gray-800" x-text="cat"></span>
+                    <select x-model="evaluation.scores[cat]" class="w-24 px-2 py-1 border border-gray-200 rounded text-sm">
+                      <option value="">-</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                    </select>
+                  </label>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">Future Potential</label>
+              <select x-model="evaluation.futurePotential" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                <option value="">-</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">Biggest Strength</label>
+              <input x-model="evaluation.biggestStrength" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">Biggest Growth Area</label>
+              <input x-model="evaluation.biggestGrowthArea" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+            </div>
+          </div>
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Notes</label>
+            <textarea x-model="evaluation.notes" rows="3" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"></textarea>
+          </div>
+          <div class="flex flex-wrap gap-2 justify-end">
+            <button @click="loadPrompt()" class="px-4 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50">View AI Prompt</button>
+            <button @click="saveEvaluation()" class="px-4 py-2 rounded-lg bg-pines-600 text-white text-sm font-semibold hover:bg-pines-700">Save Evaluation</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div x-show="prompt" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+        <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+          <h3 class="font-semibold text-gray-900">AI Report Prompt</h3>
+          <button @click="prompt = ''" class="text-gray-400 hover:text-gray-700"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <textarea readonly class="flex-1 p-5 text-sm font-mono border-0 focus:ring-0 min-h-96" x-text="prompt"></textarea>
+        <div class="px-5 py-4 border-t border-gray-200 flex justify-end">
+          <button @click="copyPrompt()" class="px-4 py-2 rounded-lg bg-pines-600 text-white text-sm font-semibold hover:bg-pines-700">Copy Prompt</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  function evaluationsApp() {
+    return {
+      loading:false, creating:false, error:'', message:'', registrations:[], sessions:[], players:[], categories:{}, selectedSession:null, selectedPlayer:null, prompt:'',
+      newSession:{name:'', registrationId:''},
+      evaluation:{evaluatorName:'', primaryPosition:'', futurePotential:'', biggestStrength:'', biggestGrowthArea:'', notes:'', scores:{}},
+      async init(){ await this.loadAll(); },
+      async api(url, options){
+        const res = await fetch(url, options || {});
+        let data = {};
+        try { data = await res.json(); } catch(e) {}
+        if (!res.ok) throw new Error(data.detail || data.error || data.message || 'Request failed');
+        return data;
+      },
+      async loadAll(){ this.error=''; this.message=''; this.loading=true; try { await Promise.all([this.loadCategories(), this.loadRegistrations(), this.loadSessions()]); } catch(e){ this.error=e.message; } finally { this.loading=false; } },
+      async loadCategories(){ const data = await this.api('/api/evaluations/categories'); this.categories = data.categories || {}; },
+      async loadRegistrations(){ const data = await this.api('/api/evaluations/sportsengine/registrations'); this.registrations = data.registrations || []; },
+      async loadSessions(){ const data = await this.api('/api/evaluations/sessions'); this.sessions = data.sessions || []; },
+      async createSession(){
+        if (!this.newSession.registrationId) return;
+        this.error=''; this.message=''; this.creating=true;
+        try {
+          const data = await this.api('/api/evaluations/sessions', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ name:this.newSession.name, sportsengine_registration_id:this.newSession.registrationId }) });
+          this.message = 'Session created. Synced ' + ((data.syncResults && (data.syncResults.new_players + data.syncResults.existing_players)) || 0) + ' players.';
+          this.newSession = {name:'', registrationId:''};
+          await this.loadSessions();
+          if (data.session) await this.selectSession(data.session);
+        } catch(e){ this.error=e.message; }
+        finally { this.creating=false; }
+      },
+      async selectSession(session){ this.selectedSession=session; this.selectedPlayer=null; this.players=[]; this.error=''; try { const data=await this.api('/api/evaluations/sessions/'+session.id+'/players'); this.players=data.players || []; } catch(e){ this.error=e.message; } },
+      selectPlayer(player){ this.selectedPlayer=player; this.evaluation={evaluatorName:'', primaryPosition:'', futurePotential:'', biggestStrength:'', biggestGrowthArea:'', notes:'', scores:{}}; },
+      async saveEvaluation(){
+        if (!this.selectedSession || !this.selectedPlayer) return;
+        this.error=''; this.message='';
+        try {
+          await this.api('/api/evaluations/sessions/'+this.selectedSession.id+'/evaluations', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ player_id:this.selectedPlayer.playerId, player_name:this.selectedPlayer.playerName, evaluator_name:this.evaluation.evaluatorName, primary_position:this.evaluation.primaryPosition, future_potential:this.evaluation.futurePotential, biggest_strength:this.evaluation.biggestStrength, biggest_growth_area:this.evaluation.biggestGrowthArea, notes:this.evaluation.notes, scores:this.evaluation.scores }) });
+          this.message='Evaluation saved.';
+          await this.loadSessions();
+        } catch(e){ this.error=e.message; }
+      },
+      async loadPrompt(){
+        if (!this.selectedSession || !this.selectedPlayer) return;
+        this.error='';
+        try { const data=await this.api('/api/evaluations/sessions/'+this.selectedSession.id+'/players/'+encodeURIComponent(this.selectedPlayer.playerName)+'/prompt'); this.prompt=data.prompt || ''; }
+        catch(e){ this.error=e.message; }
+      },
+      async copyPrompt(){ if (!this.prompt) return; await navigator.clipboard.writeText(this.prompt); this.message='Prompt copied.'; this.prompt=''; }
+    }
+  }
+  </script>
+  <script src="/static/sidebar.js"></script>
+</body>
+</html>
