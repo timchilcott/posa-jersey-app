@@ -32,15 +32,6 @@ def _score_text(value: Any) -> str:
         return str(value)
 
 
-def _score_float(value: Any) -> float | None:
-    try:
-        if value in (None, ""):
-            return None
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
 def _find_logo_path() -> str | None:
     static_dir = Path(__file__).resolve().parent / "static"
     for filename in (
@@ -97,46 +88,43 @@ def _logo_flowable(width: float, height: float):
     return scaled
 
 
-def _lowest_scored_category(categories: list[str], scores: Mapping[str, Any]) -> tuple[str, float] | None:
-    scored = []
-    for category in categories:
-        score = _score_float(scores.get(category))
-        if score is not None:
-            scored.append((category, score))
-    if not scored:
-        return None
-    return sorted(scored, key=lambda item: item[1])[0]
+def _guidance_for_category(category: str, development_library: Mapping[str, Mapping[str, str]]) -> str:
+    library = development_library.get(category, {})
+    practice = library.get("practice_focus", "")
+    at_home = library.get("at_home_development", "")
+    if practice and at_home:
+        return f"{practice} At home: {at_home}"
+    return practice or at_home or "Keep training this area with focused, game-like repetitions."
 
 
-def _score_table(section: str, categories: list[str], scores: Mapping[str, Any], styles):
+def _section_development_table(
+    categories: list[str],
+    scores: Mapping[str, Any],
+    development_library: Mapping[str, Mapping[str, str]],
+    styles,
+):
     from reportlab.lib import colors
     from reportlab.platypus import Paragraph, Table, TableStyle
 
     data = [[
         Paragraph("Category", styles["TableHeader"]),
         Paragraph("Score", styles["TableHeader"]),
-        Paragraph("Category", styles["TableHeader"]),
-        Paragraph("Score", styles["TableHeader"]),
+        Paragraph("How to Work on This", styles["TableHeader"]),
     ]]
-    pairs = [(category, _score_text(scores.get(category))) for category in categories]
-    for index in range(0, len(pairs), 2):
-        left = pairs[index]
-        right = pairs[index + 1] if index + 1 < len(pairs) else ("", "")
+    for category in categories:
         data.append([
-            Paragraph(_safe(left[0]), styles["Small"]),
-            Paragraph(_safe(left[1]), styles["Score"]),
-            Paragraph(_safe(right[0]), styles["Small"]),
-            Paragraph(_safe(right[1]), styles["Score"]),
+            Paragraph(_safe(category), styles["SmallBold"]),
+            Paragraph(_safe(_score_text(scores.get(category))), styles["Score"]),
+            Paragraph(_safe(_guidance_for_category(category, development_library)), styles["Small"]),
         ])
 
-    table = Table(data, colWidths=[180, 48, 180, 48], hAlign="LEFT")
+    table = Table(data, colWidths=[118, 42, 330], hAlign="LEFT", repeatRows=1)
     table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(PINES_LIGHT)),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor(PINES_GREEN)),
         ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#d1d5db")),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("ALIGN", (1, 1), (1, -1), "CENTER"),
-        ("ALIGN", (3, 1), (3, -1), "CENTER"),
         ("LEFTPADDING", (0, 0), (-1, -1), 6),
         ("RIGHTPADDING", (0, 0), (-1, -1), 6),
         ("TOPPADDING", (0, 0), (-1, -1), 5),
@@ -215,16 +203,6 @@ def player_development_pdf_response(
             spaceBefore=10,
             spaceAfter=7,
         ),
-        "Subhead": ParagraphStyle(
-            "PinesSubhead",
-            parent=base["BodyText"],
-            fontName="Helvetica-Bold",
-            fontSize=9,
-            leading=12,
-            textColor=colors.HexColor(PINES_GREEN),
-            spaceBefore=5,
-            spaceAfter=2,
-        ),
         "Body": ParagraphStyle(
             "PinesBody",
             parent=base["BodyText"],
@@ -236,8 +214,16 @@ def player_development_pdf_response(
         "Small": ParagraphStyle(
             "PinesSmall",
             parent=base["BodyText"],
-            fontSize=8.5,
-            leading=11,
+            fontSize=8,
+            leading=10,
+            textColor=colors.HexColor(TEXT_DARK),
+        ),
+        "SmallBold": ParagraphStyle(
+            "PinesSmallBold",
+            parent=base["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=8,
+            leading=10,
             textColor=colors.HexColor(TEXT_DARK),
         ),
         "TableHeader": ParagraphStyle(
@@ -323,20 +309,8 @@ def player_development_pdf_response(
         section_title = section
         if section in section_averages:
             section_title = f"{section} - Avg {_score_text(section_averages[section])}"
-        section_items = [
-            Paragraph(_safe(section_title), styles["Section"]),
-            _score_table(section, section_categories, scores, styles),
-        ]
-        focus = _lowest_scored_category(section_categories, scores)
-        if focus:
-            focus_category, focus_score = focus
-            library = development_library.get(focus_category, {})
-            section_items.extend([
-                Paragraph(f"Development Focus: {_safe(focus_category)} ({_score_text(focus_score)})", styles["Subhead"]),
-                Paragraph(f"<b>Practice focus:</b> {_safe(library.get('practice_focus', ''))}", styles["Body"]),
-                Paragraph(f"<b>At-home development:</b> {_safe(library.get('at_home_development', ''))}", styles["Body"]),
-            ])
-        story.append(KeepTogether(section_items))
+        story.append(Paragraph(_safe(section_title), styles["Section"]))
+        story.append(_section_development_table(section_categories, scores, development_library, styles))
 
     story.append(Paragraph("Key Strengths", styles["Section"]))
     strengths = summary.get("topStrengths", []) or []
@@ -346,16 +320,16 @@ def player_development_pdf_response(
     else:
         story.append(Paragraph("No strengths entered yet.", styles["Body"]))
 
-    story.append(Paragraph("Overall Top Development Priorities", styles["Section"]))
+    story.append(Paragraph("Key Things to Work On", styles["Section"]))
     priorities = summary.get("developmentPriorities", []) or []
     if priorities:
-        for category, score in priorities:
+        for index, (category, score) in enumerate(priorities[:5], start=1):
             library = development_library.get(category, {})
             priority_lines = [
-                Paragraph(f"<b>{_safe(category)}</b> - Score {_safe(_score_text(score))}", styles["Body"]),
-                Paragraph(f"<b>What improvement looks like:</b> {_safe(library.get('what_improvement_looks_like', ''))}", styles["Body"]),
-                Paragraph(f"<b>Practice focus:</b> {_safe(library.get('practice_focus', ''))}", styles["Body"]),
-                Paragraph(f"<b>At-home development:</b> {_safe(library.get('at_home_development', ''))}", styles["Body"]),
+                Paragraph(f"<b>{index}. {_safe(category)}</b> - Score {_safe(_score_text(score))}", styles["Body"]),
+                Paragraph(f"<b>Why it matters:</b> {_safe(library.get('what_improvement_looks_like', ''))}", styles["Body"]),
+                Paragraph(f"<b>Training focus:</b> {_safe(library.get('practice_focus', ''))}", styles["Body"]),
+                Paragraph(f"<b>At-home work:</b> {_safe(library.get('at_home_development', ''))}", styles["Body"]),
                 Spacer(1, 5),
             ]
             story.append(KeepTogether(priority_lines))
