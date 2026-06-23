@@ -3,6 +3,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, Mapping
 from xml.sax.saxutils import escape
+import re
 
 from fastapi import HTTPException
 from fastapi.responses import Response
@@ -37,14 +38,15 @@ def _clean_evaluator_names(names: list[str]) -> list[str]:
     cleaned = []
     seen = set()
     for name in names:
-        clean = str(name or "").strip()
-        if not clean or clean.lower() == "evaluator":
-            continue
-        key = clean.lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        cleaned.append(clean)
+        for part in re.split(r"[,;\n]+", str(name or "")):
+            clean = part.strip()
+            if not clean or clean.lower() == "evaluator":
+                continue
+            key = re.sub(r"\s+", " ", clean).lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            cleaned.append(clean)
     return cleaned
 
 
@@ -128,6 +130,22 @@ def _section_bar(title: str, styles):
     return table
 
 
+def _base_table_style():
+    from reportlab.lib import colors
+    from reportlab.platypus import TableStyle
+
+    return TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(PINES_LIGHT)),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor(PINES_GREEN)),
+        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#d1d5db")),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+    ])
+
+
 def _evaluators_box(names: list[str], styles):
     from reportlab.lib import colors
     from reportlab.platypus import Paragraph, Table, TableStyle
@@ -136,7 +154,7 @@ def _evaluators_box(names: list[str], styles):
     if not evaluator_names:
         evaluator_names = ["Not specified"]
 
-    rows = [[Paragraph("Evaluators", styles["CalloutLabel"])]]
+    rows = [[Paragraph("Evaluators", styles["CalloutLabel"]), Paragraph("", styles["CalloutLabel"]), Paragraph("", styles["CalloutLabel"] )]]
     for index in range(0, len(evaluator_names), 3):
         chunk = evaluator_names[index:index + 3]
         while len(chunk) < 3:
@@ -163,8 +181,7 @@ def _section_development_table(
     development_library: Mapping[str, Mapping[str, str]],
     styles,
 ):
-    from reportlab.lib import colors
-    from reportlab.platypus import Paragraph, Table, TableStyle
+    from reportlab.platypus import Paragraph, Table
 
     data = [[
         Paragraph("Category", styles["TableHeader"]),
@@ -179,17 +196,70 @@ def _section_development_table(
         ])
 
     table = Table(data, colWidths=[116, 40, 368], hAlign="LEFT", repeatRows=1)
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(PINES_LIGHT)),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor(PINES_GREEN)),
-        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#d1d5db")),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("ALIGN", (1, 1), (1, -1), "CENTER"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 6),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-    ]))
+    table.setStyle(_base_table_style())
+    return table
+
+
+def _strengths_table(strengths: list[tuple[str, Any]], styles):
+    from reportlab.platypus import Paragraph, Table
+
+    data = [[Paragraph("Category", styles["TableHeader"]), Paragraph("Score", styles["TableHeader"])] ]
+    if strengths:
+        for category, score in strengths:
+            data.append([
+                Paragraph(_safe(category), styles["SmallBold"]),
+                Paragraph(_safe(_score_text(score)), styles["Score"]),
+            ])
+    else:
+        data.append([Paragraph("No strengths entered yet.", styles["Small"]), Paragraph("", styles["Small"])])
+    table = Table(data, colWidths=[438, 86], hAlign="LEFT", repeatRows=1)
+    table.setStyle(_base_table_style())
+    return table
+
+
+def _priorities_table(priorities: list[tuple[str, Any]], development_library: Mapping[str, Mapping[str, str]], styles):
+    from reportlab.platypus import Paragraph, Table
+
+    data = [[
+        Paragraph("Priority", styles["TableHeader"]),
+        Paragraph("Score", styles["TableHeader"]),
+        Paragraph("Development Plan", styles["TableHeader"]),
+    ]]
+    if priorities:
+        for index, (category, score) in enumerate(priorities[:5], start=1):
+            library = development_library.get(category, {})
+            plan = (
+                f"<b>Why it matters:</b> {_safe(library.get('what_improvement_looks_like', ''))}<br/>"
+                f"<b>Training focus:</b> {_safe(library.get('practice_focus', ''))}<br/>"
+                f"<font color='{TEXT_MUTED}'><b>At-home work:</b> {_safe(library.get('at_home_development', ''))}</font>"
+            )
+            data.append([
+                Paragraph(f"{index}. {_safe(category)}", styles["SmallBold"]),
+                Paragraph(_safe(_score_text(score)), styles["Score"]),
+                Paragraph(plan, styles["Small"]),
+            ])
+    else:
+        data.append([
+            Paragraph("-", styles["Small"]),
+            Paragraph("", styles["Small"]),
+            Paragraph("No development priorities available yet.", styles["Small"]),
+        ])
+    table = Table(data, colWidths=[116, 40, 368], hAlign="LEFT", repeatRows=1)
+    table.setStyle(_base_table_style())
+    return table
+
+
+def _notes_table(notes: list[str], styles):
+    from reportlab.platypus import Paragraph, Table
+
+    data = [[Paragraph("Evaluator Notes", styles["TableHeader"])] ]
+    if notes:
+        for note in notes:
+            data.append([Paragraph(_safe(note), styles["Small"])])
+    else:
+        data.append([Paragraph("No notes entered yet.", styles["Small"])])
+    table = Table(data, colWidths=[REPORT_WIDTH], hAlign="LEFT", repeatRows=1)
+    table.setStyle(_base_table_style())
     return table
 
 
@@ -391,39 +461,18 @@ def player_development_pdf_response(
         story.append(Spacer(1, 8))
 
     story.append(_section_bar("Key Strengths", styles))
-    story.append(Spacer(1, 4))
-    strengths = summary.get("topStrengths", []) or []
-    if strengths:
-        for category, score in strengths:
-            story.append(Paragraph(f"<b>{_safe(category)}</b>: {_safe(_score_text(score))}", styles["Body"]))
-    else:
-        story.append(Paragraph("No strengths entered yet.", styles["Body"]))
+    story.append(Spacer(1, 2))
+    story.append(_strengths_table(summary.get("topStrengths", []) or [], styles))
+    story.append(Spacer(1, 8))
 
     story.append(_section_bar("Key Things to Work On", styles))
-    story.append(Spacer(1, 4))
-    priorities = summary.get("developmentPriorities", []) or []
-    if priorities:
-        for index, (category, score) in enumerate(priorities[:5], start=1):
-            library = development_library.get(category, {})
-            priority_lines = [
-                Paragraph(f"<b>{index}. {_safe(category)}</b> - Score {_safe(_score_text(score))}", styles["Body"]),
-                Paragraph(f"<b>Why it matters:</b> {_safe(library.get('what_improvement_looks_like', ''))}", styles["Body"]),
-                Paragraph(f"<b>Training focus:</b> {_safe(library.get('practice_focus', ''))}", styles["Body"]),
-                Paragraph(f"<b>At-home work:</b> {_safe(library.get('at_home_development', ''))}", styles["Body"]),
-                Spacer(1, 4),
-            ]
-            story.extend(priority_lines)
-    else:
-        story.append(Paragraph("No development priorities available yet.", styles["Body"]))
+    story.append(Spacer(1, 2))
+    story.append(_priorities_table(summary.get("developmentPriorities", []) or [], development_library, styles))
+    story.append(Spacer(1, 8))
 
     story.append(_section_bar("Evaluator Notes", styles))
-    story.append(Spacer(1, 4))
-    notes = summary.get("notes", []) or []
-    if notes:
-        for note in notes:
-            story.append(Paragraph(f"- {_safe(note)}", styles["Body"]))
-    else:
-        story.append(Paragraph("No notes entered yet.", styles["Body"]))
+    story.append(Spacer(1, 2))
+    story.append(_notes_table(summary.get("notes", []) or [], styles))
 
     def footer(canvas, doc_obj):
         canvas.saveState()
