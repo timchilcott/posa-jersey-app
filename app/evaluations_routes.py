@@ -5,7 +5,7 @@ import re
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
-from sqlalchemy import func, or_
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -17,8 +17,13 @@ from app.evaluation_library import (
     build_ai_prompt,
     summarize_rows,
 )
-from app.models import Player, Registration
-from app.models_evaluations import EvaluationScore, EvaluationSession, PlayerEvaluation
+from app.models import Player
+from app.models_evaluations import (
+    EvaluationScore,
+    EvaluationSession,
+    EvaluationSessionPlayer,
+    PlayerEvaluation,
+)
 
 router = APIRouter(prefix="/api/evaluations", tags=["evaluations"])
 
@@ -30,18 +35,11 @@ def _age_group_from_birth_year(birth_year: Optional[int]) -> str:
     return f"U{age}" if age > 0 else ""
 
 
-def _year_from_text(value: Optional[str]) -> Optional[str]:
+def _division_from_text(value: Optional[str]) -> str:
     if not value:
-        return None
-    match = re.search(r"20\d{2}", str(value))
-    return match.group(0) if match else None
-
-
-def _division_from_text(value: Optional[str]) -> Optional[str]:
-    if not value:
-        return None
+        return ""
     match = re.search(r"\bU\s?(\d{1,2})\b", str(value), re.IGNORECASE)
-    return f"U{match.group(1)}" if match else None
+    return f"U{match.group(1)}" if match else ""
 
 
 def _get_registration_meta(registration_id: str) -> Dict[str, str]:
@@ -62,14 +60,14 @@ def _get_registration_meta(registration_id: str) -> Dict[str, str]:
         "name": name,
         "sport": extract_sport_from_registration_name(name),
         "season_name": extract_season_from_registration_name(name),
-        "division_name": _division_from_text(name) or "",
+        "division_name": _division_from_text(name),
     }
 
 
 def _serialize_session(session: EvaluationSession, db: Session) -> Dict[str, Any]:
     player_count = (
-        db.query(func.count(func.distinct(PlayerEvaluation.player_name)))
-        .filter(PlayerEvaluation.session_id == session.id)
+        db.query(func.count(EvaluationSessionPlayer.id))
+        .filter(EvaluationSessionPlayer.session_id == session.id)
         .scalar()
         or 0
     )
@@ -163,6 +161,97 @@ def _pdf_response(title: str, lines: List[str]) -> Response:
     return Response(content=pdf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 
+def _sync_registration_into_session(session: EvaluationSession, db: Session) -> Dict[str, Any]:
+    """Sync exactly one SportsEngine registration and store its exact session roster."""
+    from app.services.sportsengine import (
+        get_registration_results,
+        process_single_registration,
+        extract_sport_from_registration_name,
+        extract_season_from_registration_name,
+        extract_player_name,
+        extract_birth_year,
+        extract_parent_email,
+        extract_division,
+        _find_existing_player,
+    )
+
+    registration_id = session.sportsengine_registration_id
+    cursor = None
+    registration_name = session.sportsengine_registration_name
+    results = {
+        "new_players": 0,
+        "existing_players": 0,
+        "new_registrations": 0,
+        "updated_registrations": 0,
+        "skipped_parents": 0,
+        "errors": [],
+    }
+    roster: List[Dict[str, Any]] = []
+    seen_names = set()
+
+    while True:
+        data = get_registration_results(registration_id, cursor, known_names=set())
+        form_data = data.get("registrationForm", {})
+        registration_name = form_data.get("name") or registration_name
+        sport = extract_sport_from_registration_name(registration_name)
+        season = extract_season_from_registration_name(registration_name)
+        division_from_name = _division_from_text(registration_name)
+
+        registrations_data = form_data.get("registrations", {})
+        nodes = registrations_data.get("nodes", [])
+        page_info = registrations_data.get("pageInfo", {})
+
+        for reg in nodes:
+            try:
+                process_single_registration(reg, sport, season, registration_name, db, results)
+            except Exception as exc:
+                results["errors"].append(str(exc))
+                continue
+
+            registrant = reg.get("registrant", {})
+            player_name = extract_player_name(registrant)
+            birth_year = extract_birth_year(registrant)
+            if birth_year and birth_year < 2005:
+                continue
+
+            player = _find_existing_player(db, player_name)
+            if not player:
+                continue
+
+            key = (player.full_name or player_name).strip().lower()
+            if key in seen_names:
+                continue
+            seen_names.add(key)
+
+            division = extract_division(reg.get("answers", [])) or division_from_name
+            roster.append({
+                "sportsengine_profile_id": str(registrant.get("id") or reg.get("id") or ""),
+                "player_id": player.id,
+                "player_name": player.full_name,
+                "birth_year": player.birth_year or birth_year,
+                "age_group": _age_group_from_birth_year(player.birth_year or birth_year),
+                "division": division,
+                "parent_email": player.parent_email or extract_parent_email(reg),
+                "jersey_number": player.jersey_number,
+            })
+
+        if page_info.get("hasNextPage"):
+            cursor = page_info.get("endCursor")
+        else:
+            break
+
+    db.query(EvaluationSessionPlayer).filter(EvaluationSessionPlayer.session_id == session.id).delete()
+    for item in roster:
+        db.add(EvaluationSessionPlayer(session_id=session.id, **item))
+
+    session.sportsengine_registration_name = registration_name
+    if not session.division_name:
+        session.division_name = _division_from_text(registration_name)
+
+    results["session_players"] = len(roster)
+    return results
+
+
 @router.get("/categories")
 def get_categories():
     return {"categories": CATEGORIES, "categoryFieldMap": CATEGORY_FIELD_MAP, "developmentLibrary": DEVELOPMENT_LIBRARY}
@@ -195,13 +284,13 @@ def list_sessions(db: Session = Depends(get_db)):
 
 @router.post("/sessions")
 async def create_session(request: Request, db: Session = Depends(get_db)):
-    """Create a session from exactly one selected SportsEngine registration and sync only that registration."""
+    """Create a session from exactly one selected SportsEngine registration."""
     data = await request.json()
     registration_id = str(data.get("sportsengine_registration_id") or data.get("registration_id") or "").strip()
     if not registration_id:
         raise HTTPException(status_code=400, detail="A SportsEngine registration must be selected for tryout import.")
 
-    from app.services.sportsengine import is_configured, sync_registration
+    from app.services.sportsengine import is_configured
 
     if not is_configured():
         raise HTTPException(status_code=400, detail="SportsEngine not configured")
@@ -216,8 +305,10 @@ async def create_session(request: Request, db: Session = Depends(get_db)):
         .first()
     )
     if session:
-        if not session.division_name:
-            session.division_name = meta.get("division_name")
+        session.sport = meta["sport"]
+        session.season_name = meta["season_name"]
+        session.division_name = data.get("division_name") or meta.get("division_name") or session.division_name
+        session.sportsengine_registration_name = meta["name"]
     else:
         session = EvaluationSession(
             name=session_name,
@@ -230,7 +321,7 @@ async def create_session(request: Request, db: Session = Depends(get_db)):
         db.add(session)
         db.flush()
 
-    sync_results = sync_registration(registration_id, db)
+    sync_results = _sync_registration_into_session(session, db)
     db.commit()
 
     return {"status": "success", "session": _serialize_session(session, db), "syncResults": sync_results}
@@ -245,50 +336,37 @@ def get_session(session_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/sessions/{session_id}/players")
-def list_session_players(session_id: int, db: Session = Depends(get_db)):
+def list_session_players(session_id: int, refresh: bool = False, db: Session = Depends(get_db)):
     session = db.query(EvaluationSession).filter(EvaluationSession.id == session_id).first()
     if not session:
         raise HTTPException(status_code=404, detail="Evaluation session not found")
 
-    reg_name = session.sportsengine_registration_name or ""
-    year = _year_from_text(session.season_name) or _year_from_text(reg_name)
-    division = session.division_name or _division_from_text(reg_name)
+    count = db.query(func.count(EvaluationSessionPlayer.id)).filter(EvaluationSessionPlayer.session_id == session.id).scalar() or 0
+    if refresh or count == 0:
+        _sync_registration_into_session(session, db)
+        db.commit()
 
-    base = db.query(Player, Registration).join(Registration, Registration.player_id == Player.id)
-
-    exact_query = base.filter(Registration.program == reg_name)
-    if session.sport and session.sport != "Unknown":
-        exact_query = exact_query.filter(func.lower(Registration.sport) == session.sport.lower())
-
-    fallback_query = base
-    if session.sport and session.sport != "Unknown":
-        fallback_query = fallback_query.filter(func.lower(Registration.sport) == session.sport.lower())
-    if year:
-        fallback_query = fallback_query.filter(Registration.season.contains(year))
-    if division:
-        fallback_query = fallback_query.filter(or_(Registration.division == division, Registration.division.ilike(f"%{division}%")))
-
-    rows = list(exact_query.all())
-    existing_ids = {player.id for player, _ in rows}
-    for player, registration in fallback_query.all():
-        if player.id not in existing_ids:
-            rows.append((player, registration))
-            existing_ids.add(player.id)
-
-    rows.sort(key=lambda item: (item[0].full_name or "").lower())
-
-    players = []
-    for player, registration in rows:
-        players.append({
-            "playerId": player.id,
-            "playerName": player.full_name,
-            "birthYear": player.birth_year,
-            "ageGroup": _age_group_from_birth_year(player.birth_year),
-            "division": registration.division,
-            "jerseyNumber": player.jersey_number,
-            "parentEmail": player.parent_email,
-        })
-    return {"players": players, "count": len(players), "match": {"year": year, "division": division, "sport": session.sport}}
+    rows = (
+        db.query(EvaluationSessionPlayer)
+        .filter(EvaluationSessionPlayer.session_id == session.id)
+        .order_by(EvaluationSessionPlayer.player_name)
+        .all()
+    )
+    players = [
+        {
+            "playerId": row.player_id,
+            "sessionPlayerId": row.id,
+            "sportsengineProfileId": row.sportsengine_profile_id,
+            "playerName": row.player_name,
+            "birthYear": row.birth_year,
+            "ageGroup": row.age_group or _age_group_from_birth_year(row.birth_year),
+            "division": row.division,
+            "jerseyNumber": row.jersey_number,
+            "parentEmail": row.parent_email,
+        }
+        for row in rows
+    ]
+    return {"players": players, "count": len(players), "source": "selected_registration", "registrationId": session.sportsengine_registration_id}
 
 
 @router.post("/sessions/{session_id}/evaluations")
