@@ -93,12 +93,9 @@ def _guidance_for_category(category: str, development_library: Mapping[str, Mapp
     library = development_library.get(category, {})
     practice = library.get("practice_focus", "")
     at_home = library.get("at_home_development", "")
-    parts = []
-    if practice:
-        parts.append(f"<b>Practice:</b> {_safe(practice)}")
-    if at_home:
-        parts.append(f"<b>At home:</b> {_safe(at_home)}")
-    return "<br/>".join(parts) or "Keep training this area with focused, game-like repetitions."
+    if practice and at_home:
+        return f"{_safe(practice)}<br/><font color='{TEXT_MUTED}'>At home: {_safe(at_home)}</font>"
+    return _safe(practice or at_home or "Keep training this area with focused, game-like repetitions.")
 
 
 def _section_development_table(
@@ -122,17 +119,17 @@ def _section_development_table(
             Paragraph(_guidance_for_category(category, development_library), styles["Small"]),
         ])
 
-    table = Table(data, colWidths=[118, 42, 364], hAlign="LEFT", repeatRows=1)
+    table = Table(data, colWidths=[116, 40, 368], hAlign="LEFT", repeatRows=1)
     table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(PINES_LIGHT)),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor(PINES_GREEN)),
-        ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#d1d5db")),
+        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#d1d5db")),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("ALIGN", (1, 1), (1, -1), "CENTER"),
         ("LEFTPADDING", (0, 0), (-1, -1), 6),
         ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
     ]))
     return table
 
@@ -152,7 +149,7 @@ def player_development_pdf_response(
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
         from reportlab.lib.units import inch
-        from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
     except Exception as exc:  # pragma: no cover - runtime dependency
         raise HTTPException(status_code=500, detail="PDF export requires reportlab.") from exc
 
@@ -204,7 +201,7 @@ def player_development_pdf_response(
             textColor=colors.white,
             backColor=colors.HexColor(PINES_GREEN),
             borderPadding=(5, 8, 5, 8),
-            spaceBefore=12,
+            spaceBefore=10,
             spaceAfter=0,
         ),
         "Body": ParagraphStyle(
@@ -218,8 +215,8 @@ def player_development_pdf_response(
         "Small": ParagraphStyle(
             "PinesSmall",
             parent=base["BodyText"],
-            fontSize=7.7,
-            leading=9.4,
+            fontSize=7.6,
+            leading=9,
             textColor=colors.HexColor(TEXT_DARK),
         ),
         "SmallBold": ParagraphStyle(
@@ -227,7 +224,7 @@ def player_development_pdf_response(
             parent=base["BodyText"],
             fontName="Helvetica-Bold",
             fontSize=7.8,
-            leading=9.4,
+            leading=9,
             textColor=colors.HexColor(TEXT_DARK),
         ),
         "TableHeader": ParagraphStyle(
@@ -235,15 +232,15 @@ def player_development_pdf_response(
             parent=base["BodyText"],
             fontName="Helvetica-Bold",
             fontSize=7.8,
-            leading=9.4,
+            leading=9,
             textColor=colors.HexColor(PINES_GREEN),
         ),
         "Score": ParagraphStyle(
             "PinesScore",
             parent=base["BodyText"],
             fontName="Helvetica-Bold",
-            fontSize=8.3,
-            leading=10,
+            fontSize=8.2,
+            leading=9.5,
             textColor=colors.HexColor(TEXT_DARK),
             alignment=TA_CENTER,
         ),
@@ -251,16 +248,16 @@ def player_development_pdf_response(
             "PinesCalloutLabel",
             parent=base["BodyText"],
             fontName="Helvetica-Bold",
-            fontSize=8,
-            leading=10,
+            fontSize=7.8,
+            leading=9.5,
             textColor=colors.HexColor(PINES_GREEN),
         ),
         "CalloutValue": ParagraphStyle(
             "PinesCalloutValue",
             parent=base["BodyText"],
             fontName="Helvetica-Bold",
-            fontSize=12,
-            leading=14,
+            fontSize=11,
+            leading=13,
             textColor=colors.HexColor(TEXT_DARK),
         ),
     }
@@ -288,23 +285,38 @@ def player_development_pdf_response(
     player_name = summary.get("playerName", "")
     player_info = [summary.get("ageGroup", ""), summary.get("position", "")]
     player_info = " | ".join([str(item) for item in player_info if item])
+    evaluator_names = ", ".join(summary.get("evaluatorNames", [])) or "Not specified"
     scores = summary.get("categoryScores", {})
     section_averages = summary.get("sectionAverages", {})
 
     overview_data = [
-        [Paragraph("Player", styles["CalloutLabel"]), Paragraph("Age / Position", styles["CalloutLabel"]), Paragraph("Weighted Score", styles["CalloutLabel"])],
-        [Paragraph(_safe(player_name), styles["CalloutValue"]), Paragraph(_safe(player_info or "-"), styles["CalloutValue"]), Paragraph(_safe(_score_text(summary.get("weightedScore"))), styles["CalloutValue"])],
+        [
+            Paragraph("Player", styles["CalloutLabel"]),
+            Paragraph("Age / Position", styles["CalloutLabel"]),
+            Paragraph("Weighted Score", styles["CalloutLabel"]),
+        ],
+        [
+            Paragraph(_safe(player_name), styles["CalloutValue"]),
+            Paragraph(_safe(player_info or "-"), styles["CalloutValue"]),
+            Paragraph(_safe(_score_text(summary.get("weightedScore"))), styles["CalloutValue"]),
+        ],
+        [
+            Paragraph("Evaluators", styles["CalloutLabel"]),
+            Paragraph(_safe(evaluator_names), styles["Body"]),
+            Paragraph("", styles["Body"]),
+        ],
     ]
     overview = Table(overview_data, colWidths=[220, 190, 114], hAlign="LEFT")
     overview.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(PINES_LIGHT)),
         ("BOX", (0, 0), (-1, -1), 0.75, colors.HexColor(PINES_BORDER)),
         ("INNERGRID", (0, 0), (-1, -1), 0.35, colors.HexColor(PINES_BORDER)),
+        ("SPAN", (1, 2), (2, 2)),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("LEFTPADDING", (0, 0), (-1, -1), 8),
         ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-        ("TOPPADDING", (0, 0), (-1, -1), 7),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
     ]))
     story.append(overview)
     story.append(Spacer(1, 8))
@@ -313,12 +325,10 @@ def player_development_pdf_response(
         section_title = section
         if section in section_averages:
             section_title = f"{section} - Avg {_score_text(section_averages[section])}"
-        story.append(KeepTogether([
-            Paragraph(_safe(section_title), styles["Section"]),
-            _section_development_table(section_categories, scores, development_library, styles),
-        ]))
+        story.append(Paragraph(_safe(section_title), styles["Section"]))
+        story.append(_section_development_table(section_categories, scores, development_library, styles))
 
-    story.append(KeepTogether([Paragraph("Key Strengths", styles["Section"])]))
+    story.append(Paragraph("Key Strengths", styles["Section"]))
     strengths = summary.get("topStrengths", []) or []
     if strengths:
         for category, score in strengths:
@@ -326,7 +336,7 @@ def player_development_pdf_response(
     else:
         story.append(Paragraph("No strengths entered yet.", styles["Body"]))
 
-    story.append(KeepTogether([Paragraph("Key Things to Work On", styles["Section"])]))
+    story.append(Paragraph("Key Things to Work On", styles["Section"]))
     priorities = summary.get("developmentPriorities", []) or []
     if priorities:
         for index, (category, score) in enumerate(priorities[:5], start=1):
@@ -336,14 +346,14 @@ def player_development_pdf_response(
                 Paragraph(f"<b>Why it matters:</b> {_safe(library.get('what_improvement_looks_like', ''))}", styles["Body"]),
                 Paragraph(f"<b>Training focus:</b> {_safe(library.get('practice_focus', ''))}", styles["Body"]),
                 Paragraph(f"<b>At-home work:</b> {_safe(library.get('at_home_development', ''))}", styles["Body"]),
-                Spacer(1, 5),
+                Spacer(1, 4),
             ]
-            story.append(KeepTogether(priority_lines))
+            story.extend(priority_lines)
     else:
         story.append(Paragraph("No development priorities available yet.", styles["Body"]))
 
-    story.append(KeepTogether([Paragraph("Evaluator Notes", styles["Section"])]))
-    notes = list(dict.fromkeys(summary.get("notes", []) or []))
+    story.append(Paragraph("Evaluator Notes", styles["Section"]))
+    notes = summary.get("notes", []) or []
     if notes:
         for note in notes:
             story.append(Paragraph(f"- {_safe(note)}", styles["Body"]))
