@@ -33,13 +33,19 @@ def _score_text(value: Any) -> str:
         return str(value)
 
 
-def _evaluator_display(names: list[str]) -> str:
-    cleaned = [name for name in names if name and name.strip().lower() != "evaluator"]
-    if not cleaned:
-        return "Not specified"
-    if len(cleaned) <= 3:
-        return ", ".join(cleaned)
-    return f"{len(cleaned)} evaluators"
+def _clean_evaluator_names(names: list[str]) -> list[str]:
+    cleaned = []
+    seen = set()
+    for name in names:
+        clean = str(name or "").strip()
+        if not clean or clean.lower() == "evaluator":
+            continue
+        key = clean.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        cleaned.append(clean)
+    return cleaned
 
 
 def _find_logo_path() -> str | None:
@@ -118,6 +124,35 @@ def _section_bar(title: str, styles):
         ("RIGHTPADDING", (0, 0), (-1, -1), 8),
         ("TOPPADDING", (0, 0), (-1, -1), 5),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+    ]))
+    return table
+
+
+def _evaluators_box(names: list[str], styles):
+    from reportlab.lib import colors
+    from reportlab.platypus import Paragraph, Table, TableStyle
+
+    evaluator_names = _clean_evaluator_names(names)
+    if not evaluator_names:
+        evaluator_names = ["Not specified"]
+
+    rows = [[Paragraph("Evaluators", styles["CalloutLabel"])]]
+    for index in range(0, len(evaluator_names), 3):
+        chunk = evaluator_names[index:index + 3]
+        while len(chunk) < 3:
+            chunk.append("")
+        rows.append([Paragraph(_safe(name), styles["EvaluatorName"]) for name in chunk])
+
+    table = Table(rows, colWidths=[REPORT_WIDTH / 3] * 3, hAlign="LEFT")
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(PINES_LIGHT)),
+        ("BOX", (0, 0), (-1, -1), 0.75, colors.HexColor(PINES_BORDER)),
+        ("SPAN", (0, 0), (2, 0)),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
     ]))
     return table
 
@@ -249,6 +284,13 @@ def player_development_pdf_response(
             leading=9,
             textColor=colors.HexColor(TEXT_DARK),
         ),
+        "EvaluatorName": ParagraphStyle(
+            "PinesEvaluatorName",
+            parent=base["BodyText"],
+            fontSize=8.2,
+            leading=10,
+            textColor=colors.HexColor(TEXT_DARK),
+        ),
         "TableHeader": ParagraphStyle(
             "PinesTableHeader",
             parent=base["BodyText"],
@@ -307,7 +349,7 @@ def player_development_pdf_response(
     player_name = summary.get("playerName", "")
     player_info = [summary.get("ageGroup", ""), summary.get("position", "")]
     player_info = " | ".join([str(item) for item in player_info if item])
-    evaluator_names = _evaluator_display(summary.get("evaluatorNames", []))
+    evaluator_names = summary.get("evaluatorNames", [])
     scores = summary.get("categoryScores", {})
     section_averages = summary.get("sectionAverages", {})
 
@@ -316,16 +358,14 @@ def player_development_pdf_response(
             Paragraph("Player", styles["CalloutLabel"]),
             Paragraph("Age / Position", styles["CalloutLabel"]),
             Paragraph("Weighted Score", styles["CalloutLabel"]),
-            Paragraph("Evaluators", styles["CalloutLabel"]),
         ],
         [
             Paragraph(_safe(player_name), styles["CalloutValue"]),
             Paragraph(_safe(player_info or "-"), styles["CalloutValue"]),
             Paragraph(_safe(_score_text(summary.get("weightedScore"))), styles["CalloutValue"]),
-            Paragraph(_safe(evaluator_names), styles["CalloutValue"]),
         ],
     ]
-    overview = Table(overview_data, colWidths=[195, 145, 95, 89], hAlign="LEFT")
+    overview = Table(overview_data, colWidths=[220, 190, 114], hAlign="LEFT")
     overview.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(PINES_LIGHT)),
         ("BOX", (0, 0), (-1, -1), 0.75, colors.HexColor(PINES_BORDER)),
@@ -337,6 +377,8 @@ def player_development_pdf_response(
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
     ]))
     story.append(overview)
+    story.append(Spacer(1, 4))
+    story.append(_evaluators_box(evaluator_names, styles))
     story.append(Spacer(1, 14))
 
     for section, section_categories in categories.items():
