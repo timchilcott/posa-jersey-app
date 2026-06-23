@@ -14,6 +14,7 @@ PINES_BORDER = "#b3dbb3"
 TEXT_DARK = "#1f2937"
 TEXT_MUTED = "#4b5563"
 PINES_LOGO_URL = "https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg"
+REPORT_WIDTH = 524
 
 
 def _safe(value: Any) -> str:
@@ -92,9 +93,12 @@ def _guidance_for_category(category: str, development_library: Mapping[str, Mapp
     library = development_library.get(category, {})
     practice = library.get("practice_focus", "")
     at_home = library.get("at_home_development", "")
-    if practice and at_home:
-        return f"{practice} At home: {at_home}"
-    return practice or at_home or "Keep training this area with focused, game-like repetitions."
+    parts = []
+    if practice:
+        parts.append(f"<b>Practice:</b> {_safe(practice)}")
+    if at_home:
+        parts.append(f"<b>At home:</b> {_safe(at_home)}")
+    return "<br/>".join(parts) or "Keep training this area with focused, game-like repetitions."
 
 
 def _section_development_table(
@@ -115,20 +119,20 @@ def _section_development_table(
         data.append([
             Paragraph(_safe(category), styles["SmallBold"]),
             Paragraph(_safe(_score_text(scores.get(category))), styles["Score"]),
-            Paragraph(_safe(_guidance_for_category(category, development_library)), styles["Small"]),
+            Paragraph(_guidance_for_category(category, development_library), styles["Small"]),
         ])
 
-    table = Table(data, colWidths=[118, 42, 330], hAlign="LEFT", repeatRows=1)
+    table = Table(data, colWidths=[118, 42, 364], hAlign="LEFT", repeatRows=1)
     table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(PINES_LIGHT)),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor(PINES_GREEN)),
-        ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#d1d5db")),
+        ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#d1d5db")),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("ALIGN", (1, 1), (1, -1), "CENTER"),
         ("LEFTPADDING", (0, 0), (-1, -1), 6),
         ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-        ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
     ]))
     return table
 
@@ -180,7 +184,7 @@ def player_development_pdf_response(
             leading=12,
             textColor=colors.HexColor(TEXT_MUTED),
             alignment=TA_CENTER,
-            spaceAfter=10,
+            spaceAfter=8,
         ),
         "Wordmark": ParagraphStyle(
             "PinesWordmark",
@@ -199,47 +203,47 @@ def player_development_pdf_response(
             leading=14,
             textColor=colors.white,
             backColor=colors.HexColor(PINES_GREEN),
-            borderPadding=(6, 8, 6, 8),
-            spaceBefore=10,
-            spaceAfter=7,
+            borderPadding=(5, 8, 5, 8),
+            spaceBefore=12,
+            spaceAfter=0,
         ),
         "Body": ParagraphStyle(
             "PinesBody",
             parent=base["BodyText"],
-            fontSize=9,
-            leading=12,
+            fontSize=8.5,
+            leading=11,
             textColor=colors.HexColor(TEXT_DARK),
             spaceAfter=4,
         ),
         "Small": ParagraphStyle(
             "PinesSmall",
             parent=base["BodyText"],
-            fontSize=8,
-            leading=10,
+            fontSize=7.7,
+            leading=9.4,
             textColor=colors.HexColor(TEXT_DARK),
         ),
         "SmallBold": ParagraphStyle(
             "PinesSmallBold",
             parent=base["BodyText"],
             fontName="Helvetica-Bold",
-            fontSize=8,
-            leading=10,
+            fontSize=7.8,
+            leading=9.4,
             textColor=colors.HexColor(TEXT_DARK),
         ),
         "TableHeader": ParagraphStyle(
             "PinesTableHeader",
             parent=base["BodyText"],
             fontName="Helvetica-Bold",
-            fontSize=8,
-            leading=10,
+            fontSize=7.8,
+            leading=9.4,
             textColor=colors.HexColor(PINES_GREEN),
         ),
         "Score": ParagraphStyle(
             "PinesScore",
             parent=base["BodyText"],
             fontName="Helvetica-Bold",
-            fontSize=9,
-            leading=11,
+            fontSize=8.3,
+            leading=10,
             textColor=colors.HexColor(TEXT_DARK),
             alignment=TA_CENTER,
         ),
@@ -269,15 +273,15 @@ def player_development_pdf_response(
         Paragraph(_safe(registration_name or session_name), styles["Subtitle"]),
     ]
     if logo:
-        header = Table([[logo, title_block]], colWidths=[1.3 * inch, 5.0 * inch], hAlign="LEFT")
+        header = Table([[logo, title_block]], colWidths=[1.3 * inch, REPORT_WIDTH - 1.3 * inch], hAlign="LEFT")
     else:
         wordmark = Paragraph("POSA Sports<br/><font color='#2f6130'>PINES</font>", styles["Wordmark"])
-        header = Table([[wordmark, title_block]], colWidths=[1.3 * inch, 5.0 * inch], hAlign="LEFT")
+        header = Table([[wordmark, title_block]], colWidths=[1.3 * inch, REPORT_WIDTH - 1.3 * inch], hAlign="LEFT")
     header.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("LEFTPADDING", (0, 0), (-1, -1), 0),
         ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
     ]))
     story.append(header)
 
@@ -291,7 +295,7 @@ def player_development_pdf_response(
         [Paragraph("Player", styles["CalloutLabel"]), Paragraph("Age / Position", styles["CalloutLabel"]), Paragraph("Weighted Score", styles["CalloutLabel"])],
         [Paragraph(_safe(player_name), styles["CalloutValue"]), Paragraph(_safe(player_info or "-"), styles["CalloutValue"]), Paragraph(_safe(_score_text(summary.get("weightedScore"))), styles["CalloutValue"])],
     ]
-    overview = Table(overview_data, colWidths=[220, 175, 95], hAlign="LEFT")
+    overview = Table(overview_data, colWidths=[220, 190, 114], hAlign="LEFT")
     overview.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(PINES_LIGHT)),
         ("BOX", (0, 0), (-1, -1), 0.75, colors.HexColor(PINES_BORDER)),
@@ -303,16 +307,18 @@ def player_development_pdf_response(
         ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
     ]))
     story.append(overview)
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 8))
 
     for section, section_categories in categories.items():
         section_title = section
         if section in section_averages:
             section_title = f"{section} - Avg {_score_text(section_averages[section])}"
-        story.append(Paragraph(_safe(section_title), styles["Section"]))
-        story.append(_section_development_table(section_categories, scores, development_library, styles))
+        story.append(KeepTogether([
+            Paragraph(_safe(section_title), styles["Section"]),
+            _section_development_table(section_categories, scores, development_library, styles),
+        ]))
 
-    story.append(Paragraph("Key Strengths", styles["Section"]))
+    story.append(KeepTogether([Paragraph("Key Strengths", styles["Section"])]))
     strengths = summary.get("topStrengths", []) or []
     if strengths:
         for category, score in strengths:
@@ -320,7 +326,7 @@ def player_development_pdf_response(
     else:
         story.append(Paragraph("No strengths entered yet.", styles["Body"]))
 
-    story.append(Paragraph("Key Things to Work On", styles["Section"]))
+    story.append(KeepTogether([Paragraph("Key Things to Work On", styles["Section"])]))
     priorities = summary.get("developmentPriorities", []) or []
     if priorities:
         for index, (category, score) in enumerate(priorities[:5], start=1):
@@ -336,8 +342,8 @@ def player_development_pdf_response(
     else:
         story.append(Paragraph("No development priorities available yet.", styles["Body"]))
 
-    story.append(Paragraph("Evaluator Notes", styles["Section"]))
-    notes = summary.get("notes", []) or []
+    story.append(KeepTogether([Paragraph("Evaluator Notes", styles["Section"])]))
+    notes = list(dict.fromkeys(summary.get("notes", []) or []))
     if notes:
         for note in notes:
             story.append(Paragraph(f"- {_safe(note)}", styles["Body"]))
