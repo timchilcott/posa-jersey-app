@@ -37,6 +37,11 @@ class EvaluationSession(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    players = relationship(
+        "EvaluationSessionPlayer",
+        back_populates="session",
+        cascade="all, delete-orphan",
+    )
     evaluations = relationship(
         "PlayerEvaluation",
         back_populates="session",
@@ -45,6 +50,34 @@ class EvaluationSession(Base):
 
     __table_args__ = (
         Index("ix_eval_session_registration", "sportsengine_registration_id"),
+    )
+
+
+class EvaluationSessionPlayer(Base):
+    """Exact player membership for one selected SportsEngine registration."""
+
+    __tablename__ = "evaluation_session_players"
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(Integer, ForeignKey("evaluation_sessions.id"), nullable=False, index=True)
+    player_id = Column(Integer, ForeignKey("players.id"), nullable=True, index=True)
+
+    sportsengine_profile_id = Column(String, nullable=True, index=True)
+    player_name = Column(String, nullable=False, index=True)
+    birth_year = Column(Integer, nullable=True, index=True)
+    age_group = Column(String, nullable=True)
+    division = Column(String, nullable=True)
+    parent_email = Column(String, nullable=True)
+    jersey_number = Column(Integer, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    session = relationship("EvaluationSession", back_populates="players")
+
+    __table_args__ = (
+        UniqueConstraint("session_id", "player_name", name="uq_eval_session_player_name"),
+        Index("ix_eval_session_player_session_name", "session_id", "player_name"),
     )
 
 
