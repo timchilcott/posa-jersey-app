@@ -1,10 +1,11 @@
 """Routes for tryout/player evaluations and development-plan exports."""
 from io import BytesIO
 from typing import Any, Dict, List, Optional
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -25,14 +26,30 @@ router = APIRouter(prefix="/api/evaluations", tags=["evaluations"])
 def _age_group_from_birth_year(birth_year: Optional[int]) -> str:
     if not birth_year:
         return ""
-    # Youth soccer age groups normally roll by birth year. Use 2026 as the current app year,
-    # consistent with the existing admin routes until this becomes configurable.
     age = 2026 - int(birth_year)
     return f"U{age}" if age > 0 else ""
 
 
+def _year_from_text(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    match = re.search(r"20\d{2}", str(value))
+    return match.group(0) if match else None
+
+
+def _division_from_text(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    match = re.search(r"\bU\s?(\d{1,2})\b", str(value), re.IGNORECASE)
+    return f"U{match.group(1)}" if match else None
+
+
 def _get_registration_meta(registration_id: str) -> Dict[str, str]:
-    from app.services.sportsengine import get_all_registrations, extract_season_from_registration_name, extract_sport_from_registration_name
+    from app.services.sportsengine import (
+        get_all_registrations,
+        extract_season_from_registration_name,
+        extract_sport_from_registration_name,
+    )
 
     forms = get_all_registrations()
     selected = next((form for form in forms if str(form.get("id")) == str(registration_id)), None)
@@ -45,6 +62,7 @@ def _get_registration_meta(registration_id: str) -> Dict[str, str]:
         "name": name,
         "sport": extract_sport_from_registration_name(name),
         "season_name": extract_season_from_registration_name(name),
+        "division_name": _division_from_text(name) or "",
     }
 
 
@@ -112,10 +130,8 @@ def _summaries_for_session(session: EvaluationSession, db: Session) -> List[Dict
     summaries: List[Dict[str, Any]] = []
     for name in names:
         rows = _rows_for_player(session.id, name, db)
-        if not rows:
-            continue
-        summary = summarize_rows(rows)
-        summaries.append(summary)
+        if rows:
+            summaries.append(summarize_rows(rows))
     return summaries
 
 
@@ -124,42 +140,32 @@ def _pdf_response(title: str, lines: List[str]) -> Response:
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.styles import getSampleStyleSheet
         from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-    except Exception as exc:  # pragma: no cover - depends on runtime dependency
-        raise HTTPException(
-            status_code=500,
-            detail="PDF export requires reportlab. Add 'reportlab' to requirements.txt and redeploy.",
-        ) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="PDF export requires reportlab.") from exc
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=54, leftMargin=54, topMargin=54, bottomMargin=54)
     styles = getSampleStyleSheet()
     story = [Paragraph(title, styles["Title"]), Spacer(1, 12)]
     for line in lines:
-        if not line.strip():
+        safe_line = str(line).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        if not safe_line.strip():
             story.append(Spacer(1, 8))
-        elif line.endswith(":") or line.startswith(("1.", "2.", "3.", "4.", "5.")):
-            story.append(Paragraph(f"<b>{line}</b>", styles["Heading3"]))
+        elif safe_line.endswith(":") or safe_line.startswith(("1.", "2.", "3.", "4.", "5.")):
+            story.append(Paragraph(f"<b>{safe_line}</b>", styles["Heading3"]))
         else:
-            story.append(Paragraph(line, styles["BodyText"]))
+            story.append(Paragraph(safe_line, styles["BodyText"]))
             story.append(Spacer(1, 4))
     doc.build(story)
     pdf = buffer.getvalue()
     buffer.close()
     filename = title.lower().replace(" ", "-").replace("/", "-") + ".pdf"
-    return Response(
-        content=pdf,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+    return Response(content=pdf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 
 @router.get("/categories")
 def get_categories():
-    return {
-        "categories": CATEGORIES,
-        "categoryFieldMap": CATEGORY_FIELD_MAP,
-        "developmentLibrary": DEVELOPMENT_LIBRARY,
-    }
+    return {"categories": CATEGORIES, "categoryFieldMap": CATEGORY_FIELD_MAP, "developmentLibrary": DEVELOPMENT_LIBRARY}
 
 
 @router.get("/sportsengine/registrations")
@@ -173,12 +179,11 @@ def get_tryout_registrations():
     forms = get_all_registrations()
     registrations = []
     for form in forms:
-        registrations.append({
-            "id": str(form.get("id")),
-            "name": form.get("name"),
-            "status": form.get("status"),
-            "sport": extract_sport_from_registration_name(form.get("name") or ""),
-        })
+        name = form.get("name") or ""
+        sport = extract_sport_from_registration_name(name)
+        if sport == "Unknown" and not any(word in name.lower() for word in ["tryout", "soccer", "pines"]):
+            continue
+        registrations.append({"id": str(form.get("id")), "name": name, "status": form.get("status"), "sport": sport})
     return {"status": "success", "registrations": registrations}
 
 
@@ -204,35 +209,31 @@ async def create_session(request: Request, db: Session = Depends(get_db)):
     meta = _get_registration_meta(registration_id)
     session_name = data.get("name") or meta["name"]
 
-    existing = (
+    session = (
         db.query(EvaluationSession)
         .filter(EvaluationSession.sportsengine_registration_id == registration_id)
         .filter(EvaluationSession.name == session_name)
         .first()
     )
-    if existing:
-        session = existing
+    if session:
+        if not session.division_name:
+            session.division_name = meta.get("division_name")
     else:
         session = EvaluationSession(
             name=session_name,
             sport=meta["sport"],
             season_name=meta["season_name"],
-            division_name=data.get("division_name"),
+            division_name=data.get("division_name") or meta.get("division_name"),
             sportsengine_registration_id=registration_id,
             sportsengine_registration_name=meta["name"],
         )
         db.add(session)
         db.flush()
 
-    # Critical guardrail: sync ONLY the selected registration ID.
     sync_results = sync_registration(registration_id, db)
     db.commit()
 
-    return {
-        "status": "success",
-        "session": _serialize_session(session, db),
-        "syncResults": sync_results,
-    }
+    return {"status": "success", "session": _serialize_session(session, db), "syncResults": sync_results}
 
 
 @router.get("/sessions/{session_id}")
@@ -249,25 +250,35 @@ def list_session_players(session_id: int, db: Session = Depends(get_db)):
     if not session:
         raise HTTPException(status_code=404, detail="Evaluation session not found")
 
-    query = (
-        db.query(Player, Registration)
-        .join(Registration, Registration.player_id == Player.id)
-        .filter(Registration.program == session.sportsengine_registration_name)
-        .order_by(Player.full_name)
-    )
-    if session.sport:
-        query = query.filter(func.lower(Registration.sport) == session.sport.lower())
-    if session.season_name:
-        year = ''.join(ch for ch in session.season_name if ch.isdigit())
-        if year:
-            query = query.filter(Registration.season.contains(year))
+    reg_name = session.sportsengine_registration_name or ""
+    year = _year_from_text(session.season_name) or _year_from_text(reg_name)
+    division = session.division_name or _division_from_text(reg_name)
+
+    base = db.query(Player, Registration).join(Registration, Registration.player_id == Player.id)
+
+    exact_query = base.filter(Registration.program == reg_name)
+    if session.sport and session.sport != "Unknown":
+        exact_query = exact_query.filter(func.lower(Registration.sport) == session.sport.lower())
+
+    fallback_query = base
+    if session.sport and session.sport != "Unknown":
+        fallback_query = fallback_query.filter(func.lower(Registration.sport) == session.sport.lower())
+    if year:
+        fallback_query = fallback_query.filter(Registration.season.contains(year))
+    if division:
+        fallback_query = fallback_query.filter(or_(Registration.division == division, Registration.division.ilike(f"%{division}%")))
+
+    rows = list(exact_query.all())
+    existing_ids = {player.id for player, _ in rows}
+    for player, registration in fallback_query.all():
+        if player.id not in existing_ids:
+            rows.append((player, registration))
+            existing_ids.add(player.id)
+
+    rows.sort(key=lambda item: (item[0].full_name or "").lower())
 
     players = []
-    seen = set()
-    for player, registration in query.all():
-        if player.id in seen:
-            continue
-        seen.add(player.id)
+    for player, registration in rows:
         players.append({
             "playerId": player.id,
             "playerName": player.full_name,
@@ -277,7 +288,7 @@ def list_session_players(session_id: int, db: Session = Depends(get_db)):
             "jerseyNumber": player.jersey_number,
             "parentEmail": player.parent_email,
         })
-    return {"players": players}
+    return {"players": players, "count": len(players), "match": {"year": year, "division": division, "sport": session.sport}}
 
 
 @router.post("/sessions/{session_id}/evaluations")
@@ -377,10 +388,7 @@ def player_pdf(session_id: int, player_name: str, db: Session = Depends(get_db))
             f"At-Home Development: {library.get('at_home_development', '')}",
             "",
         ])
-    lines.extend([
-        "Evaluator Notes:",
-        "; ".join(summary.get("notes", [])) or "No notes entered.",
-    ])
+    lines.extend(["Evaluator Notes:", "; ".join(summary.get("notes", [])) or "No notes entered."])
     return _pdf_response(f"{summary.get('playerName', player_name)} Development Plan", lines)
 
 
