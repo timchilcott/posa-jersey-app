@@ -3,39 +3,13 @@ Shared player-evaluation categories, scoring helpers, and development text.
 """
 from statistics import mean
 from typing import Any, Dict, Iterable, List, Mapping, Optional
+import re
 
 CATEGORIES: Dict[str, List[str]] = {
-    "Technical/Skills": [
-        "Shooting",
-        "Receiving & Turning",
-        "Passing",
-        "Balls Out of Air",
-        "Dribbling",
-        "Tackling",
-    ],
-    "Tactical/Decision Making": [
-        "Support Play",
-        "Attacking",
-        "Off Ball Movement",
-        "Defending",
-        "Vision",
-        "Speed of Play",
-    ],
-    "Physical": [
-        "Speed",
-        "Agility",
-        "Balance",
-        "Power",
-        "Endurance",
-    ],
-    "Psychological": [
-        "Attitude",
-        "Coachability",
-        "Body Language",
-        "Communication",
-        "Sportsmanship",
-        "Leadership",
-    ],
+    "Technical/Skills": ["Shooting", "Receiving & Turning", "Passing", "Balls Out of Air", "Dribbling", "Tackling"],
+    "Tactical/Decision Making": ["Support Play", "Attacking", "Off Ball Movement", "Defending", "Vision", "Speed of Play"],
+    "Physical": ["Speed", "Agility", "Balance", "Power", "Endurance"],
+    "Psychological": ["Attitude", "Coachability", "Body Language", "Communication", "Sportsmanship", "Leadership"],
 }
 
 CATEGORY_FIELD_MAP = {
@@ -71,13 +45,7 @@ WEIGHTS = {
     "Psychological": 0.20,
 }
 
-SCORE_LABELS = {
-    1: "Beginning",
-    2: "Developing",
-    3: "Competent",
-    4: "Advanced",
-    5: "Elite",
-}
+SCORE_LABELS = {1: "Beginning", 2: "Developing", 3: "Competent", 4: "Advanced", 5: "Elite"}
 
 _DEVELOPMENT_DEFAULTS = {
     "Shooting": ("A stronger finisher strikes the ball with consistent technique, chooses appropriate moments to shoot, and can place shots with accuracy and composure.", "Focus on clean contact, accuracy before power, shooting with both feet, and creating a shooting window with the first touch.", "Use a wall, goal, or target area to practice controlled finishing. Start with clean contact and placement, then add movement, angle changes, and weak-foot repetitions."),
@@ -143,6 +111,22 @@ def unique_values(values: Iterable[Any]) -> List[str]:
     return result
 
 
+def unique_evaluator_names(values: Iterable[Any]) -> List[str]:
+    seen = set()
+    result: List[str] = []
+    for value in values:
+        for part in re.split(r"[,;\n]+", str(value or "")):
+            clean = part.strip()
+            if not clean or clean.lower() == "evaluator":
+                continue
+            key = re.sub(r"\s+", " ", clean).lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            result.append(clean)
+    return result
+
+
 def summarize_rows(rows: Iterable[Mapping[str, Any]]) -> Dict[str, Any]:
     rows = list(rows)
     if not rows:
@@ -187,7 +171,7 @@ def summarize_rows(rows: Iterable[Mapping[str, Any]]) -> Dict[str, Any]:
         "weightedScore": weighted_score,
         "topStrengths": ranked_high[:3],
         "developmentPriorities": ranked_low[:3],
-        "evaluatorNames": unique_values(row.get("evaluatorName") or row.get("Evaluator Name") for row in rows),
+        "evaluatorNames": unique_evaluator_names(row.get("evaluatorName") or row.get("Evaluator Name") for row in rows),
         "evaluatorStrengths": unique_values(row.get("Biggest Strength", "") for row in rows),
         "evaluatorGrowthAreas": unique_values(row.get("Biggest Growth Area", "") for row in rows),
         "notes": unique_values(row.get("Notes", "") for row in rows),
