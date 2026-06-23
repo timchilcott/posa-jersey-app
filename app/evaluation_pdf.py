@@ -13,6 +13,7 @@ PINES_LIGHT = "#f0f7f0"
 PINES_BORDER = "#b3dbb3"
 TEXT_DARK = "#1f2937"
 TEXT_MUTED = "#4b5563"
+PINES_LOGO_URL = "https://cdn.prod.website-files.com/681d81085457ff1ea60182c2/684103edf65163765f534531_PINES_LOGO_DARK.svg"
 
 
 def _safe(value: Any) -> str:
@@ -33,24 +34,71 @@ def _score_text(value: Any) -> str:
 
 def _find_logo_path() -> str | None:
     static_dir = Path(__file__).resolve().parent / "static"
-    for filename in ("pines-logo.png", "pines_logo.png", "logo.png", "pines-logo.jpg", "pines_logo.jpg", "logo.jpg"):
+    for filename in (
+        "pines-logo.png",
+        "pines_logo.png",
+        "logo.png",
+        "pines-logo.jpg",
+        "pines_logo.jpg",
+        "logo.jpg",
+        "pines-logo.svg",
+        "pines_logo.svg",
+        "logo.svg",
+    ):
         candidate = static_dir / filename
         if candidate.exists():
             return str(candidate)
     return None
 
 
-def _paragraph(text: Any, style):
-    from reportlab.platypus import Paragraph
+def _logo_flowable(width: float, height: float):
+    """Return the app's Pines logo as a ReportLab flowable when available."""
+    from reportlab.lib.units import inch
+    from reportlab.platypus import Image
 
-    return Paragraph(_safe(text), style)
+    logo_path = _find_logo_path()
+    if logo_path and not logo_path.lower().endswith(".svg"):
+        return Image(logo_path, width=width, height=height, kind="proportional")
+
+    try:
+        from reportlab.graphics.shapes import Drawing
+        from svglib.svglib import svg2rlg
+    except Exception:
+        return None
+
+    drawing = None
+    try:
+        if logo_path and logo_path.lower().endswith(".svg"):
+            drawing = svg2rlg(logo_path)
+        else:
+            import requests
+
+            response = requests.get(PINES_LOGO_URL, timeout=5)
+            response.raise_for_status()
+            drawing = svg2rlg(BytesIO(response.content))
+    except Exception:
+        return None
+
+    if not drawing:
+        return None
+
+    scale = min(width / float(drawing.width or width), height / float(drawing.height or height))
+    scaled = Drawing(width, height)
+    drawing.scale(scale, scale)
+    scaled.add(drawing)
+    return scaled
 
 
 def _score_table(section: str, categories: list[str], scores: Mapping[str, Any], styles):
     from reportlab.lib import colors
     from reportlab.platypus import Paragraph, Table, TableStyle
 
-    data = [[Paragraph("Category", styles["TableHeader"]), Paragraph("Score", styles["TableHeader"]), Paragraph("Category", styles["TableHeader"]), Paragraph("Score", styles["TableHeader"])]]
+    data = [[
+        Paragraph("Category", styles["TableHeader"]),
+        Paragraph("Score", styles["TableHeader"]),
+        Paragraph("Category", styles["TableHeader"]),
+        Paragraph("Score", styles["TableHeader"]),
+    ]]
     pairs = [(category, _score_text(scores.get(category))) for category in categories]
     for index in range(0, len(pairs), 2):
         left = pairs[index]
@@ -93,7 +141,7 @@ def player_development_pdf_response(
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
         from reportlab.lib.units import inch
-        from reportlab.platypus import Image, KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+        from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
     except Exception as exc:  # pragma: no cover - runtime dependency
         raise HTTPException(status_code=500, detail="PDF export requires reportlab.") from exc
 
@@ -126,6 +174,15 @@ def player_development_pdf_response(
             textColor=colors.HexColor(TEXT_MUTED),
             alignment=TA_CENTER,
             spaceAfter=10,
+        ),
+        "Wordmark": ParagraphStyle(
+            "PinesWordmark",
+            parent=base["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=13,
+            leading=15,
+            textColor=colors.HexColor(PINES_GREEN),
+            alignment=TA_CENTER,
         ),
         "Section": ParagraphStyle(
             "PinesSection",
@@ -191,23 +248,23 @@ def player_development_pdf_response(
 
     story = []
 
-    logo_path = _find_logo_path()
-    if logo_path:
-        logo = Image(logo_path, width=0.9 * inch, height=0.9 * inch, kind="proportional")
-        title_block = [
-            Paragraph("Pines Player Development Report", styles["Title"]),
-            Paragraph(_safe(registration_name or session_name), styles["Subtitle"]),
-        ]
-        header = Table([[logo, title_block]], colWidths=[0.95 * inch, 5.35 * inch], hAlign="LEFT")
-        header.setStyle(TableStyle([
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-        ]))
-        story.append(header)
+    logo = _logo_flowable(width=1.15 * inch, height=0.75 * inch)
+    title_block = [
+        Paragraph("Pines Player Development Report", styles["Title"]),
+        Paragraph(_safe(registration_name or session_name), styles["Subtitle"]),
+    ]
+    if logo:
+        header = Table([[logo, title_block]], colWidths=[1.3 * inch, 5.0 * inch], hAlign="LEFT")
     else:
-        story.append(Paragraph("Pines Player Development Report", styles["Title"]))
-        story.append(Paragraph(_safe(registration_name or session_name), styles["Subtitle"]))
+        wordmark = Paragraph("POSA Sports<br/><font color='#2f6130'>PINES</font>", styles["Wordmark"])
+        header = Table([[wordmark, title_block]], colWidths=[1.3 * inch, 5.0 * inch], hAlign="LEFT")
+    header.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+    ]))
+    story.append(header)
 
     player_name = summary.get("playerName", "")
     player_info = [summary.get("ageGroup", ""), summary.get("position", "")]
@@ -280,7 +337,7 @@ def player_development_pdf_response(
         canvas.line(doc_obj.leftMargin, 28, letter[0] - doc_obj.rightMargin, 28)
         canvas.setFont("Helvetica", 7)
         canvas.setFillColor(colors.HexColor(TEXT_MUTED))
-        canvas.drawString(doc_obj.leftMargin, 16, "Pines Athletics - Player Development")
+        canvas.drawString(doc_obj.leftMargin, 16, "POSA Sports - Pines Player Development")
         canvas.drawRightString(letter[0] - doc_obj.rightMargin, 16, f"Page {doc_obj.page}")
         canvas.restoreState()
 
