@@ -30,11 +30,38 @@ from app.models_evaluations import (
 router = APIRouter(prefix="/api/evaluations", tags=["evaluations"])
 
 
+def _age_from_birthdate(value: Optional[str]) -> Optional[int]:
+    if not value:
+        return None
+    raw = str(value).strip()
+    if not raw:
+        return None
+    try:
+        birthdate = datetime.fromisoformat(raw[:10]).date()
+    except ValueError:
+        return None
+    today = datetime.utcnow().date()
+    age = today.year - birthdate.year - ((today.month, today.day) < (birthdate.month, birthdate.day))
+    return age if age > 0 else None
+
+
 def _age_group_from_birth_year(birth_year: Optional[int]) -> str:
     if not birth_year:
         return ""
-    age = 2026 - int(birth_year)
-    return f"U{age}" if age > 0 else ""
+    try:
+        age = datetime.utcnow().year - int(birth_year)
+    except (TypeError, ValueError):
+        return ""
+    return str(age) if age > 0 else ""
+
+
+def _display_age(value: Optional[str], birth_year: Optional[int]) -> str:
+    clean = str(value or "").strip()
+    if clean:
+        match = re.fullmatch(r"U\s?(\d{1,2})", clean, flags=re.IGNORECASE)
+        if not match:
+            return clean
+    return _age_group_from_birth_year(birth_year)
 
 
 def _division_from_text(value: Optional[str]) -> str:
@@ -93,6 +120,15 @@ def _serialize_session(session: EvaluationSession, db: Session) -> Dict[str, Any
     }
 
 
+def _session_player_for_evaluation(session_id: int, evaluation: PlayerEvaluation, db: Session) -> Optional[EvaluationSessionPlayer]:
+    query = db.query(EvaluationSessionPlayer).filter(EvaluationSessionPlayer.session_id == session_id)
+    if evaluation.player_id:
+        match = query.filter(EvaluationSessionPlayer.player_id == evaluation.player_id).first()
+        if match:
+            return match
+    return query.filter(func.lower(EvaluationSessionPlayer.player_name) == evaluation.player_name.lower()).first()
+
+
 def _rows_for_player(session_id: int, player_name: str, db: Session) -> List[Dict[str, Any]]:
     evaluations = (
         db.query(PlayerEvaluation)
@@ -103,14 +139,18 @@ def _rows_for_player(session_id: int, player_name: str, db: Session) -> List[Dic
     )
     rows: List[Dict[str, Any]] = []
     for evaluation in evaluations:
+        session_player = _session_player_for_evaluation(session_id, evaluation, db)
+        roster_age = _display_age(session_player.age_group, session_player.birth_year) if session_player else ""
+        evaluation_age = _display_age(evaluation.age_group, evaluation.birth_year)
         row: Dict[str, Any] = {
             "evaluationId": evaluation.id,
             "evaluatorName": evaluation.evaluator_name,
             "Evaluator Name": evaluation.evaluator_name,
             "playerId": evaluation.player_id,
             "playerName": evaluation.player_name,
-            "ageGroup": evaluation.age_group or _age_group_from_birth_year(evaluation.birth_year),
-            "position": evaluation.primary_position or "",
+            "ageGroup": roster_age or evaluation_age,
+            "birthYear": (session_player.birth_year if session_player else None) or evaluation.birth_year,
+            "position": "",
             "Future Potential": evaluation.future_potential,
             "Biggest Strength": evaluation.biggest_strength,
             "Biggest Growth Area": evaluation.biggest_growth_area,
@@ -231,12 +271,14 @@ def _sync_registration_into_session(session: EvaluationSession, db: Session) -> 
             seen_names.add(key)
 
             division = extract_division(reg.get("answers", [])) or division_from_name
+            exact_age = _age_from_birthdate(registrant.get("dateOfBirth"))
+            roster_birth_year = player.birth_year or birth_year
             roster.append({
                 "sportsengine_profile_id": str(registrant.get("id") or reg.get("id") or ""),
                 "player_id": player.id,
                 "player_name": player.full_name,
-                "birth_year": player.birth_year or birth_year,
-                "age_group": _age_group_from_birth_year(player.birth_year or birth_year),
+                "birth_year": roster_birth_year,
+                "age_group": str(exact_age) if exact_age else _age_group_from_birth_year(roster_birth_year),
                 "division": division,
                 "parent_email": player.parent_email or extract_parent_email(reg),
                 "jersey_number": player.jersey_number,
@@ -366,7 +408,7 @@ def list_session_players(session_id: int, refresh: bool = False, db: Session = D
             "sportsengineProfileId": row.sportsengine_profile_id,
             "playerName": row.player_name,
             "birthYear": row.birth_year,
-            "ageGroup": row.age_group or _age_group_from_birth_year(row.birth_year),
+            "ageGroup": _display_age(row.age_group, row.birth_year),
             "division": row.division,
             "jerseyNumber": row.jersey_number,
             "parentEmail": row.parent_email,
@@ -417,10 +459,11 @@ async def save_evaluation(session_id: int, request: Request, db: Session = Depen
         db.add(evaluation)
         db.flush()
 
+    eval_birth_year = player.birth_year if player else data.get("birth_year") or data.get("birthYear")
     evaluation.player_id = player.id if player else None
     evaluation.player_name = saved_player_name
-    evaluation.birth_year = player.birth_year if player else data.get("birth_year") or data.get("birthYear")
-    evaluation.age_group = data.get("age_group") or data.get("ageGroup")
+    evaluation.birth_year = eval_birth_year
+    evaluation.age_group = _display_age(data.get("age_group") or data.get("ageGroup"), eval_birth_year)
     evaluation.primary_position = data.get("primary_position") or data.get("primaryPosition")
     evaluation.evaluator_name = evaluator_name
     evaluation.future_potential = data.get("future_potential") or data.get("futurePotential")
