@@ -221,12 +221,12 @@ def _priorities_table(priorities: list[tuple[str, Any]], development_library: Ma
     from reportlab.platypus import Paragraph, Table
 
     data = [[
-        Paragraph("Priority", styles["TableHeader"]),
+        Paragraph("Focus Area", styles["TableHeader"]),
         Paragraph("Score", styles["TableHeader"]),
         Paragraph("Development Plan", styles["TableHeader"]),
     ]]
     if priorities:
-        for index, (category, score) in enumerate(priorities[:5], start=1):
+        for category, score in priorities[:5]:
             library = development_library.get(category, {})
             plan = (
                 f"<b>Why it matters:</b> {_safe(library.get('what_improvement_looks_like', ''))}<br/>"
@@ -234,7 +234,7 @@ def _priorities_table(priorities: list[tuple[str, Any]], development_library: Ma
                 f"<font color='{TEXT_MUTED}'><b>At-home work:</b> {_safe(library.get('at_home_development', ''))}</font>"
             )
             data.append([
-                Paragraph(f"{index}. {_safe(category)}", styles["SmallBold"]),
+                Paragraph(_safe(category), styles["SmallBold"]),
                 Paragraph(_safe(_score_text(score)), styles["Score"]),
                 Paragraph(plan, styles["Small"]),
             ])
@@ -301,6 +301,7 @@ def player_development_pdf_response(
             fontSize=18,
             leading=22,
             textColor=colors.HexColor(PINES_GREEN),
+            alignment=TA_CENTER,
             spaceAfter=4,
         ),
         "Subtitle": ParagraphStyle(
@@ -403,22 +404,22 @@ def player_development_pdf_response(
         Paragraph("Pines Player Development Report", styles["Title"]),
         Paragraph(_safe(registration_name or session_name), styles["Subtitle"]),
     ]
+    right_spacer = Paragraph("", styles["Body"])
     if logo:
-        header = Table([[logo, title_block]], colWidths=[1.3 * inch, REPORT_WIDTH - 1.3 * inch], hAlign="LEFT")
+        header = Table([[logo, title_block, right_spacer]], colWidths=[1.3 * inch, REPORT_WIDTH - 2.6 * inch, 1.3 * inch], hAlign="LEFT")
     else:
         wordmark = Paragraph("POSA Sports<br/><font color='#2f6130'>PINES</font>", styles["Wordmark"])
-        header = Table([[wordmark, title_block]], colWidths=[1.3 * inch, REPORT_WIDTH - 1.3 * inch], hAlign="LEFT")
+        header = Table([[wordmark, title_block, right_spacer]], colWidths=[1.3 * inch, REPORT_WIDTH - 2.6 * inch, 1.3 * inch], hAlign="LEFT")
     header.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
     ]))
     story.append(header)
 
     player_name = summary.get("playerName", "")
-    player_info = [summary.get("ageGroup", ""), summary.get("position", "")]
-    player_info = " | ".join([str(item) for item in player_info if item])
+    player_age = summary.get("ageGroup", "")
     evaluator_names = summary.get("evaluatorNames", [])
     scores = summary.get("categoryScores", {})
     section_averages = summary.get("sectionAverages", {})
@@ -426,16 +427,16 @@ def player_development_pdf_response(
     overview_data = [
         [
             Paragraph("Player", styles["CalloutLabel"]),
-            Paragraph("Age / Position", styles["CalloutLabel"]),
+            Paragraph("Age", styles["CalloutLabel"]),
             Paragraph("Weighted Score", styles["CalloutLabel"]),
         ],
         [
             Paragraph(_safe(player_name), styles["CalloutValue"]),
-            Paragraph(_safe(player_info or "-"), styles["CalloutValue"]),
+            Paragraph(_safe(player_age or "-"), styles["CalloutValue"]),
             Paragraph(_safe(_score_text(summary.get("weightedScore"))), styles["CalloutValue"]),
         ],
     ]
-    overview = Table(overview_data, colWidths=[220, 190, 114], hAlign="LEFT")
+    overview = Table(overview_data, colWidths=[250, 120, 154], hAlign="LEFT")
     overview.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(PINES_LIGHT)),
         ("BOX", (0, 0), (-1, -1), 0.75, colors.HexColor(PINES_BORDER)),
