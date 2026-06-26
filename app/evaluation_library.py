@@ -133,16 +133,15 @@ def summarize_rows(rows: Iterable[Mapping[str, Any]]) -> Dict[str, Any]:
         raise ValueError("No evaluations supplied")
 
     first = rows[0]
-    averaged: Dict[str, float] = {}
+    current_scores: Dict[str, float] = {}
     for category in all_category_names() + ["Future Potential"]:
-        scores = [to_float(row.get(category)) for row in rows]
-        scores = [score for score in scores if score is not None]
-        if scores:
-            averaged[category] = round(mean(scores), 2)
+        score = to_float(first.get(category))
+        if score is not None:
+            current_scores[category] = score
 
     section_averages: Dict[str, float] = {}
     for section, categories in CATEGORIES.items():
-        scores = [averaged[category] for category in categories if category in averaged]
+        scores = [current_scores[category] for category in categories if category in current_scores]
         if scores:
             section_averages[section] = round(mean(scores), 2)
 
@@ -152,11 +151,11 @@ def summarize_rows(rows: Iterable[Mapping[str, Any]]) -> Dict[str, Any]:
     )
 
     ranked_low = sorted(
-        [(category, averaged[category]) for category in all_category_names() if category in averaged],
+        [(category, current_scores[category]) for category in all_category_names() if category in current_scores],
         key=lambda item: item[1],
     )
     ranked_high = sorted(
-        [(category, averaged[category]) for category in all_category_names() if category in averaged],
+        [(category, current_scores[category]) for category in all_category_names() if category in current_scores],
         key=lambda item: item[1],
         reverse=True,
     )
@@ -166,7 +165,7 @@ def summarize_rows(rows: Iterable[Mapping[str, Any]]) -> Dict[str, Any]:
         "playerName": first.get("playerName") or "",
         "ageGroup": first.get("ageGroup") or "",
         "position": first.get("position") or "",
-        "categoryScores": averaged,
+        "categoryScores": current_scores,
         "sectionAverages": section_averages,
         "weightedScore": weighted_score,
         "topStrengths": ranked_high[:3],
