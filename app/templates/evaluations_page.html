@@ -252,7 +252,6 @@
           this.message='Evaluation saved (' + (data.scoresSaved || 0) + ' scores).';
           this.savedStatus='Saved. Total evaluations for player: ' + (data.totalEvaluationsForPlayer || 1) + '.';
           await this.loadSessions();
-          await this.loadSavedEvaluation();
         } catch(e){ this.error=e.message; this.savedStatus='Save failed.'; }
       },
       async loadPrompt(){
