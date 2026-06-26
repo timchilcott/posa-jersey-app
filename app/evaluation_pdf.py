@@ -249,13 +249,28 @@ def _priorities_table(priorities: list[tuple[str, Any]], development_library: Ma
     return table
 
 
+def _format_note_for_pdf(note: Any) -> str:
+    """Preserve spacing and bullet formatting for evaluator notes in ReportLab paragraphs."""
+    text = _safe(note).replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not text:
+        return ""
+
+    text = re.sub(r"(?m)^\s*[-*]\s+", "• ", text)
+    text = re.sub(r"\n\s*\n+", "<br/><br/>", text)
+    text = text.replace("\n", "<br/>")
+    text = re.sub(r"\s*•\s*", "<br/><br/>• ", text)
+    text = re.sub(r"^(<br/>)+", "", text)
+    text = re.sub(r"(<br/>){3,}", "<br/><br/>", text)
+    return text
+
+
 def _notes_table(notes: list[str], styles):
     from reportlab.platypus import Paragraph, Table
 
     data = [[Paragraph("Evaluator Notes", styles["TableHeader"])] ]
     if notes:
         for note in notes:
-            data.append([Paragraph(_safe(note), styles["Small"])])
+            data.append([Paragraph(_format_note_for_pdf(note), styles["Small"])])
     else:
         data.append([Paragraph("No notes entered yet.", styles["Small"])])
     table = Table(data, colWidths=[REPORT_WIDTH], hAlign="LEFT", repeatRows=1)
