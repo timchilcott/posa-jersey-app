@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 from app.database import get_db
 from app.models import Player, Registration
+from app.player_dates import date_of_birth_iso, parse_date_of_birth
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -278,6 +279,7 @@ def get_filtered_players(
         result.append({
             'id': player.id,
             'name': player.full_name,
+            'dateOfBirth': date_of_birth_iso(player.date_of_birth),
             'birthYear': player.birth_year,
             'jersey': player.jersey_number,
             'email': player.parent_email,
@@ -312,10 +314,20 @@ def create_player(player_data: Dict[str, Any], db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=409, detail="A player with that name already exists")
 
+    raw_dob = player_data.get("date_of_birth") or player_data.get("dateOfBirth")
+    date_of_birth = parse_date_of_birth(raw_dob)
+    if raw_dob and not date_of_birth:
+        raise HTTPException(status_code=400, detail="Invalid date of birth")
+
+    birth_year = player_data.get("birth_year")
+    if date_of_birth:
+        birth_year = date_of_birth.year
+
     player = Player(
         full_name=full_name,
         parent_email=parent_email,
-        birth_year=player_data.get("birth_year"),
+        date_of_birth=date_of_birth,
+        birth_year=birth_year,
         jersey_number=player_data.get("jersey_number"),
     )
     db.add(player)
