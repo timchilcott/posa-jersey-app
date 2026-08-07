@@ -48,13 +48,24 @@ def _read_template(name: str) -> str:
         return f.read()
 
 
+def _admin_dashboard_template() -> str:
+    html = _read_template("players_page.html")
+    script = '    <script src="/static/dashboard-high-school-toggle.js?v=1"></script>'
+    if "dashboard-high-school-toggle.js" not in html:
+        html = html.replace(
+            '    <script src="/static/sidebar.js"></script>',
+            f"{script}\n    <script src=\"/static/sidebar.js\"></script>",
+        )
+    return html
+
+
 @app.get("/")
 async def home():
     return {"status": "ok"}
 
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_dashboard(request: Request):
-    return HTMLResponse(_read_template("players_page.html"))
+    return HTMLResponse(_admin_dashboard_template())
 
 @app.get("/admin/add", response_class=HTMLResponse)
 async def admin_add_player():
