@@ -44,3 +44,35 @@ def ensure_player_high_school_column(engine) -> None:
         )
 
     logger.info("Added players.is_high_school column")
+
+
+def ensure_player_aliases_table(engine) -> None:
+    """Add player aliases table for existing databases created before player merging."""
+    inspector = inspect(engine)
+    if "players" not in inspector.get_table_names():
+        return
+    if "player_aliases" in inspector.get_table_names():
+        return
+
+    dialect = engine.dialect.name
+    id_column = "INTEGER PRIMARY KEY AUTOINCREMENT" if dialect == "sqlite" else "SERIAL PRIMARY KEY"
+    created_at_column = "DATETIME DEFAULT CURRENT_TIMESTAMP" if dialect == "sqlite" else "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+
+    with engine.begin() as conn:
+        conn.execute(text(f"""
+            CREATE TABLE IF NOT EXISTS player_aliases (
+                id {id_column},
+                player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+                alias_name VARCHAR NOT NULL,
+                normalized_alias VARCHAR NOT NULL,
+                created_at {created_at_column}
+            )
+        """))
+        conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_player_aliases_player_id ON player_aliases (player_id)")
+        )
+        conn.execute(
+            text("CREATE UNIQUE INDEX IF NOT EXISTS ix_player_aliases_normalized_alias ON player_aliases (normalized_alias)")
+        )
+
+    logger.info("Added player_aliases table")
