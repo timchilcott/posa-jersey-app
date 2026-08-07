@@ -10,7 +10,7 @@ from jinja2 import Environment, FileSystemLoader
 from app.database import get_db, engine
 from app.models import Base, Player, Registration, EmailTemplate
 from app.player_dates import parse_date_of_birth
-from app.schema_compat import ensure_player_date_of_birth_column
+from app.schema_compat import ensure_player_date_of_birth_column, ensure_player_high_school_column
 import app.models_members  # noqa: F401  — register Member/MemberGuardian tables
 import app.models_seasons  # noqa: F401  — register Team/TeamRoster/TeamStaff tables
 import app.models_evaluations  # noqa: F401  — register Evaluation tables
@@ -24,6 +24,7 @@ from app.evaluations_routes import router as evaluations_router
 
 Base.metadata.create_all(bind=engine)
 ensure_player_date_of_birth_column(engine)
+ensure_player_high_school_column(engine)
 app = FastAPI(title="POSA Jersey Management")
 
 # Static files (sidebar.js, etc.)
@@ -179,6 +180,8 @@ async def update_player(player_id: int, request: Request, db: Session = Depends(
         player.full_name = data["full_name"]
     if "parent_email" in data:
         player.parent_email = data["parent_email"]
+    if "is_high_school" in data or "isHighSchool" in data:
+        player.is_high_school = bool(data.get("is_high_school", data.get("isHighSchool")))
     dob_supplied = "date_of_birth" in data or "dateOfBirth" in data
     if dob_supplied:
         raw_dob = data.get("date_of_birth", data.get("dateOfBirth"))
