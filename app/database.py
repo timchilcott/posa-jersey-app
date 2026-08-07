@@ -10,13 +10,12 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# Create engine
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20
-)
+# Create engine. SQLite does not accept the Postgres-oriented pool options.
+engine_options = {"pool_pre_ping": True}
+if DATABASE_URL and not DATABASE_URL.startswith("sqlite"):
+    engine_options.update(pool_size=10, max_overflow=20)
+
+engine = create_engine(DATABASE_URL, **engine_options)
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
