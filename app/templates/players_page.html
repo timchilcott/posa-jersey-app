@@ -150,6 +150,37 @@
                     @click="clearFilters(); showMore = false" class="text-xs text-gray-900 hover:text-gray-900 px-1.5 py-1.5">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
+            <!-- Grouping -->
+            <div class="relative" x-data="{ open: false }">
+                <button @click="open = !open" @click.outside="open = false"
+                        class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border border-gray-200 text-gray-900 hover:bg-gray-50 transition-colors">
+                    <span x-text="'Group: ' + groupLabel()"></span>
+                    <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="open" x-transition class="absolute z-20 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+                    <button type="button" @click="setGroupMode('birthYear'); open = false"
+                            class="w-full text-left px-3 py-1.5 hover:bg-gray-50 text-xs"
+                            :class="groupMode === 'birthYear' ? 'font-semibold text-pines-700' : 'text-gray-700'">Birth Year</button>
+                    <button type="button" @click="setGroupMode('ageGroup'); open = false"
+                            class="w-full text-left px-3 py-1.5 hover:bg-gray-50 text-xs"
+                            :class="groupMode === 'ageGroup' ? 'font-semibold text-pines-700' : 'text-gray-700'">Age Group</button>
+                </div>
+            </div>
+            <div class="relative" x-data="{ open: false }" x-show="groupMode === 'ageGroup'">
+                <button @click="open = !open" @click.outside="open = false"
+                        class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border border-pines-200 bg-pines-50 text-gray-900 transition-colors">
+                    <span x-text="seasonLabel(ageGroupSeasonYear)"></span>
+                    <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="open" x-transition class="absolute z-20 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg py-1 max-h-48 overflow-y-auto">
+                    <template x-for="y in availableGroupYears" :key="y">
+                        <button type="button" @click="ageGroupSeasonYear = y; open = false; buildRowMeta()"
+                                class="w-full text-left px-3 py-1.5 hover:bg-gray-50 text-xs"
+                                :class="Number(ageGroupSeasonYear) === Number(y) ? 'font-semibold text-pines-700' : 'text-gray-700'"
+                                x-text="seasonLabel(y)"></button>
+                    </template>
+                </div>
+            </div>
             <!-- Spacer + actions -->
             <div class="ml-auto flex items-center gap-2">
                 <a href="/sportsengine" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
@@ -185,7 +216,7 @@
                                 @click="!item._isHeader && openPanel(item)">
                                 <template x-if="item._isHeader">
                                     <td :colspan="visibleCount" class="px-4 py-2.5">
-                                        <span class="text-sm font-bold text-gray-900" x-text="'Birth Year ' + item.birthYear"></span>
+                                        <span class="text-sm font-bold text-gray-900" x-text="item.label"></span>
                                         <span class="ml-2 text-xs text-gray-500 font-normal" x-text="item._count + ' players'"></span>
                                     </td>
                                 </template>
@@ -263,9 +294,12 @@
                         <input type="number" x-model="selectedPlayer.jersey" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pines-500 focus:border-transparent">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Birth Year</label>
-                        <input type="number" x-model="selectedPlayer.birthYear" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pines-500 focus:border-transparent">
+                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Date of Birth</label>
+                        <input type="date" x-model="selectedPlayer.dateOfBirth" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pines-500 focus:border-transparent">
                     </div>
+                </div>
+                <div class="text-xs text-gray-500" x-show="selectedPlayer.dateOfBirth || selectedPlayer.birthYear">
+                    Birth year <span x-text="playerBirthYear(selectedPlayer) || '-'"></span>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Email</label>
@@ -331,6 +365,9 @@
             availableSports: [],
             availableYears: [],
             availableSeasons: [],
+            availableGroupYears: [],
+            groupMode: 'birthYear',
+            ageGroupSeasonYear: null,
             birthYearColorMap: {},
             duplicateJerseys: new Set(),
             displayList: [],
@@ -377,6 +414,52 @@
                 return match ? match[0] : '';
             },
 
+            playerBirthYear(player) {
+                const dob = player?.dateOfBirth;
+                if (dob) {
+                    const year = parseInt(String(dob).slice(0, 4), 10);
+                    if (!Number.isNaN(year)) return year;
+                }
+                return player?.birthYear || null;
+            },
+
+            seasonLabel(year) {
+                const start = Number(year) || new Date().getFullYear();
+                const end = String((start + 1) % 100).padStart(2, '0');
+                return start + '-' + end;
+            },
+
+            groupLabel() {
+                return this.groupMode === 'ageGroup' ? 'Age Group' : 'Birth Year';
+            },
+
+            setGroupMode(mode) {
+                this.groupMode = mode;
+                this.ensureAgeGroupSeason();
+                this.buildRowMeta();
+            },
+
+            ensureAgeGroupSeason() {
+                const years = this.availableGroupYears.length ? this.availableGroupYears : [new Date().getFullYear()];
+                const selected = Number(this.ageGroupSeasonYear);
+                if (!selected || !years.map(Number).includes(selected)) {
+                    const currentYear = new Date().getFullYear();
+                    this.ageGroupSeasonYear = years.map(Number).includes(currentYear) ? currentYear : years[0];
+                }
+            },
+
+            ageGroupNumber(player) {
+                const birthYear = this.playerBirthYear(player);
+                const seasonYear = Number(this.ageGroupSeasonYear) || new Date().getFullYear();
+                if (!birthYear) return null;
+                return seasonYear - birthYear + 1;
+            },
+
+            ageGroupLabel(player) {
+                const group = this.ageGroupNumber(player);
+                return group ? 'U-' + group : 'Unknown';
+            },
+
             updateAvailableOptions() {
                 const playerFiltered = this.allPlayers.filter(p => {
                     if (this.filters.search) {
@@ -395,8 +478,9 @@
 
                 const allRegs = [];
                 playerFiltered.forEach(p => {
+                    const birthYear = this.playerBirthYear(p);
                     p.registrations.forEach(r => {
-                        allRegs.push({ sport: r.sport, year: r.year, season: r.season, seasonYear: this.getSeasonYear(r.season), birthYear: p.birthYear });
+                        allRegs.push({ sport: r.sport, year: r.year, season: r.season, seasonYear: this.getSeasonYear(r.season), birthYear: birthYear });
                     });
                 });
 
@@ -412,6 +496,8 @@
                 this.availableYears = [...new Set(matchExcept(allRegs, 'year').map(r => r.year).filter(Boolean))].sort((a, b) => b - a);
                 this.availableSeasons = [...new Set(matchExcept(allRegs, 'season').map(r => r.season).filter(Boolean))].filter(s => s.toLowerCase() !== 'unknown' && /[a-z]/i.test(s)).sort();
                 this.availableBirthYears = [...new Set(matchExcept(allRegs, 'birthYear').map(r => r.birthYear).filter(Boolean))].sort((a, b) => b - a);
+                this.availableGroupYears = this.availableYears.length ? [...this.availableYears] : [new Date().getFullYear()];
+                this.ensureAgeGroupSeason();
 
                 this.filters.sport = this.filters.sport.filter(s => this.availableSports.includes(s));
                 this.filters.year = this.filters.year.filter(y => this.availableYears.map(String).includes(String(y)));
@@ -430,7 +516,7 @@
                         const matchesJersey = player.jersey ? player.jersey.toString().toLowerCase().includes(search) : false;
                         if (!matchesName && !matchesEmail && !matchesJersey) return false;
                     }
-                    if (this.filters.birthYear.length > 0 && !this.filters.birthYear.map(String).includes(String(player.birthYear))) return false;
+                    if (this.filters.birthYear.length > 0 && !this.filters.birthYear.map(String).includes(String(this.playerBirthYear(player)))) return false;
                     if (this.filters.sport.length > 0 || this.filters.year.length > 0 || this.filters.season.length > 0) {
                         const matchingReg = player.registrations.some(r => {
                             if (this.filters.sport.length > 0 && !this.filters.sport.includes(r.sport)) return false;
@@ -454,15 +540,16 @@
             },
 
             buildRowMeta() {
-                const years = [...new Set(this.filteredPlayers.map(p => p.birthYear).filter(Boolean))].sort((a, b) => b - a);
+                const years = [...new Set(this.filteredPlayers.map(p => this.playerBirthYear(p)).filter(Boolean))].sort((a, b) => b - a);
                 this.birthYearColorMap = {};
                 years.forEach((y, i) => { this.birthYearColorMap[y] = i % 2 === 0; });
 
                 this.duplicateJerseys = new Set();
                 const byYear = {};
                 this.filteredPlayers.forEach(p => {
-                    if (p.birthYear && p.jersey) {
-                        const key = p.birthYear + '-' + p.jersey;
+                    const birthYear = this.playerBirthYear(p);
+                    if (birthYear && p.jersey) {
+                        const key = birthYear + '-' + p.jersey;
                         if (byYear[key]) {
                             this.duplicateJerseys.add(byYear[key]);
                             this.duplicateJerseys.add(p.id);
@@ -473,18 +560,62 @@
                 });
 
                 this.displayList = [];
-                let lastYear = null;
-                const yearCounts = {};
-                this.filteredPlayers.forEach(p => {
-                    yearCounts[p.birthYear] = (yearCounts[p.birthYear] || 0) + 1;
+                const sortedPlayers = [...this.filteredPlayers].sort((a, b) => {
+                    const aBirthYear = this.playerBirthYear(a);
+                    const bBirthYear = this.playerBirthYear(b);
+                    const aGroup = this.groupMode === 'ageGroup' ? this.ageGroupNumber(a) : null;
+                    const bGroup = this.groupMode === 'ageGroup' ? this.ageGroupNumber(b) : null;
+
+                    if (this.groupMode === 'ageGroup') {
+                        if ((aGroup || 999) !== (bGroup || 999)) return (aGroup || 999) - (bGroup || 999);
+                    } else if ((aBirthYear || 0) !== (bBirthYear || 0)) {
+                        if (!aBirthYear) return 1;
+                        if (!bBirthYear) return -1;
+                        return bBirthYear - aBirthYear;
+                    }
+
+                    if ((a.jersey || 999) !== (b.jersey || 999)) return (a.jersey || 999) - (b.jersey || 999);
+                    return (a.name || '').localeCompare(b.name || '');
                 });
-                this.filteredPlayers.forEach(p => {
-                    if (p.birthYear !== lastYear) {
-                        this.displayList.push({ _isHeader: true, _key: 'h-' + (p.birthYear || 'none'), birthYear: p.birthYear || 'Unknown', _count: yearCounts[p.birthYear] || 0 });
-                        lastYear = p.birthYear;
+
+                const groupCounts = {};
+                sortedPlayers.forEach(p => {
+                    const key = this.groupKey(p);
+                    groupCounts[key] = (groupCounts[key] || 0) + 1;
+                });
+
+                let lastGroup = null;
+                sortedPlayers.forEach(p => {
+                    const groupKey = this.groupKey(p);
+                    if (groupKey !== lastGroup) {
+                        this.displayList.push({
+                            _isHeader: true,
+                            _key: 'h-' + groupKey,
+                            label: this.groupHeaderLabel(p),
+                            _count: groupCounts[groupKey] || 0
+                        });
+                        lastGroup = groupKey;
                     }
                     this.displayList.push({ ...p, _isHeader: false, _key: 'p-' + p.id });
                 });
+            },
+
+            groupKey(player) {
+                if (this.groupMode === 'ageGroup') {
+                    const group = this.ageGroupNumber(player);
+                    return group ? 'age-' + group : 'age-unknown';
+                }
+                const birthYear = this.playerBirthYear(player);
+                return birthYear ? 'birth-' + birthYear : 'birth-unknown';
+            },
+
+            groupHeaderLabel(player) {
+                if (this.groupMode === 'ageGroup') {
+                    const group = this.ageGroupNumber(player);
+                    return group ? this.ageGroupLabel(player) : 'Unknown Age Group';
+                }
+                const birthYear = this.playerBirthYear(player);
+                return birthYear ? 'Birth Year ' + birthYear : 'Birth Year Unknown';
             },
 
             rowClass(player) {
@@ -504,15 +635,20 @@
 
             async savePanel() {
                 try {
+                    const payload = {
+                        full_name: this.selectedPlayer.name,
+                        parent_email: this.selectedPlayer.email,
+                        jersey_number: this.selectedPlayer.jersey
+                    };
+                    if (this.selectedPlayer.dateOfBirth) {
+                        payload.date_of_birth = this.selectedPlayer.dateOfBirth;
+                    } else {
+                        payload.birth_year = this.selectedPlayer.birthYear || null;
+                    }
                     const response = await fetch(`/api/players/${this.selectedPlayer.id}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            full_name: this.selectedPlayer.name,
-                            parent_email: this.selectedPlayer.email,
-                            birth_year: this.selectedPlayer.birthYear,
-                            jersey_number: this.selectedPlayer.jersey
-                        })
+                        body: JSON.stringify(payload)
                     });
                     const data = await response.json();
                     if (data.success) {

@@ -4,6 +4,7 @@ import email
 import logging
 from bs4 import BeautifulSoup
 from datetime import datetime
+from typing import Optional
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 from .models import Player, Registration
@@ -67,7 +68,7 @@ DIVISION_ALIASES = {
 # ---------------------------------------------------------------------
 # Division normalization
 # ---------------------------------------------------------------------
-def normalize_division(raw: str, birth_year: int | None = None) -> str:
+def normalize_division(raw: str, birth_year: Optional[int] = None) -> str:
     """Map various division strings to canonical form, applying POSA's 2022→U3 rule."""
     key = re.sub(r"[^A-Za-z0-9]", "", raw or "").upper()
     if key in DIVISION_ALIASES:
@@ -212,7 +213,7 @@ def send_pines_confirmation_email(to_email, players, registrations=None, db=None
 # ---------------------------------------------------------------------
 # Inbound email capture / parsing (Legacy - for Blue Sombrero)
 # ---------------------------------------------------------------------
-def save_inbound_email(email_body: str, filename: str | None = None) -> None:
+def save_inbound_email(email_body: str, filename: Optional[str] = None) -> None:
     root_dir = os.path.dirname(os.path.dirname(__file__))
     if not filename:
         filename = f"captured_email_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
