@@ -57,7 +57,7 @@ def seed_data():
         birth_year = entry["dob"].year
         player = Player(
             full_name=entry["full_name"],
-            dob=entry["dob"],
+            date_of_birth=entry["dob"],
             birth_year=birth_year,
             jersey_number=entry["jersey_number"],
             parent_email=entry["parent_email"]
