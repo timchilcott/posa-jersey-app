@@ -14,6 +14,7 @@ class Player(Base):
     birth_year = Column(Integer, nullable=True, index=True)
     jersey_number = Column(Integer, nullable=True)
     parent_email = Column(String, nullable=False, index=True)
+    is_high_school = Column(Boolean, default=False, nullable=False, index=True)
     locked = Column(Boolean, default=False)
 
     registrations = relationship("Registration", back_populates="player", cascade="all, delete-orphan")
