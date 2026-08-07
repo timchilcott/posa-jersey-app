@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models import Player, Registration
+from app.player_aliases import upsert_player_alias
 from app.player_dates import date_of_birth_iso
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -135,7 +136,11 @@ def merge_players(payload: Dict[str, Any] = Body(...), db: Session = Depends(get
     updated_fields = []
 
     try:
+        upsert_player_alias(db, keep_player.id, keep_player.full_name)
+
         for duplicate_player in duplicate_players:
+            upsert_player_alias(db, keep_player.id, duplicate_player.full_name)
+
             if not keep_player.date_of_birth and duplicate_player.date_of_birth:
                 keep_player.date_of_birth = duplicate_player.date_of_birth
                 updated_fields.append("date_of_birth")
