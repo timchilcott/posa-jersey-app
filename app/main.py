@@ -21,6 +21,7 @@ from app.events_routes import router as events_router
 from app.members_routes import router as members_router
 from app.seasons_routes import router as seasons_router
 from app.evaluations_routes import router as evaluations_router
+from app.player_merge_routes import router as player_merge_router
 
 Base.metadata.create_all(bind=engine)
 ensure_player_date_of_birth_column(engine)
@@ -39,6 +40,7 @@ app.include_router(events_router)
 app.include_router(members_router)
 app.include_router(seasons_router)
 app.include_router(evaluations_router)
+app.include_router(player_merge_router)
 
 _TEMPLATES_DIR = pathlib.Path(__file__).parent / "templates"
 
@@ -70,6 +72,10 @@ async def admin_dashboard(request: Request):
 @app.get("/admin/add", response_class=HTMLResponse)
 async def admin_add_player():
     return HTMLResponse(_read_template("player_add.html"))
+
+@app.get("/admin/merge", response_class=HTMLResponse)
+async def admin_merge_players():
+    return HTMLResponse(_read_template("player_merge.html"))
 
 @app.get("/admin/volunteers", response_class=HTMLResponse)
 async def admin_volunteers(request: Request):
