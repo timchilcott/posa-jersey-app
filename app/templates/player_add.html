@@ -86,6 +86,14 @@
                                placeholder="e.g. 7">
                     </div>
                 </div>
+                <label class="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <input type="checkbox" x-model="form.is_high_school"
+                           class="mt-0.5 rounded border-gray-300 text-pines-500 focus:ring-pines-500">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-900">High School Player</span>
+                        <span class="block text-xs text-gray-500">Uses the high school email template.</span>
+                    </span>
+                </label>
 
                 <!-- Optional Registration Section -->
                 <div class="border-t border-gray-200 pt-5">
@@ -146,6 +154,7 @@
                 parent_email: '',
                 date_of_birth: '',
                 jersey_number: null,
+                is_high_school: false,
                 sport: '',
                 division: '',
                 season: ''
@@ -200,6 +209,7 @@
                     parent_email: '',
                     date_of_birth: '',
                     jersey_number: null,
+                    is_high_school: false,
                     sport: '',
                     division: '',
                     season: ''
