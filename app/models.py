@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, UniqueConstraint, Boolean, Text, Index
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, UniqueConstraint, Boolean, Text, Index
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -10,6 +10,7 @@ class Player(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     full_name = Column(String, nullable=False)
+    date_of_birth = Column(Date, nullable=True, index=True)
     birth_year = Column(Integer, nullable=True, index=True)
     jersey_number = Column(Integer, nullable=True)
     parent_email = Column(String, nullable=False, index=True)
