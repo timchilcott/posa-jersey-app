@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.database import get_db, SessionLocal
 from app.models_members import Member, MemberGuardian
 from app.models import Player, Registration
+from app.player_dates import date_of_birth_iso
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ _sync_status = {
 
 
 def _run_sync_background(force: bool = False):
-    """Run members sync in a background thread with its own DB session."""
+    """Run members sync in background thread with its own DB session."""
     global _sync_status
     db = SessionLocal()
     try:
@@ -181,6 +182,7 @@ def list_members(db: Session = Depends(get_db)):
             entry["player"] = {
                 "id": matched_player.id,
                 "jerseyNumber": matched_player.jersey_number,
+                "dateOfBirth": date_of_birth_iso(matched_player.date_of_birth),
                 "birthYear": matched_player.birth_year,
                 "parentEmail": matched_player.parent_email,
                 "locked": matched_player.locked,
