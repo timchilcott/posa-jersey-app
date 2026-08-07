@@ -22,12 +22,26 @@ VOLUNTEER_DIVISIONS = [
     "Background Check",
 ]
 
+PINES_HIGH_SCHOOL_DIVISION = "Pend Oreille Pines (High School Club Team)"
+
 def is_volunteer_division(division):
     """Check if a division name indicates a volunteer/parent registration"""
     if not division:
         return False
     d = division.lower()
     return any(v.lower() in d for v in VOLUNTEER_DIVISIONS)
+
+
+def is_high_school_division(division):
+    """Check if a division should use the Pines high school template."""
+    if not division:
+        return False
+    d = division.strip().lower()
+    return (
+        d == PINES_HIGH_SCHOOL_DIVISION.lower()
+        or d == "hs"
+        or "high school" in d
+    )
 
 
 def _season_year(reg):
@@ -283,6 +297,7 @@ def get_filtered_players(
             'birthYear': player.birth_year,
             'jersey': player.jersey_number,
             'email': player.parent_email,
+            'isHighSchool': bool(player.is_high_school),
             'emailSent': email_sent,
             'locked': player.locked,
             'registrations': [{
@@ -329,6 +344,7 @@ def create_player(player_data: Dict[str, Any], db: Session = Depends(get_db)):
         date_of_birth=date_of_birth,
         birth_year=birth_year,
         jersey_number=player_data.get("jersey_number"),
+        is_high_school=bool(player_data.get("is_high_school", player_data.get("isHighSchool", False))),
     )
     db.add(player)
     db.flush()
@@ -449,10 +465,16 @@ def send_player_email(player_id: int, db: Session = Depends(get_db)):
     target_season = latest_reg.season
     
     # Separate Pines HS vs standard registrations (scoped to target season)
-    pines_division = "Pend Oreille Pines (High School Club Team)"
     season_regs = [r for r in registrations if r.season == target_season]
-    standard_regs = [r for r in season_regs if r.division != pines_division]
-    pines_regs = [r for r in season_regs if r.division == pines_division]
+    player_is_high_school = bool(player.is_high_school) or any(
+        is_high_school_division(r.division) for r in season_regs
+    )
+    standard_regs = [] if player_is_high_school else [
+        r for r in season_regs if not is_high_school_division(r.division)
+    ]
+    pines_regs = season_regs if player_is_high_school else [
+        r for r in season_regs if is_high_school_division(r.division)
+    ]
     
     emails_sent = 0
     
@@ -470,6 +492,8 @@ def send_player_email(player_id: int, db: Session = Depends(get_db)):
             new_siblings = []
             already_have_jersey = []
             for sib in sibling_players:
+                if sib.is_high_school:
+                    continue
                 all_sib_regs = db.query(Registration).filter(
                     Registration.player_id == sib.id
                 ).all()
@@ -495,14 +519,17 @@ def send_player_email(player_id: int, db: Session = Depends(get_db)):
             
             # Get registrations only for never-confirmed siblings,
             # scoped to the target season, excluding Pines and Unknown sport
-            family_standard_regs = db.query(Registration).filter(
+            family_candidate_regs = db.query(Registration).filter(
                 Registration.player_id.in_(new_sibling_ids),
-                Registration.division != pines_division,
                 Registration.season == target_season,
                 Registration.sport != 'Unknown',
                 Registration.sport != 'unknown',
                 Registration.sport != '',
             ).all() if new_sibling_ids else []
+            family_standard_regs = [
+                reg for reg in family_candidate_regs
+                if not is_high_school_division(reg.division)
+            ]
             
             # Build player list for email — deduplicate by player_id
             family_reg_map = {}  # player_id -> list of regs
