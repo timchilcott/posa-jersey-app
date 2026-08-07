@@ -9,6 +9,8 @@ from sqlalchemy import func
 from jinja2 import Environment, FileSystemLoader
 from app.database import get_db, engine
 from app.models import Base, Player, Registration, EmailTemplate
+from app.player_dates import parse_date_of_birth
+from app.schema_compat import ensure_player_date_of_birth_column
 import app.models_members  # noqa: F401  — register Member/MemberGuardian tables
 import app.models_seasons  # noqa: F401  — register Team/TeamRoster/TeamStaff tables
 import app.models_evaluations  # noqa: F401  — register Evaluation tables
@@ -21,6 +23,7 @@ from app.seasons_routes import router as seasons_router
 from app.evaluations_routes import router as evaluations_router
 
 Base.metadata.create_all(bind=engine)
+ensure_player_date_of_birth_column(engine)
 app = FastAPI(title="POSA Jersey Management")
 
 # Static files (sidebar.js, etc.)
@@ -176,15 +179,23 @@ async def update_player(player_id: int, request: Request, db: Session = Depends(
         player.full_name = data["full_name"]
     if "parent_email" in data:
         player.parent_email = data["parent_email"]
-    if "birth_year" in data:
+    dob_supplied = "date_of_birth" in data or "dateOfBirth" in data
+    if dob_supplied:
+        raw_dob = data.get("date_of_birth", data.get("dateOfBirth"))
+        parsed_dob = parse_date_of_birth(raw_dob)
+        if raw_dob and not parsed_dob:
+            return {"success": False, "error": "Invalid date of birth"}
+        player.date_of_birth = parsed_dob
+        player.birth_year = parsed_dob.year if parsed_dob else None
+    elif "birth_year" in data:
         player.birth_year = data["birth_year"]
     if "jersey_number" in data and data["jersey_number"] is not None:
         player.jersey_number = int(data["jersey_number"])
 
-    if "birth_year" in data and data["birth_year"]:
+    if ("birth_year" in data or dob_supplied) and player.birth_year:
         if not player.jersey_number or player.jersey_number == 0:
             max_jersey = db.query(func.max(Player.jersey_number)).filter(
-                Player.birth_year == data["birth_year"]
+                Player.birth_year == player.birth_year
             ).scalar()
 
             try:
