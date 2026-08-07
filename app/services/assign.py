@@ -1,20 +1,26 @@
-def assign_jersey_number(db, birth_year: int | None = None) -> int:
+from typing import Optional, Union
+
+
+def assign_jersey_number(db, group: Optional[Union[int, str]] = None) -> int:
     """
-    Assign the lowest available jersey number for a given birth year.
-    If no birth year provided, just return 1.
+    Assign the lowest available jersey number for a birth year or division.
+    If no group is provided, just return 1.
     """
     # local import to avoid circular import
-    from app.models import Player
+    from app.models import Player, Registration
 
-    if birth_year is None:
+    if group is None:
         return 1
 
-    # Get all players with this birth year
-    players = (
-        db.query(Player)
-        .filter(Player.birth_year == birth_year)
-        .all()
-    )
+    if isinstance(group, int):
+        players = db.query(Player).filter(Player.birth_year == group).all()
+    else:
+        players = (
+            db.query(Player)
+            .join(Registration)
+            .filter(Registration.division == str(group))
+            .all()
+        )
 
     # Get all jersey numbers already used by players in this birth year
     taken = {
