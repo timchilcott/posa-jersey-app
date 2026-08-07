@@ -9,8 +9,13 @@ from sqlalchemy import func
 from jinja2 import Environment, FileSystemLoader
 from app.database import get_db, engine
 from app.models import Base, Player, Registration, EmailTemplate
+from app.player_alias_sync import install_player_alias_sync_patch
 from app.player_dates import parse_date_of_birth
-from app.schema_compat import ensure_player_date_of_birth_column, ensure_player_high_school_column
+from app.schema_compat import (
+    ensure_player_aliases_table,
+    ensure_player_date_of_birth_column,
+    ensure_player_high_school_column,
+)
 import app.models_members  # noqa: F401  — register Member/MemberGuardian tables
 import app.models_seasons  # noqa: F401  — register Team/TeamRoster/TeamStaff tables
 import app.models_evaluations  # noqa: F401  — register Evaluation tables
@@ -26,6 +31,8 @@ from app.player_merge_routes import router as player_merge_router
 Base.metadata.create_all(bind=engine)
 ensure_player_date_of_birth_column(engine)
 ensure_player_high_school_column(engine)
+ensure_player_aliases_table(engine)
+install_player_alias_sync_patch()
 app = FastAPI(title="POSA Jersey Management")
 
 # Static files (sidebar.js, etc.)
