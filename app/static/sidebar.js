@@ -212,6 +212,108 @@
     document.head.appendChild(style);
   }
 
+  function isAdminDashboard() {
+    return currentPath === '/admin';
+  }
+
+  function installAdminHighSchoolTogglePatch() {
+    if (!isAdminDashboard() || typeof window.tableApp !== 'function' || window.tableApp.__highSchoolTogglePatched) return;
+
+    const originalTableApp = window.tableApp;
+    const patchedTableApp = function() {
+      const app = originalTableApp.apply(this, arguments);
+
+      app.buildPlayerPayload = function(player) {
+        const payload = {
+          full_name: player.name,
+          parent_email: player.email,
+          jersey_number: player.jersey,
+          is_high_school: !!player.isHighSchool
+        };
+        if (player.dateOfBirth) {
+          payload.date_of_birth = player.dateOfBirth;
+        } else {
+          payload.birth_year = player.birthYear || null;
+        }
+        return payload;
+      };
+
+      app.savePanel = async function() {
+        try {
+          const response = await fetch(`/api/players/${this.selectedPlayer.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.buildPlayerPayload(this.selectedPlayer))
+          });
+          const data = await response.json();
+          if (data.success) {
+            await this.loadPlayers();
+            this.closePanel();
+          }
+        } catch (error) {
+          console.error('Failed to update player:', error);
+          alert('Failed to update player');
+        }
+      };
+
+      app.sendEmail = async function(player) {
+        try {
+          if (this.selectedPlayer && this.selectedPlayer.id === player.id) {
+            const saveResponse = await fetch(`/api/players/${this.selectedPlayer.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(this.buildPlayerPayload(this.selectedPlayer))
+            });
+            const saveData = await saveResponse.json();
+            if (!saveData.success) {
+              alert(`Failed: ${saveData.error || 'Could not save player before sending email'}`);
+              return;
+            }
+          }
+
+          const response = await fetch(`/api/admin/players/${player.id}/send-email`, { method: 'POST' });
+          const data = await response.json();
+          if (data.success) {
+            alert(`Email sent to ${player.email}`);
+            await this.loadPlayers();
+          } else {
+            alert(`Failed: ${data.message || data.error}`);
+          }
+        } catch (error) {
+          console.error('Failed to send email:', error);
+          alert('Failed to send email');
+        }
+      };
+
+      return app;
+    };
+
+    patchedTableApp.__highSchoolTogglePatched = true;
+    window.tableApp = patchedTableApp;
+  }
+
+  function insertAdminHighSchoolToggle() {
+    if (!isAdminDashboard()) return;
+
+    document.querySelectorAll('template').forEach(function(template) {
+      if (template.content.querySelector('[x-model="selectedPlayer.isHighSchool"]')) return;
+
+      const emailInput = template.content.querySelector('[x-model="selectedPlayer.email"]');
+      if (!emailInput) return;
+
+      const emailBlock = emailInput.closest('div');
+      if (!emailBlock || !emailBlock.parentNode) return;
+
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = '' +
+        '<label class="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">' +
+          '<input type="checkbox" x-model="selectedPlayer.isHighSchool" class="rounded border-gray-300 text-pines-500 focus:ring-pines-500">' +
+          '<span class="text-sm font-medium text-gray-900">High School Player</span>' +
+        '</label>';
+      emailBlock.parentNode.insertBefore(wrapper.firstElementChild, emailBlock.nextSibling);
+    });
+  }
+
   function injectLayout() {
     const body = document.body;
     const xData = body.getAttribute('x-data') || '';
@@ -241,6 +343,7 @@
       '</div>' + buildMobileOverlay();
 
     body.innerHTML = layoutHTML;
+    insertAdminHighSchoolToggle();
     body.classList.remove('sidebar-loading');
     body.classList.add('sidebar-ready');
 
@@ -257,6 +360,7 @@
     mobileLinks.forEach(function(link) { link.addEventListener('click', closeMobile); });
   }
 
+  installAdminHighSchoolTogglePatch();
   injectStyles();
   document.body.classList.add('sidebar-loading');
   if (document.readyState === 'loading') {
