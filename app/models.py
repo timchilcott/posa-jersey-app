@@ -18,11 +18,24 @@ class Player(Base):
     locked = Column(Boolean, default=False)
 
     registrations = relationship("Registration", back_populates="player", cascade="all, delete-orphan")
+    aliases = relationship("PlayerAlias", back_populates="player", cascade="all, delete-orphan")
 
     __table_args__ = (
         UniqueConstraint("full_name", name="uq_fullname"),
         Index('ix_player_birth_jersey', 'birth_year', 'jersey_number'),
     )
+
+
+class PlayerAlias(Base):
+    __tablename__ = "player_aliases"
+
+    id = Column(Integer, primary_key=True, index=True)
+    player_id = Column(Integer, ForeignKey("players.id"), nullable=False, index=True)
+    alias_name = Column(String, nullable=False)
+    normalized_alias = Column(String, nullable=False, unique=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    player = relationship("Player", back_populates="aliases")
 
 
 class Registration(Base):
